@@ -2,12 +2,8 @@ const defaultTheme = require("tailwindcss/defaultTheme");
 
 module.exports = {
   content: [
-    "./app/**/*.{js,ts,jsx,tsx}",
     "./pages/**/*.{js,ts,jsx,tsx}",
     "./components/**/*.{js,ts,jsx,tsx}",
-
-    // Or if using `src` directory:
-    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     fontFamily: {
@@ -26,34 +22,5 @@ module.exports = {
       },
     },
   },
-  plugins: [
-    require("@tailwindcss/forms"),
-    // require("tailwindcss-animatecss")({
-    //   settings: {
-    //     animateSpeed: 250,
-    //   },
-    //   classes: [
-    //     "animate__animated",
-    //     "animate__infinite",
-    //     "animate__fast",
-    //     "animate__faster",
-    //     "animate__slow",
-    //     "animate__slower",
-    //     "animate__fadeIn",
-    //     "animate__fadeOut",
-    //     "animate__fadeInUp",
-    //     "animate__fadeInLeft",
-    //     "animate__fadeInRight",
-    //     "animate__fadeInDown",
-    //     "animate__fadeOutUp",
-    //     "animate__fadeOutDown",
-    //     "animate__fadeOutLeft",
-    //     "animate__fadeOutRight",
-    //     "animate__flipInX",
-    //     "animate__flipOutX",
-    //     "animate__flipInY",
-    //     "animate__flipOutY",
-    //   ],
-    // }),
-  ],
+  plugins: [],
 };
