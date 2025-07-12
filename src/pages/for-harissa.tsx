@@ -34,7 +34,7 @@ export default function ProposalPage() {
   }, [hasPlayed]);
 
   const [slide, setSlide] = useState(0);
-  const [showNoPrompt, setShowNoPrompt] = useState(false);
+  // const [showNoPrompt, setShowNoPrompt] = useState(false);
   const [step, setStep] = useState<"default" | "confirm" | "rejected">(
     "default"
   );
