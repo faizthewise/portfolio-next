@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -125,7 +125,7 @@ export default function ProposalPage() {
           <span className="font-semibold text-pink-600">Totally unfair 😄</span>
         </p>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {harissaImages.map((src, index) => (
             <div
               key={index}
@@ -225,6 +225,19 @@ export default function ProposalPage() {
 
       <section className="min-h-screen flex flex-col items-center justify-center p-8 bg-gradient-to-b from-white to-pink-200 text-center">
         <h2 className="text-2xl font-bold">I love you ❤️</h2>
+        <p className="mt-4 max-w-xl text-lg">
+          I have been really happy since you came into my life. I enjoy every
+          moment I spent with you and wish I could spend even more.
+        </p>
+        <p className="mt-4 max-w-xl text-lg">
+          I love seeing your beautiful face, the gorgeous curls of your hair,
+          the shiny eyes that you have, your soft hands. I love the way your
+          lips curl when you smile when you're shy.
+        </p>
+        <p className="mt-4 max-w-xl text-lg">
+          I love how smart you are. I love the way you talk, the way you laugh.
+          I love everything about you and more.
+        </p>
         <p className="mt-4 max-w-xl text-lg">
           I know I have a lot of flaws. I'm really sorry I'm giving you a hard
           time because of that. But I promise you I'm trying to be better for
