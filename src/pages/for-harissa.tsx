@@ -43,10 +43,21 @@ export default function ProposalPage() {
     setShowStory(true);
   };
 
-  // const [showNoPrompt, setShowNoPrompt] = useState(false);
-  const [step, setStep] = useState<"default" | "confirm" | "rejected">(
-    "default"
-  );
+  const [step, setStep] = useState<
+    "default" | "confirm" | "rejected" | "accepted"
+  >("default");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("hasSaidYes");
+    if (stored === "true") {
+      setStep("accepted");
+    }
+  }, []);
+
+  const handleAccept = () => {
+    setStep("accepted");
+    localStorage.setItem("hasSaidYes", "true");
+  };
 
   const [slide, setSlide] = useState(0);
   const [direction, setDirection] = useState<"left" | "right">("right");
@@ -164,15 +175,22 @@ export default function ProposalPage() {
         <h2 className="text-3xl md:text-4xl font-extrabold text-pink-800 drop-shadow-sm">
           And somehow, fate decided this incredible woman should meet... me
         </h2>
-        <p className="mt-6 max-w-2xl text-lg md:text-xl text-pink-900 leading-relaxed">
-          It all began at a simple blood donation event, such a simple moment
-          that left a quiet spark in both of us.
-          <br className="hidden md:block" />
-          Life had other plans, and fate gently pulled us apart... only to bring
-          us back together{" "}
+        <p className="mt-24 max-w-2xl text-lg md:text-xl text-pink-900 leading-relaxed">
+          It all began at an uneventful blood donation event, such a simple
+          encounter that left an unforgettable moment for both of us.
+        </p>
+        <p className="mt-4 max-w-2xl text-lg md:text-xl text-pink-900 leading-relaxed">
+          Life had other plans though, and fate gently pulled us apart... only
+          to bring us back together{" "}
           <span className="font-semibold">EIGHT YEARS LATER</span>!
-          <br className="hidden md:block" />I can ask anyone and they would say
-          it's like a K-drama plot but it's magically real ✨ like there's an
+        </p>
+        <p className="mt-4 max-w-2xl text-lg md:text-xl text-pink-900 leading-relaxed">
+          I messed up so bad during our first date. Like who would spills coffee
+          in their first date??
+        </p>
+        <p className="mt-4 max-w-2xl text-lg md:text-xl text-pink-900 leading-relaxed">
+          I can ask anyone and they would say it's like a K-drama plot but it's
+          magically real ✨ like there's an
           <span className="italic"> invisible string tying you to me~</span>
         </p>
       </section>
@@ -231,7 +249,7 @@ export default function ProposalPage() {
         </p>
         <p className="mt-4 max-w-xl text-lg">
           I love seeing your beautiful face, the gorgeous curls of your hair,
-          the shiny eyes that you have, your soft hands. I love the way your
+          the shiny eyes of yours, the softness your hands. I love the way your
           lips curl when you smile when you're shy.
         </p>
         <p className="mt-4 max-w-xl text-lg">
@@ -276,7 +294,7 @@ export default function ProposalPage() {
                   No 😢
                 </button>
                 <button
-                  onClick={() => setStep("accepted")}
+                  onClick={handleAccept}
                   className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-full text-lg shadow"
                 >
                   Yes 💖
