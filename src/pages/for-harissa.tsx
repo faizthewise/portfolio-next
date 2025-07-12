@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import clsx from "clsx";
 
 const images = [
   "/images/memories/luge_1.jpg",
