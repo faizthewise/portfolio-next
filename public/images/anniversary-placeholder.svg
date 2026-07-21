@@ -1,0 +1,22 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="background" x1="90" y1="36" x2="1110" y2="864" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCE7F3"/>
+      <stop offset="0.5" stop-color="#FFF7ED"/>
+      <stop offset="1" stop-color="#FBCFE8"/>
+    </linearGradient>
+    <filter id="shadow" x="420" y="257" width="360" height="386" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#9D174D" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="900" rx="48" fill="url(#background)"/>
+  <circle cx="175" cy="150" r="70" fill="#FFFFFF" fill-opacity="0.35"/>
+  <circle cx="1060" cy="745" r="105" fill="#FFFFFF" fill-opacity="0.3"/>
+  <g filter="url(#shadow)">
+    <rect x="450" y="287" width="300" height="326" rx="28" fill="white" transform="rotate(-3 450 287)"/>
+    <rect x="478" y="315" width="244" height="222" rx="17" fill="#FDF2F8" transform="rotate(-3 478 315)"/>
+  </g>
+  <path d="M600 477C590 463 556 443 542 412C522 367 575 343 600 383C625 343 678 367 658 412C644 443 610 463 600 477Z" fill="#EC4899"/>
+  <text x="600" y="690" text-anchor="middle" fill="#9D174D" font-family="Georgia, serif" font-size="32" font-style="italic">our memory goes here</text>
+  <text x="600" y="738" text-anchor="middle" fill="#BE185D" fill-opacity="0.65" font-family="Arial, sans-serif" font-size="20" letter-spacing="4">REPLACE WITH YOUR PHOTO</text>
+</svg>
