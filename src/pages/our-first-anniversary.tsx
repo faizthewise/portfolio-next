@@ -112,7 +112,7 @@ function HomeScrapbook() {
       <div className="rounded-xl bg-[radial-gradient(#c9b198_1px,transparent_1px)] bg-[length:18px_18px] p-3 md:p-6">
         <figure className="rotate-1 rounded-sm bg-white p-3 pb-7 shadow-lg">
           <div className="relative aspect-[4/3] overflow-hidden bg-rose-50"><Image key={active} src={photo.src} alt={photo.label} fill className="object-cover" /></div>
-          <figcaption className="px-2 pt-5"><span className="font-serif text-2xl text-rose-950">{photo.label}</span><p className="mt-1 text-sm text-stone-500">{photo.caption}</p></figcaption>
+          <figcaption className="px-2 pt-5"><span className="font-serif text-2xl text-[#4c0519]">{photo.label}</span><p className="mt-1 text-sm text-stone-500">{photo.caption}</p></figcaption>
         </figure>
         <div className="mt-6 grid grid-cols-4 gap-2">
           {homePhotos.map((item, index) => (
@@ -145,7 +145,7 @@ export default function OurFirstAnniversary() {
               <Heart className="h-9 w-9 fill-current" />
             </div>
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">For Harissa</p>
-            <h1 className="font-serif text-4xl leading-tight text-rose-950 md:text-6xl">A year since you said yes</h1>
+            <h1 className="font-serif text-4xl leading-tight text-[#4c0519] md:text-6xl">A year since you said yes</h1>
             <p className="mx-auto mt-5 max-w-md leading-relaxed text-stone-600">I made you something to remember how far we have come — and everything waiting for us ahead.</p>
             <button onClick={openLetter} className="mt-9 rounded-full bg-rose-600 px-7 py-3.5 font-medium text-white shadow-lg shadow-rose-200 transition hover:-translate-y-0.5 hover:bg-rose-700">
               Open our story
@@ -163,7 +163,7 @@ export default function OurFirstAnniversary() {
         <div className="absolute bottom-[20%] right-[5%] h-40 w-40 rounded-full bg-rose-200/40 blur-2xl" />
         <div className="relative max-w-3xl">
           <p className="mb-5 text-sm font-bold uppercase tracking-[0.3em] text-rose-500">20 July · One year ago</p>
-          <h1 className="font-serif text-5xl leading-[1.08] text-rose-950 md:text-7xl">You clicked <span className="italic text-rose-600">yes</span>,<br />and my whole world changed.</h1>
+          <h1 className="font-serif text-5xl leading-[1.08] text-[#4c0519] md:text-7xl">You clicked <span className="italic text-rose-600">yes</span>,<br />and my whole world changed.</h1>
           <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-stone-600 md:text-xl">A year ago, you chose to be my girlfriend. I still feel incredibly lucky that you chose me — you have brought a million blessings into my life, through every laugh, every quiet moment, every lesson, and every bit of love we have shared since.</p>
         </div>
         <div className="absolute bottom-8 flex flex-col items-center gap-2 text-rose-500">
@@ -177,14 +177,14 @@ export default function OurFirstAnniversary() {
           <div className="mx-auto mb-16 max-w-2xl text-center">
             <Sparkles className="mx-auto mb-5 h-7 w-7 text-amber-500" />
             <p className="text-sm font-bold uppercase tracking-[0.25em] text-rose-500">365 days of us</p>
-            <h2 className="mt-4 font-serif text-4xl text-rose-950 md:text-5xl">A year I will always treasure</h2>
+            <h2 className="mt-4 font-serif text-4xl text-[#4c0519] md:text-5xl">A year I will always treasure</h2>
             <p className="mt-5 text-lg leading-8 text-stone-600">We filled this year with so many moments — big adventures, quiet dates, silly conversations, and ordinary days that felt extraordinary simply because they were ours.</p>
           </div>
           <YearFilmstrip />
         </div>
       </section>
 
-      <section className="bg-rose-950 px-6 py-24 text-rose-50 md:py-32">
+      <section className="bg-[#4c0519] px-6 py-24 text-rose-50 md:py-32">
         <div className="mx-auto grid max-w-6xl items-center gap-14 md:grid-cols-2">
           <EngagementSlideshow />
           <div>
@@ -203,7 +203,7 @@ export default function OurFirstAnniversary() {
             <div>
               <div className="flex gap-3 text-rose-700"><Home className="h-8 w-8" /><KeyRound className="h-8 w-8" /></div>
               <p className="mt-7 text-sm font-bold uppercase tracking-[0.28em] text-rose-600">Our next little adventure</p>
-              <h2 className="mt-4 font-serif text-4xl leading-tight text-rose-950 md:text-5xl">Turning a house into our home.</h2>
+              <h2 className="mt-4 font-serif text-4xl leading-tight text-[#4c0519] md:text-5xl">Turning a house into our home.</h2>
               <p className="mt-6 text-lg leading-8 text-stone-600">From walking through home expos and imagining every corner, to finally holding the keys in our hands — we are building more than a house. We are making a place for slow mornings, shared dinners, laughter in every room, and a lifetime of coming home to each other.</p>
             </div>
             <HomeScrapbook />
@@ -217,12 +217,12 @@ export default function OurFirstAnniversary() {
         <div className="relative max-w-3xl">
           <CalendarDays className="mx-auto h-10 w-10 text-rose-600" />
           <p className="mt-7 text-sm font-bold uppercase tracking-[0.3em] text-rose-500">28 November · Our wedding day</p>
-          <h2 className="mt-5 font-serif text-5xl leading-tight text-rose-950 md:text-7xl">I cannot wait to marry you.</h2>
+          <h2 className="mt-5 font-serif text-5xl leading-tight text-[#4c0519] md:text-7xl">I cannot wait to marry you.</h2>
           <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-stone-600 md:text-xl">I am excited for every part of that day — the moment our akad nikah makes us husband and wife, slipping the ring onto your finger, sitting beside you on the pelamin, and celebrating our sanding surrounded by the family and friends we love. But more than the wedding, I am excited for the marriage: for all the mornings, challenges, celebrations, and quiet but exciting years we will share after it.</p>
         </div>
       </section>
 
-      <section className="bg-rose-950 px-6 py-28 text-center text-rose-50 md:py-36">
+      <section className="bg-[#4c0519] px-6 py-28 text-center text-rose-50 md:py-36">
         <div className="mx-auto max-w-3xl">
           <Heart className="mx-auto h-8 w-8 fill-rose-400 text-rose-400" />
           <h2 className="mt-8 font-serif text-4xl md:text-6xl">My favourite story is still us.</h2>
