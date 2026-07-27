@@ -193,7 +193,7 @@ export default function OurFirstAnniversary() {
             </div>
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">For Harissa</p>
             <h1 className="font-serif text-4xl leading-tight text-[#4c0519] md:text-6xl">A year since you said yes</h1>
-            <p className="mx-auto mt-5 max-w-md leading-relaxed text-stone-600">I made you something to remember how far we have come — and everything waiting for us ahead.</p>
+            <p className="mx-auto mt-5 max-w-md leading-relaxed text-stone-600">I made you something so that every time you forget, you can remember again how far we have come and everything waiting for us ahead.</p>
             <button onClick={openLetter} className="mt-9 rounded-full bg-rose-600 px-7 py-3.5 font-medium text-white shadow-lg shadow-rose-200 transition hover:-translate-y-0.5 hover:bg-rose-700">
               Open our story
             </button>
