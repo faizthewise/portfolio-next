@@ -41,7 +41,7 @@ const engagementPhotos = [
 ];
 
 const homePhotos = [
-  { type: "video", orientation: "portrait", src: "/images/anniversary/IMG_2716.mp4", label: "Our first home expo", caption: "Experiencing our first home expo together made the dream of building a home with you feel a little more real." },
+  { type: "video", orientation: "portrait", src: "/images/anniversary/IMG_2716-compatible.m4v", label: "Our first home expo", caption: "Experiencing our first home expo together made the dream of building a home with you feel a little more real." },
   { type: "image", orientation: "portrait", src: "/images/anniversary/home-1.jpg", label: "Planning our home", caption: "I loved planning our home with you and imagining how every little corner could become ours." },
   { type: "image", orientation: "landscape", src: "/images/anniversary/key-day.jpg", label: "Our key day", caption: "Holding the keys to our first home together felt like the beginning of an exciting new chapter for us." },
   { type: "image", orientation: "portrait", src: "/images/anniversary/key-day-2.jpg", label: "Our first step inside", caption: "The first time we stepped inside our house, I could already imagine all the memories we would make there." },
@@ -150,7 +150,7 @@ function HomeScrapbook() {
         <figure className="rotate-1 rounded-sm bg-white p-3 pb-7 shadow-lg">
           <div className={`relative mx-auto w-full overflow-hidden bg-rose-50 ${photo.orientation === "portrait" ? "aspect-[9/16] max-w-sm" : "aspect-[4/3]"}`}>
             {photo.type === "video" ? (
-              <video ref={videoRef} key={photo.src} src={photo.src} aria-label={photo.label} loop playsInline controls preload="metadata" className="h-full w-full object-cover" />
+              <video ref={videoRef} key={photo.src} src={photo.src} aria-label={photo.label} loop playsInline controls preload="auto" className="h-full w-full object-cover" />
             ) : (
               <Image key={active} src={photo.src} alt={photo.label} fill className="object-cover" />
             )}
