@@ -211,7 +211,7 @@ export default function OurFirstAnniversary() {
         <div className="relative max-w-3xl">
           <p className="mb-5 text-sm font-bold uppercase tracking-[0.3em] text-rose-500">20 July · One year ago</p>
           <h1 className="font-serif text-5xl leading-[1.08] text-[#4c0519] md:text-7xl">You clicked <span className="italic text-rose-600">yes</span>,<br />and my whole world changed.</h1>
-          <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-stone-600 md:text-xl">A year ago, you chose to be my girlfriend. I still feel incredibly lucky that you chose me — you have brought a million blessings into my life, through every laugh, every quiet moment, every lesson, and every bit of love we have shared since.</p>
+          <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-stone-600 md:text-xl">A year ago, you chose to be my girlfriend. I still feel incredibly lucky that you chose me. You have brought a million blessings into my life, through every laugh, every quiet moment, every lesson, and every bit of love we have shared since.</p>
         </div>
         <div className="absolute bottom-8 flex flex-col items-center gap-2 text-rose-500">
           <span className="text-xs uppercase tracking-[0.22em]">Our first chapter</span>
@@ -225,7 +225,7 @@ export default function OurFirstAnniversary() {
             <Sparkles className="mx-auto mb-5 h-7 w-7 text-amber-500" />
             <p className="text-sm font-bold uppercase tracking-[0.25em] text-rose-500">365 days of us</p>
             <h2 className="mt-4 font-serif text-4xl text-[#4c0519] md:text-5xl">A year I will always treasure</h2>
-            <p className="mt-5 text-lg leading-8 text-stone-600">We filled this year with so many moments — big adventures, quiet dates, silly conversations, and ordinary days that felt extraordinary simply because they were ours.</p>
+            <p className="mt-5 text-lg leading-8 text-stone-600">We filled this year with so many moments. Big adventures, quiet dates, silly conversations, and ordinary days that felt extraordinary simply because they were ours.</p>
           </div>
           <YearFilmstrip />
         </div>
@@ -238,7 +238,7 @@ export default function OurFirstAnniversary() {
             <div className="mb-7 flex h-14 w-14 items-center justify-center rounded-full bg-rose-800"><Heart className="h-6 w-6 fill-current" /></div>
             <p className="text-sm font-bold uppercase tracking-[0.28em] text-rose-300">6 June · We got engaged</p>
             <h2 className="mt-4 font-serif text-4xl leading-tight md:text-6xl">One step closer to forever.</h2>
-            <p className="mt-7 text-lg leading-8 text-rose-100/80">That day, our promises became even bigger. We were no longer only dreaming about a life together — we were choosing it, planning it, and walking towards it hand in hand.</p>
+            <p className="mt-7 text-lg leading-8 text-rose-100/80">That day, our promises became even bigger. We were no longer only dreaming about a life together. We were choosing it, planning it, and walking towards it hand in hand.</p>
             <p className="mt-5 text-lg leading-8 text-rose-100/80">Being your fiancé is one of the greatest honours of my life. I cannot wait for the day I get to call you my wife.</p>
           </div>
         </div>
@@ -251,7 +251,7 @@ export default function OurFirstAnniversary() {
               <div className="flex gap-3 text-rose-700"><Home className="h-8 w-8" /><KeyRound className="h-8 w-8" /></div>
               <p className="mt-7 text-sm font-bold uppercase tracking-[0.28em] text-rose-600">Our next little adventure</p>
               <h2 className="mt-4 font-serif text-4xl leading-tight text-[#4c0519] md:text-5xl">Turning a house into our home.</h2>
-              <p className="mt-6 text-lg leading-8 text-stone-600">From walking through home expos and imagining every corner, to finally holding the keys in our hands — we are building more than a house. We are making a place for slow mornings, shared dinners, laughter in every room, and a lifetime of coming home to each other.</p>
+              <p className="mt-6 text-lg leading-8 text-stone-600">From walking through home expos and imagining every corner, to finally holding the keys in our hands, we are building more than a house. We are making a place for slow mornings, shared dinners, laughter in every room, and a lifetime of coming home to each other.</p>
             </div>
             <HomeScrapbook />
           </div>
@@ -265,7 +265,7 @@ export default function OurFirstAnniversary() {
           <CalendarDays className="mx-auto h-10 w-10 text-rose-600" />
           <p className="mt-7 text-sm font-bold uppercase tracking-[0.3em] text-rose-500">28 November · Our wedding day</p>
           <h2 className="mt-5 font-serif text-5xl leading-tight text-[#4c0519] md:text-7xl">I cannot wait to marry you.</h2>
-          <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-stone-600 md:text-xl">I am excited for every part of that day — the moment our akad nikah makes us husband and wife, slipping the ring onto your finger, sitting beside you on the pelamin, and celebrating our wedding surrounded by the family and friends we love. But more than the wedding, I am excited for the marriage: for all the mornings, challenges, celebrations, and quiet but exciting years we will share after it.</p>
+          <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-stone-600 md:text-xl">I am excited for every part of that day. The moment our akad nikah makes us husband and wife, slipping the ring onto your finger, sitting beside you on the pelamin, and celebrating our wedding surrounded by the family and friends we love. But more than the wedding, I am excited for the marriage: for all the mornings, challenges, celebrations, and quiet but exciting years we will share after it.</p>
         </div>
       </section>
 
