@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   CalendarDays,
@@ -16,26 +16,35 @@ import {
 const placeholder = "/images/anniversary-placeholder.svg";
 
 const firstYearMemories = [
-  { src: placeholder, title: "Our little adventures", note: "The places were lovely, but you were always my favourite view." },
-  { src: placeholder, title: "The ordinary days", note: "Even the simplest days became memories because I spent them with you." },
-  { src: placeholder, title: "All our laughter", note: "Thank you for making this year feel lighter, warmer, and so full of joy." },
-  { src: placeholder, title: "Growing together", note: "Through every season, I kept finding new reasons to love you." },
-  { src: placeholder, title: "Our favourite dates", note: "Every date with you gave me another moment I wanted to keep." },
-  { src: placeholder, title: "Just being us", note: "My favourite memories are the ones where we were completely ourselves." },
+  { src: "/images/anniversary/memories-1.jpg", title: "My forever plus-one", note: "Our first wedding together and now I know I want to keep bringing the prettiest plus-one to every wedding to come." },
+  { src: "/images/anniversary/memories-2.jpg", title: "Our first beach day", note: "That first day by the sea made me hope it would be the first of many places we would discover together." },
+  { src: "/images/anniversary/memories-3b.jpg", title: "Sunset by the sea", note: "The sunset from our first beach trip was beautiful, but you were still my favourite view." },
+  { src: "/images/anniversary/memories-3c.jpg", title: "Slow mornings with you", note: "Coffee, a good book, and the quiet joy of sharing an unhurried morning together." },
+  { src: "/images/anniversary/memories-4.jpg", title: "Every kind of date with you", note: "From quiet dinners to thrilling adventures, I want to experience every kind of date with you." },
+  { src: "/images/anniversary/memories-5.JPG", title: "Meeting your parents", note: "I was extremely nervous that day, but meeting your parents made me feel one step closer to being part of your world." },
+  { src: "/images/anniversary/memories-5b.jpg", title: "Birthday girl", note: "Being there to celebrate you and seeing how happy you were made this day just as special to me." },
+  { src: "/images/anniversary/memories-5a.jpg", title: "Celebrating your birthday", note: "You deserve to feel loved and celebrated, and I was so happy to make your day a little more special." },
+  { src: "/images/anniversary/memories-6.PNG", title: "Our haunted-house adventure", note: "I love trying new things with you—even being scared feels fun when I get to experience it by your side." },
+  { src: "/images/anniversary/memories-7.jpg", title: "The day our families met", note: "Seeing our families together for the first time made me grateful for how far we have come and excited for everything ahead of us." },
+  { src: "/images/anniversary/memories-9.jpg", title: "My favourite birthday gift", note: "Of all the moments from my birthday, having you close was the gift I treasured most." },
+  { src: "/images/anniversary/memories-10.jpg", title: "Our Pilates date", note: "Stay healthy together, stay longer together." },
 ];
 
 const engagementPhotos = [
-  { src: "/images/anniversary/engagement-2.jpg", caption: "The official start of our forever." },
-  { src: "/images/anniversary/engagement-3.jpg", caption: "You have no idea how beautiful you are." },
-  { src: "/images/anniversary/engagement-5.jpg", caption: "So happy to have a ring to match yours." },
-  { src: "/images/anniversary/engagement-4.jpg", caption: "Even from far, we look sweet together." },
+  { src: "/images/anniversary/engagement-2.jpg", caption: "The day I got to call you my fiancée, I felt like the luckiest man." },
+  { src: "/images/anniversary/engagement-6.jpg", caption: "We planned it together, and it turned out more beautiful than we imagined." },
+  { src: "/images/anniversary/engagement-3.jpg", caption: "You looked beautiful, and I felt so lucky knowing my future was with you." },
+  { src: "/images/anniversary/engagement-7.jpg", caption: "Every step toward you felt like a step toward our future." },
+  { src: "/images/anniversary/engagement-8.jpg", caption: "Even on such an important day, you still knew how to make me laugh." },
+  { src: "/images/anniversary/engagement-5.jpg", caption: "Two rings and one promise to choose each other, always." },
+  { src: "/images/anniversary/engagement-4.jpg", caption: "In this quiet moment, forever with you finally felt real." },
 ];
 
 const homePhotos = [
-  { src: placeholder, label: "Home expo", caption: "Dreaming about every little corner." },
-  { src: placeholder, label: "Finding ideas", caption: "Choosing what our future could look like." },
-  { src: placeholder, label: "Our house", caption: "Standing where so many memories will be made." },
-  { src: "/images/anniversary/key-day.jpg", label: "Key day", caption: "The first key to our first home together." },
+  { type: "video", orientation: "portrait", src: "/images/anniversary/IMG_2716.mp4", label: "Our first home expo", caption: "Experiencing our first home expo together made the dream of building a home with you feel a little more real." },
+  { type: "image", orientation: "portrait", src: "/images/anniversary/home-1.jpg", label: "Planning our home", caption: "I loved planning our home with you and imagining how every little corner could become ours." },
+  { type: "image", orientation: "landscape", src: "/images/anniversary/key-day.jpg", label: "Our key day", caption: "Holding the keys to our first home together felt like the beginning of an exciting new chapter for us." },
+  { type: "image", orientation: "portrait", src: "/images/anniversary/key-day-2.jpg", label: "Our first step inside", caption: "The first time we stepped inside our house, I could already imagine all the memories we would make there." },
 ];
 
 function ArrowButton({ direction, onClick, light = false }: { direction: "previous" | "next"; onClick: () => void; light?: boolean }) {
@@ -85,12 +94,12 @@ function EngagementSlideshow() {
 
   return (
     <div className="mx-auto w-full max-w-lg">
-      <div className="relative mb-10 aspect-[4/3]">
+      <div className="relative mb-10 h-96 sm:h-[30rem]">
         <div className="absolute inset-5 rotate-6 rounded-sm bg-rose-300/30" />
         <div className="absolute inset-3 -rotate-3 rounded-sm bg-rose-100/20" />
-        <figure className="absolute inset-0 -rotate-1 rounded-sm bg-white p-3 pb-12 shadow-2xl transition-transform duration-500 hover:rotate-0">
+        <figure className="absolute inset-0 -rotate-1 rounded-sm bg-white p-3 pb-28 shadow-2xl transition-transform duration-500 hover:rotate-0">
           <div className="relative h-full overflow-hidden bg-rose-50"><Image key={active} src={engagementPhotos[active].src} alt={`Engagement memory ${active + 1}`} fill className="object-cover" /></div>
-          <figcaption className="absolute inset-x-5 bottom-3 text-center font-serif text-lg italic text-rose-900">{engagementPhotos[active].caption}</figcaption>
+          <figcaption className="absolute inset-x-5 bottom-4 text-center font-serif text-base leading-5 italic text-rose-900 sm:text-lg sm:leading-6">{engagementPhotos[active].caption}</figcaption>
         </figure>
       </div>
       <div className="flex items-center justify-center gap-4">
@@ -105,19 +114,57 @@ function EngagementSlideshow() {
 function HomeScrapbook() {
   const [active, setActive] = useState(0);
   const photo = homePhotos[active];
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || photo.type !== "video") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.muted = false;
+          video.volume = 1;
+          video.play().catch(() => {
+            video.muted = true;
+            video.play().catch(() => undefined);
+          });
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.6 },
+    );
+
+    observer.observe(video);
+    return () => {
+      observer.disconnect();
+      video.pause();
+    };
+  }, [active, photo.type]);
 
   return (
     <div className="relative rounded-2xl bg-[#d8c3ad] p-4 shadow-xl md:p-7">
       <div className="absolute -top-3 left-1/2 h-8 w-28 -translate-x-1/2 rotate-2 bg-amber-100/70 shadow-sm" />
       <div className="rounded-xl bg-[radial-gradient(#c9b198_1px,transparent_1px)] bg-[length:18px_18px] p-3 md:p-6">
         <figure className="rotate-1 rounded-sm bg-white p-3 pb-7 shadow-lg">
-          <div className="relative aspect-[4/3] overflow-hidden bg-rose-50"><Image key={active} src={photo.src} alt={photo.label} fill className="object-cover" /></div>
+          <div className={`relative mx-auto w-full overflow-hidden bg-rose-50 ${photo.orientation === "portrait" ? "aspect-[9/16] max-w-sm" : "aspect-[4/3]"}`}>
+            {photo.type === "video" ? (
+              <video ref={videoRef} key={photo.src} src={photo.src} aria-label={photo.label} loop playsInline controls preload="metadata" className="h-full w-full object-cover" />
+            ) : (
+              <Image key={active} src={photo.src} alt={photo.label} fill className="object-cover" />
+            )}
+          </div>
           <figcaption className="px-2 pt-5"><span className="font-serif text-2xl text-[#4c0519]">{photo.label}</span><p className="mt-1 text-sm text-stone-500">{photo.caption}</p></figcaption>
         </figure>
-        <div className="mt-6 grid grid-cols-4 gap-2">
+        <div className="mt-6 grid grid-cols-5 gap-2">
           {homePhotos.map((item, index) => (
             <button key={index} onClick={() => setActive(index)} aria-label={`Show ${item.label}`} className={`relative aspect-square overflow-hidden rounded-md border-2 bg-white transition ${index === active ? "-translate-y-1 rotate-2 border-rose-600 shadow-md" : "border-white opacity-65 hover:opacity-100"}`}>
-              <Image src={item.src} alt="" fill className="object-cover" />
+              {item.type === "video" ? (
+                <video src={item.src} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+              ) : (
+                <Image src={item.src} alt="" fill className="object-cover" />
+              )}
               <span className="absolute inset-x-0 bottom-0 bg-stone-900/65 px-1 py-1 text-[9px] font-semibold text-white sm:text-xs">{index + 1}</span>
             </button>
           ))}
@@ -218,7 +265,7 @@ export default function OurFirstAnniversary() {
           <CalendarDays className="mx-auto h-10 w-10 text-rose-600" />
           <p className="mt-7 text-sm font-bold uppercase tracking-[0.3em] text-rose-500">28 November · Our wedding day</p>
           <h2 className="mt-5 font-serif text-5xl leading-tight text-[#4c0519] md:text-7xl">I cannot wait to marry you.</h2>
-          <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-stone-600 md:text-xl">I am excited for every part of that day — the moment our akad nikah makes us husband and wife, slipping the ring onto your finger, sitting beside you on the pelamin, and celebrating our sanding surrounded by the family and friends we love. But more than the wedding, I am excited for the marriage: for all the mornings, challenges, celebrations, and quiet but exciting years we will share after it.</p>
+          <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-stone-600 md:text-xl">I am excited for every part of that day — the moment our akad nikah makes us husband and wife, slipping the ring onto your finger, sitting beside you on the pelamin, and celebrating our wedding surrounded by the family and friends we love. But more than the wedding, I am excited for the marriage: for all the mornings, challenges, celebrations, and quiet but exciting years we will share after it.</p>
         </div>
       </section>
 
