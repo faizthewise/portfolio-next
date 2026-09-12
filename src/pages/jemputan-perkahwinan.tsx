@@ -118,11 +118,11 @@ const getWishesFromEntries = (entries: unknown): WeddingWish[] => {
 function WhiteFlower({ x, y, scale = 1, rotation = 0 }: { x: number; y: number; scale?: number; rotation?: number }) {
   return (
     <g transform={`translate(${x} ${y}) rotate(${rotation}) scale(${scale})`}>
-      <ellipse cx="0" cy="-11" rx="7" ry="12" fill="#fff8ef" stroke="#c5ad78" strokeWidth="1" />
-      <ellipse cx="10.5" cy="-3.5" rx="7" ry="12" transform="rotate(72 10.5 -3.5)" fill="#fff8ef" stroke="#c5ad78" strokeWidth="1" />
-      <ellipse cx="6.5" cy="9" rx="7" ry="12" transform="rotate(144 6.5 9)" fill="#fff8ef" stroke="#c5ad78" strokeWidth="1" />
-      <ellipse cx="-6.5" cy="9" rx="7" ry="12" transform="rotate(216 -6.5 9)" fill="#fff8ef" stroke="#c5ad78" strokeWidth="1" />
-      <ellipse cx="-10.5" cy="-3.5" rx="7" ry="12" transform="rotate(288 -10.5 -3.5)" fill="#fff8ef" stroke="#c5ad78" strokeWidth="1" />
+      <ellipse cx="0" cy="-11" rx="7" ry="12" fill="#fffdf8" stroke="#c5ad78" strokeWidth="1" />
+      <ellipse cx="10.5" cy="-3.5" rx="7" ry="12" transform="rotate(72 10.5 -3.5)" fill="#fffdf8" stroke="#c5ad78" strokeWidth="1" />
+      <ellipse cx="6.5" cy="9" rx="7" ry="12" transform="rotate(144 6.5 9)" fill="#fffdf8" stroke="#c5ad78" strokeWidth="1" />
+      <ellipse cx="-6.5" cy="9" rx="7" ry="12" transform="rotate(216 -6.5 9)" fill="#fffdf8" stroke="#c5ad78" strokeWidth="1" />
+      <ellipse cx="-10.5" cy="-3.5" rx="7" ry="12" transform="rotate(288 -10.5 -3.5)" fill="#fffdf8" stroke="#c5ad78" strokeWidth="1" />
       <circle r="5.2" fill="#d1af63" />
       <circle r="2" fill="#8f7440" />
     </g>
@@ -137,64 +137,57 @@ function Ornament() {
       <WhiteFlower x={108} y={37} scale={0.72} rotation={-12} />
       <WhiteFlower x={130} y={32} scale={0.92} rotation={8} />
       <WhiteFlower x={153} y={38} scale={0.68} rotation={24} />
-      <path d="M112 62h36" stroke="#b7a16e" strokeWidth="1.4" />
-      <circle cx="104" cy="62" r="2" fill="#b7a16e" />
-      <circle cx="156" cy="62" r="2" fill="#b7a16e" />
+      <path d="M112 62h36" stroke="#a79a78" strokeWidth="1.4" />
+      <circle cx="104" cy="62" r="2" fill="#a79a78" />
+      <circle cx="156" cy="62" r="2" fill="#a79a78" />
     </svg>
   );
 }
 
-function BotanicalCorner({ className }: { className: string }) {
+function InvitationCoverArtwork({ onOpen }: { onOpen: () => void }) {
   return (
-    <svg viewBox="0 0 260 300" aria-hidden="true" className={className}>
-      <path d="M17 286C36 215 73 171 132 131c42-28 74-60 105-112" fill="none" stroke="#879783" strokeWidth="2" />
-      <path d="M48 248c33-5 54-22 69-51m-7-34c30-5 51-19 68-43m-30-2c31-3 52-15 69-36M29 272c18-35 19-62 16-87" fill="none" stroke="#879783" strokeWidth="1.4" />
-      <path d="M57 221c-7-33 12-56 40-57-2 27-15 47-40 57Zm49-63c-1-31 20-50 46-46-6 24-21 41-46 46Zm53-50c5-27 26-40 48-32-9 20-25 32-48 32ZM39 250c29-4 48 12 50 36-25 0-42-11-50-36Zm43-65c27-7 49 6 54 30-24 3-42-6-54-30Zm54-57c24-10 46 0 54 21-21 6-39 0-54-21Z" fill="#879783" opacity=".8" />
-      <path d="M30 211c-12-18-3-35 13-39 6 17 1 30-13 39Zm70-17c16-18 35-14 43 0-14 10-29 10-43 0Zm33-68c-8-20 4-35 21-36 3 17-4 29-21 36Zm58-28c16-16 34-11 40 4-15 8-28 7-40-4Z" fill="#aab6a5" opacity=".9" />
-      <WhiteFlower x={51} y={231} scale={1.2} rotation={-8} />
-      <WhiteFlower x={92} y={192} scale={0.82} rotation={22} />
-      <WhiteFlower x={118} y={161} scale={1.05} rotation={-18} />
-      <WhiteFlower x={153} y={126} scale={0.78} rotation={12} />
-      <WhiteFlower x={183} y={86} scale={1.12} rotation={-4} />
-      <WhiteFlower x={218} y={43} scale={0.72} rotation={28} />
-      <WhiteFlower x={38} y={269} scale={0.7} rotation={16} />
-      <g fill="#ad7180" stroke="#8d5362" strokeWidth="1">
-        <circle cx="76" cy="215" r="11" />
-        <circle cx="69" cy="207" r="7" />
-        <circle cx="84" cy="205" r="7" />
-      </g>
-      <circle cx="76" cy="208" r="4" fill="#e7cfd4" />
-    </svg>
-  );
-}
+    <div className="mx-auto w-full max-w-md">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="sealed-invitation group relative block w-full overflow-hidden text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#747d59] focus-visible:ring-offset-4 focus-visible:ring-offset-[#dfe1dc]"
+        aria-label="Buka undangan perkahwinan Harissa Amani dan Muhammad Faiz"
+      >
+        <span className="seal-inner-card absolute inset-4 grid place-items-center px-12 py-20">
+          <span>
+            <span className="block text-[9px] font-semibold uppercase tracking-[0.32em] text-[#777d72]">Walimatulurus</span>
+            <span className={`${titleFont.className} mt-4 block text-xl tracking-wide text-[#66704b]`}>{wedding.hosts}</span>
+            <span className={`${namesFont.className} mt-7 block text-4xl leading-tight text-[#66704b]`}>
+              {wedding.bride} <span className={`${titleFont.className} text-base italic text-[#9b8b65]`}>&</span> {wedding.groom}
+            </span>
+            <span className="mt-6 block text-[9px] font-semibold uppercase tracking-[0.2em] text-[#777d72]">{wedding.dateLabel}</span>
+          </span>
+        </span>
 
-function InvitationEnvelope() {
-  return (
-    <svg viewBox="0 0 520 360" aria-hidden="true" className="mx-auto w-full max-w-lg drop-shadow-2xl">
-      <rect x="45" y="64" width="430" height="250" rx="5" fill="#fff8ef" stroke="#b4934f" strokeWidth="2" />
-      <path d="M47 67 260 224 473 67" fill="#f9ece7" stroke="#c6a96a" strokeWidth="2" />
-      <path d="M47 311 205 175c31-27 79-27 110 0l158 136" fill="#fff8ef" stroke="#c6a96a" strokeWidth="2" />
-      <path d="M48 311 211 174c29-24 69-24 98 0l163 137" fill="none" stroke="#d7c49a" strokeWidth="1" />
-      <path d="M68 92c42 19 65 39 92 76M452 92c-42 19-65 39-92 76" fill="none" stroke="#879783" strokeWidth="2" />
-      <path d="M77 102c17-19 37-14 44 3-16 8-31 7-44-3Zm36 30c15-18 34-14 41 1-15 8-28 7-41-1Zm330-30c-17-19-37-14-44 3 16 8 31 7 44-3Zm-36 30c-15-18-34-14-41 1 15 8 28 7 41-1Z" fill="#9dad96" />
-      <WhiteFlower x={78} y={83} scale={1.05} rotation={-18} />
-      <WhiteFlower x={112} y={112} scale={0.76} rotation={20} />
-      <WhiteFlower x={442} y={83} scale={1.05} rotation={18} />
-      <WhiteFlower x={408} y={112} scale={0.76} rotation={-20} />
-      <g transform="translate(260 221)">
-        <circle r="35" fill="#a86273" stroke="#8c4e5e" strokeWidth="3" />
-        <circle r="27" fill="none" stroke="#ddb7bf" strokeWidth="1.5" />
-        <path d="M0 15C-27-1-18-22-6-22c7 0 11 4 14 9 3-5 7-9 14-9 12 0 21 21-22 37Z" fill="#f5d9de" />
-      </g>
-    </svg>
+        <span className="seal-gate seal-gate-left" aria-hidden="true">
+          {[12, 29, 46, 63, 80].map((top) => <span key={top} className="seal-scallop" style={{ top: `${top}%` }} />)}
+        </span>
+        <span className="seal-gate seal-gate-right" aria-hidden="true">
+          {[12, 29, 46, 63, 80].map((top) => <span key={top} className="seal-scallop" style={{ top: `${top}%` }} />)}
+        </span>
+
+        <span className="wax-seal absolute left-1/2 top-1/2 z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center transition duration-300 group-hover:scale-105" aria-hidden="true">
+          <svg viewBox="0 0 64 64" className="h-10 w-10" fill="none">
+            <path d="M31 49c1-15 4-25 12-35M33 38c-8-4-11-10-10-16 7 1 11 7 10 16Zm4-9c1-8 6-13 13-14 0 7-5 12-13 14Zm-7 16c-7-1-12-5-14-11 7-1 12 3 14 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="31" cy="49" r="2" fill="currentColor" />
+          </svg>
+        </span>
+      </button>
+      <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#777d72]">Tekan mohor untuk membuka</p>
+    </div>
   );
 }
 
 function SectionTitle({ eyebrow, children, light = false }: { eyebrow: string; children: ReactNode; light?: boolean }) {
   return (
     <div className="mx-auto mb-10 max-w-xl text-center">
-      <p className={`text-[11px] font-bold uppercase tracking-[0.32em] ${light ? "text-[#e8d8b5]" : "text-[#9a5d6c]"}`}>{eyebrow}</p>
-      <h2 className={`${titleFont.className} mt-3 text-4xl font-medium tracking-wide sm:text-5xl ${light ? "text-[#fff8ef]" : "text-[#304254]"}`}>{children}</h2>
+      <p className={`text-[10px] font-semibold uppercase tracking-[0.34em] ${light ? "text-[#66704b]" : "text-[#7c8467]"}`}>{eyebrow}</p>
+      <h2 className={`${titleFont.className} mt-3 text-4xl font-medium tracking-wide text-[#4f5843] sm:text-5xl`}>{children}</h2>
       <Ornament />
     </div>
   );
@@ -348,100 +341,75 @@ export default function JemputanPerkahwinan() {
       <Head>
         <title>{wedding.bride} & {wedding.groom} — Undangan Walimatulurus</title>
         <meta name="description" content={`Dengan penuh kesyukuran, ${wedding.hosts} menjemput anda ke majlis perkahwinan puteri mereka, ${wedding.bride}, bersama ${wedding.groom} pada 28 November 2026.`} />
-        <meta name="theme-color" content="#304254" />
+        <meta name="theme-color" content="#dfe1dc" />
       </Head>
 
       {!invitationOpened ? (
-        <main className="english-wedding-hero relative grid min-h-screen place-items-center overflow-hidden px-6 py-12 text-center text-[#304254]">
-          <div className="absolute inset-4 border border-[#b7a16e]/55 sm:inset-7" />
-          <div className="absolute inset-[1.35rem] border border-[#b7a16e]/25 sm:inset-[2.05rem]" />
-          <BotanicalCorner className="pointer-events-none absolute -left-12 -top-12 w-56 rotate-90 opacity-75 sm:w-80" />
-          <BotanicalCorner className="pointer-events-none absolute -bottom-12 -right-12 w-56 -rotate-90 opacity-75 sm:w-80" />
-          <div className="relative z-10 mx-auto w-full max-w-2xl">
-            <p className={`${titleFont.className} text-sm font-semibold uppercase tracking-[0.35em] text-[#9a5d6c]`}>Undangan Walimatulurus</p>
-            <div className="mt-5">
-              <InvitationEnvelope />
-            </div>
-            <h1 className={`${namesFont.className} -mt-3 text-5xl leading-tight text-[#304254] sm:text-7xl`}>
-              {wedding.brideFullName} <span className={`${titleFont.className} text-2xl italic text-[#9a5d6c]`}>&</span> {wedding.groomFullName}
-            </h1>
-            <p className="mt-3 text-sm text-[#68776d]">Dengan segala hormatnya daripada {wedding.hosts}</p>
-            <button
-              type="button"
-              onClick={() => {
+        <main className="english-wedding-hero relative grid min-h-screen place-items-center overflow-hidden px-5 py-10 text-center text-[#4f5843] sm:px-8 sm:py-14">
+          <div className="relative z-10 mx-auto w-full max-w-xl">
+            <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.38em] text-[#777d72]">Sebuah undangan daripada keluarga pengantin perempuan</p>
+            <InvitationCoverArtwork
+              onOpen={() => {
                 window.scrollTo({ top: 0 });
                 setInvitationOpened(true);
               }}
-              className="mt-7 rounded-full bg-[#304254] px-9 py-3.5 text-sm font-semibold uppercase tracking-[0.16em] text-white shadow-xl shadow-[#6f4050]/20 transition hover:-translate-y-0.5 hover:bg-[#455d72] focus:outline-none focus:ring-2 focus:ring-[#9a5d6c] focus:ring-offset-2 focus:ring-offset-[#efcfd5]"
-            >
-              Buka Undangan
-            </button>
+            />
           </div>
         </main>
       ) : (
-        <main className="english-invitation-enter english-wedding-paper min-h-screen bg-[#fff8ef] text-[#304254] antialiased selection:bg-[#efcfd5]">
-        <section className="english-wedding-hero relative grid min-h-screen place-items-center overflow-hidden px-6 py-16 text-center">
-          <div className="absolute inset-4 rounded-sm border border-[#b7a16e]/55 sm:inset-7" />
-          <div className="absolute inset-[1.35rem] rounded-sm border border-[#b7a16e]/25 sm:inset-[2.05rem]" />
-          <BotanicalCorner className="pointer-events-none absolute -left-12 -top-10 w-52 rotate-90 opacity-75 sm:w-72" />
-          <BotanicalCorner className="pointer-events-none absolute -right-12 -top-10 hidden w-52 rotate-180 opacity-55 sm:block sm:w-72" />
-          <BotanicalCorner className="pointer-events-none absolute -bottom-10 -left-12 hidden w-52 opacity-55 sm:block sm:w-72" />
-          <BotanicalCorner className="pointer-events-none absolute -bottom-10 -right-12 w-52 -rotate-90 opacity-75 sm:w-72" />
-          <div className="absolute -left-16 -top-20 h-72 w-72 rounded-full bg-[#efcfd5]/20 blur-3xl" />
-          <div className="absolute -bottom-24 -right-12 h-80 w-80 rounded-full bg-[#a8b3a2]/20 blur-3xl" />
-          <div className="english-invitation-card relative z-10 mx-auto w-full max-w-3xl px-6 py-12 sm:px-14 sm:py-16">
-            <p className={`${titleFont.className} text-sm font-semibold uppercase tracking-[0.35em] text-[#9a5d6c]`}>Walimatulurus</p>
+        <main className="english-invitation-enter english-wedding-paper min-h-screen bg-[#fffdf8] text-[#4f5843] antialiased selection:bg-[#dfe3da]">
+        <section className="english-wedding-hero relative grid min-h-screen place-items-center overflow-x-hidden px-5 py-20 text-center sm:px-8 sm:py-24">
+          <div className="english-invitation-card relative z-10 mx-auto w-full max-w-3xl px-7 pb-28 pt-32 sm:px-16 sm:pb-36 sm:pt-44">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.38em] text-[#747b70]">Walimatulurus</p>
             <p className="mt-5 font-serif text-xl italic text-[#68776d]">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيم</p>
             <p className="mx-auto mt-6 max-w-lg text-sm leading-7 text-[#68776d]">
               Dengan penuh kesyukuran ke hadrat Allah SWT, kami
             </p>
-            <p className={`${titleFont.className} mt-2 text-3xl font-medium text-[#9a5d6c] sm:text-4xl`}>{wedding.hosts}</p>
+            <p className={`${titleFont.className} mt-2 text-3xl font-medium tracking-wide text-[#66704b] sm:text-4xl`}>{wedding.hosts}</p>
             <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-[#68776d]">
               dengan segala hormatnya menjemput Dato&apos;, Datin, Tuan, Puan, Encik dan Cik seisi keluarga ke majlis perkahwinan puteri kami
             </p>
-            <h1 className={`${namesFont.className} mt-7 text-5xl font-normal leading-[0.9] text-[#304254] sm:text-7xl`}>
+            <h1 className={`${namesFont.className} mt-7 text-4xl font-normal leading-[0.95] text-[#66704b] sm:text-6xl`}>
               {wedding.brideFullName}
-              <span className={`${titleFont.className} mx-auto my-3 block text-2xl font-normal italic text-[#9a5d6c]`}>&</span>
+              <span className={`${titleFont.className} mx-auto my-3 block text-xl font-normal italic text-[#9b8b65]`}>&</span>
               {wedding.groomFullName}
             </h1>
             <Ornament />
             <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <a href="#lokasi" className="inline-flex items-center gap-2 rounded-full border border-[#304254]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#304254] shadow-sm transition hover:-translate-y-0.5 hover:border-[#9a5d6c]">
+              <a href="#lokasi" className="inline-flex items-center gap-2 rounded-full border border-[#7c8467]/25 bg-[#fffdf8]/80 px-5 py-3 text-sm font-semibold text-[#4f5843] shadow-sm transition hover:-translate-y-0.5 hover:border-[#747d59]">
                 <MapPin className="h-4 w-4" /> Lokasi
               </a>
-              <a href="#rsvp" className="inline-flex items-center gap-2 rounded-full bg-[#304254] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#455d72]">
+              <a href="#rsvp" className="inline-flex items-center gap-2 rounded-full bg-[#5f684d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#4f5843]">
                 <Heart className="h-4 w-4" /> RSVP
               </a>
-              <a href="#hadiah" className="inline-flex items-center gap-2 rounded-full border border-[#304254]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#304254] shadow-sm transition hover:-translate-y-0.5 hover:border-[#9a5d6c]">
+              <a href="#hadiah" className="inline-flex items-center gap-2 rounded-full border border-[#4f5843]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#4f5843] shadow-sm transition hover:-translate-y-0.5 hover:border-[#747d59]">
                 <Gift className="h-4 w-4" /> Hadiah
               </a>
               {showSalam && (
-                <a href="#salam-kaut" className="inline-flex items-center gap-2 rounded-full border border-[#9a5d6c]/30 bg-[#9a5d6c] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#814a58]">
+                <a href="#salam-kaut" className="inline-flex items-center gap-2 rounded-full border border-[#747d59]/30 bg-[#747d59] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#5d664b]">
                   <QrCode className="h-4 w-4" /> Salam Kaut
                 </a>
               )}
             </div>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-medium text-[#304254]">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-medium text-[#4f5843]">
               <span>{wedding.dateLabel}</span>
-              <span className="hidden h-1 w-1 rounded-full bg-[#9a5d6c] sm:block" />
+              <span className="hidden h-1 w-1 rounded-full bg-[#747d59] sm:block" />
               <span>{wedding.timeLabel}</span>
             </div>
-            <a href="#butiran" className="mx-auto mt-9 grid h-12 w-12 place-items-center rounded-full border border-[#9a5d6c]/40 text-[#9a5d6c] transition hover:-translate-y-1 hover:bg-white/60" aria-label="Lihat butiran majlis">
+            <a href="#butiran" className="mx-auto mt-9 grid h-12 w-12 place-items-center rounded-full border border-[#747d59]/40 text-[#747d59] transition hover:-translate-y-1 hover:bg-white/60" aria-label="Lihat butiran majlis">
               <ChevronDown className="h-5 w-5" />
             </a>
           </div>
         </section>
 
-        <section id="butiran" className="relative overflow-hidden border-y border-[#b7a16e]/40 bg-[#304254] px-6 py-24 text-[#fff8ef]">
-          <BotanicalCorner className="pointer-events-none absolute -left-16 -top-16 w-64 opacity-25" />
-          <BotanicalCorner className="pointer-events-none absolute -bottom-16 -right-16 w-64 rotate-180 opacity-25" />
+        <section id="butiran" className="stationery-section relative overflow-hidden border-y border-[#a79a78]/20 bg-[#efefeb] px-6 py-24 text-[#4f5843]">
           <div className="relative">
             <SectionTitle eyebrow="Dengan segala hormatnya" light>Majlis perkahwinan puteri kami</SectionTitle>
             <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
               {[["Hari", countdown.hari], ["Jam", countdown.jam], ["Minit", countdown.minit]].map(([label, value]) => (
-                <div key={label} className="rounded-sm border border-[#e8d8b5]/30 bg-white/5 p-7 text-center backdrop-blur">
-                  <strong className={`${titleFont.className} block text-6xl font-medium text-[#e8d8b5]`}>{value}</strong>
-                  <span className="mt-2 block text-xs uppercase tracking-[0.25em] text-white/60">{label}</span>
+                <div key={label} className="stationery-panel p-7 text-center">
+                  <strong className={`${titleFont.className} block text-6xl font-medium text-[#66704b]`}>{value}</strong>
+                  <span className="mt-2 block text-xs uppercase tracking-[0.25em] text-[#777d72]">{label}</span>
                 </div>
               ))}
             </div>
@@ -451,8 +419,8 @@ export default function JemputanPerkahwinan() {
                 { icon: Sparkles, label: wedding.timeLabel },
                 { icon: MapPin, label: wedding.venue },
               ].map(({ icon: Icon, label }) => (
-                <div key={label} className="flex items-center gap-4 rounded-lg bg-[#fff8ef] p-5 text-[#304254]">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#e6d6bb]"><Icon className="h-5 w-5" /></span>
+                <div key={label} className="stationery-panel flex items-center gap-4 p-5 text-[#4f5843]">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#e4e5dc]"><Icon className="h-5 w-5" /></span>
                   <span className="font-medium">{label}</span>
                 </div>
               ))}
@@ -462,7 +430,7 @@ export default function JemputanPerkahwinan() {
                 href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Majlis Perkahwinan ${wedding.bride} & ${wedding.groom}`)}&dates=20261128T113000/20261128T123000&ctz=Asia%2FKuala_Lumpur&location=${encodeURIComponent(wedding.venue)}&details=${encodeURIComponent(`Dengan penuh kesyukuran, ${wedding.hosts} menjemput tuan/puan ke majlis perkahwinan puteri mereka, ${wedding.bride}, bersama ${wedding.groom}.`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-[#e8d8b5]/30 bg-[#e8d8b5] px-6 py-3.5 text-sm font-bold text-[#304254] shadow-lg shadow-black/10 transition hover:-translate-y-0.5 hover:bg-[#f1e4cb]"
+                className="inline-flex items-center gap-2 rounded-full bg-[#5f684d] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#4f5843]/10 transition hover:-translate-y-0.5 hover:bg-[#4f5843]"
               >
                 <CalendarDays className="h-4 w-4" /> Tambah ke Google Calendar
               </a>
@@ -471,20 +439,18 @@ export default function JemputanPerkahwinan() {
         </section>
 
         <section id="lokasi" className="relative scroll-mt-6 overflow-hidden px-6 py-24">
-          <BotanicalCorner className="pointer-events-none absolute -bottom-20 -left-16 w-64 opacity-35 sm:w-80" />
-          <BotanicalCorner className="pointer-events-none absolute -right-16 -top-20 w-64 rotate-180 opacity-35 sm:w-80" />
           <div className="relative">
             <SectionTitle eyebrow="Tempat berlangsungnya majlis">Kami menanti kehadiran tuan dan puan</SectionTitle>
-            <div className="mx-auto max-w-4xl rounded-sm border-4 border-double border-[#b7a16e]/45 bg-white/75 p-6 shadow-xl shadow-[#745f52]/5 sm:p-10">
+            <div className="stationery-panel mx-auto max-w-4xl p-6 sm:p-10">
               <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
                 <div>
-                  <MapPin className="h-9 w-9 text-[#9a5d6c]" />
-                  <h3 className={`${titleFont.className} mt-4 text-4xl font-medium text-[#304254]`}>{wedding.venue}</h3>
+                  <MapPin className="h-9 w-9 text-[#747d59]" />
+                  <h3 className={`${titleFont.className} mt-4 text-4xl font-medium text-[#4f5843]`}>{wedding.venue}</h3>
                   <p className="mt-3 max-w-lg leading-7 text-[#6f786f]">Kami berdua dan sekeluarga berbesar hati menyambut kehadiran tuan/puan. Pilih aplikasi navigasi untuk mendapatkan arah ke lokasi majlis.</p>
                 </div>
                 <div className="grid gap-3">
                   {maps.map((map) => (
-                    <a key={map.name} href={map.href} target="_blank" rel="noreferrer" className="flex min-w-[190px] items-center justify-between rounded-full border border-[#304254]/15 bg-white px-5 py-3 font-medium transition hover:-translate-y-0.5 hover:border-[#9a5d6c]">
+                    <a key={map.name} href={map.href} target="_blank" rel="noreferrer" className="flex min-w-[190px] items-center justify-between rounded-full border border-[#4f5843]/15 bg-white px-5 py-3 font-medium transition hover:-translate-y-0.5 hover:border-[#747d59]">
                       {map.name}<ExternalLink className="h-4 w-4" />
                     </a>
                   ))}
@@ -494,43 +460,39 @@ export default function JemputanPerkahwinan() {
           </div>
         </section>
 
-        <section id="rsvp" className="english-wedding-blush relative scroll-mt-6 overflow-hidden border-y border-[#b7a16e]/25 bg-[#f3dde1] px-6 py-24">
-          <BotanicalCorner className="pointer-events-none absolute -left-14 -top-16 w-56 rotate-90 opacity-50 sm:w-72" />
-          <BotanicalCorner className="pointer-events-none absolute -bottom-16 -right-14 w-56 -rotate-90 opacity-50 sm:w-72" />
+        <section id="rsvp" className="english-wedding-blush stationery-section relative scroll-mt-6 overflow-hidden border-y border-[#a79a78]/20 bg-[#efefeb] px-6 py-24">
           <div className="relative">
             <SectionTitle eyebrow="Mohon maklum balas">Khabarkan kehadiran tuan dan puan</SectionTitle>
             <p className="mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]">Bagi membantu kami membuat persiapan, mohon sahkan kehadiran sebelum hari majlis.</p>
-            <form onSubmit={submitRsvp} className="mx-auto grid max-w-2xl gap-5 rounded-sm border-4 border-double border-[#b7a16e]/35 bg-[#fff8ef]/95 p-6 shadow-xl shadow-[#6f5c50]/10 sm:p-10">
+            <form onSubmit={submitRsvp} className="stationery-panel mx-auto grid max-w-2xl gap-5 p-6 sm:p-10">
             <label className="grid gap-2 text-sm font-semibold">Nama
-              <input name="nama" required placeholder="Nama anda" className="rounded-sm border-[#304254]/15 bg-white focus:border-[#9a5d6c] focus:ring-[#9a5d6c]" />
+              <input name="nama" required placeholder="Nama anda" className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]" />
             </label>
             <fieldset>
               <legend className="mb-3 text-sm font-semibold">Kehadiran</legend>
               <div className="grid grid-cols-2 gap-3">
                 {["Hadir, insya-Allah", "Maaf, tidak dapat hadir"].map((answer, index) => (
-                  <label key={answer} className="flex cursor-pointer items-center gap-3 rounded-sm border border-[#304254]/15 bg-white p-4 text-sm">
-                    <input type="radio" name="kehadiran" value={answer} required defaultChecked={index === 0} className="text-[#9a5d6c] focus:ring-[#9a5d6c]" />{answer}
+                  <label key={answer} className="flex cursor-pointer items-center gap-3 rounded-sm border border-[#4f5843]/15 bg-white p-4 text-sm">
+                    <input type="radio" name="kehadiran" value={answer} required defaultChecked={index === 0} className="text-[#747d59] focus:ring-[#747d59]" />{answer}
                   </label>
                 ))}
               </div>
             </fieldset>
             <label className="grid gap-2 text-sm font-semibold">Jumlah tetamu
-              <select name="tetamu" className="rounded-sm border-[#304254]/15 bg-white focus:border-[#9a5d6c] focus:ring-[#9a5d6c]">
+              <select name="tetamu" className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]">
                 {[1, 2, 3, 4, 5].map((count) => <option key={count}>{count}</option>)}
               </select>
             </label>
             <label className="grid gap-2 text-sm font-semibold">Ucapan dan doa buat pasangan pengantin
-              <textarea name="ucapan" rows={4} placeholder="Titipkan doa dan ucapan buat pengantin..." className="rounded-sm border-[#304254]/15 bg-white focus:border-[#9a5d6c] focus:ring-[#9a5d6c]" />
+              <textarea name="ucapan" rows={4} placeholder="Titipkan doa dan ucapan buat pengantin..." className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]" />
             </label>
-            <button className="mt-2 rounded-full bg-[#304254] px-6 py-4 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#455d72]">Hantar RSVP</button>
+            <button className="mt-2 rounded-full bg-[#4f5843] px-6 py-4 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5f684d]">Hantar RSVP</button>
             {rsvpSent && <p className="text-center text-sm font-medium text-[#637d6d]">Terima kasih. Maklum balas tuan/puan telah kami terima.</p>}
             </form>
           </div>
         </section>
 
-        <section id="ucapan" className="relative scroll-mt-6 overflow-hidden border-b border-[#b7a16e]/25 bg-[#fff8ef] px-6 py-24">
-          <BotanicalCorner className="pointer-events-none absolute -left-16 -top-20 w-64 rotate-90 opacity-30 sm:w-80" />
-          <BotanicalCorner className="pointer-events-none absolute -bottom-20 -right-16 w-64 -rotate-90 opacity-30 sm:w-80" />
+        <section id="ucapan" className="relative scroll-mt-6 overflow-hidden border-b border-[#a79a78]/25 bg-[#fffdf8] px-6 py-24">
           <div className="relative mx-auto max-w-5xl">
             <SectionTitle eyebrow="Titipan buat pengantin">Ucapan dan doa</SectionTitle>
             <p className="mx-auto -mt-6 mb-10 max-w-xl text-center leading-7 text-[#6f786f]">
@@ -540,17 +502,17 @@ export default function JemputanPerkahwinan() {
             {wishes.length > 0 ? (
               <div className="grid gap-5 md:grid-cols-2">
                 {wishes.slice().reverse().map((wish, index) => (
-                  <blockquote key={`${wish.name}-${index}`} className="relative border-4 border-double border-[#b7a16e]/30 bg-white/75 p-6 shadow-lg shadow-[#6f5c50]/5 sm:p-8">
-                    <Quote className="h-8 w-8 fill-[#efcfd5] text-[#9a5d6c]" aria-hidden="true" />
-                    <p className={`${titleFont.className} mt-4 text-2xl leading-9 text-[#304254]`}>&ldquo;{wish.message}&rdquo;</p>
-                    <footer className="mt-5 text-sm font-semibold uppercase tracking-[0.16em] text-[#9a5d6c]">— {wish.name}</footer>
+                  <blockquote key={`${wish.name}-${index}`} className="stationery-panel relative p-6 sm:p-8">
+                    <Quote className="h-8 w-8 fill-[#dfe3da] text-[#747d59]" aria-hidden="true" />
+                    <p className={`${titleFont.className} mt-4 text-2xl leading-9 text-[#4f5843]`}>&ldquo;{wish.message}&rdquo;</p>
+                    <footer className="mt-5 text-sm font-semibold uppercase tracking-[0.16em] text-[#747d59]">— {wish.name}</footer>
                   </blockquote>
                 ))}
               </div>
             ) : (
-              <div className="mx-auto max-w-xl border-4 border-double border-[#b7a16e]/30 bg-white/70 px-6 py-10 text-center shadow-lg shadow-[#6f5c50]/5">
-                <Quote className="mx-auto h-8 w-8 text-[#9a5d6c]" aria-hidden="true" />
-                <p className={`${titleFont.className} mt-4 text-2xl text-[#304254]`}>Belum ada ucapan dititipkan.</p>
+              <div className="stationery-panel mx-auto max-w-xl px-6 py-10 text-center">
+                <Quote className="mx-auto h-8 w-8 text-[#747d59]" aria-hidden="true" />
+                <p className={`${titleFont.className} mt-4 text-2xl text-[#4f5843]`}>Belum ada ucapan dititipkan.</p>
                 <p className="mt-2 text-sm leading-6 text-[#6f786f]">Ucapan daripada borang RSVP akan dipaparkan di sini.</p>
               </div>
             )}
@@ -558,8 +520,6 @@ export default function JemputanPerkahwinan() {
         </section>
 
         <section id="hadiah" className="relative scroll-mt-6 overflow-hidden px-6 py-24">
-          <BotanicalCorner className="pointer-events-none absolute -bottom-20 -left-14 w-60 opacity-30 sm:w-80" />
-          <BotanicalCorner className="pointer-events-none absolute -right-14 -top-20 w-60 rotate-180 opacity-30 sm:w-80" />
           <div className="relative">
             <SectionTitle eyebrow="Buat pasangan pengantin">Senarai hadiah pengantin</SectionTitle>
             <div className="mx-auto max-w-3xl">
@@ -573,30 +533,30 @@ export default function JemputanPerkahwinan() {
                   const fullyFunded = percentage >= 100;
 
                   return (
-                    <div key={item.id} className={`rounded-lg border p-5 transition ${fullyFunded ? "border-[#93a38e]/40 bg-[#e4ebe1]" : "border-[#9a5d6c]/15 bg-white/70"}`}>
+                    <div key={item.id} className={`rounded-lg border p-5 transition ${fullyFunded ? "border-[#93a38e]/40 bg-[#e4ebe1]" : "border-[#747d59]/15 bg-white/70"}`}>
                       <div className="flex items-center gap-4">
-                        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${fullyFunded ? "bg-[#778b78] text-white" : "bg-[#ead9dc] text-[#814a58]"}`}>
+                        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${fullyFunded ? "bg-[#778b78] text-white" : "bg-[#e5e8df] text-[#5d664b]"}`}>
                           {fullyFunded ? <Check className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-[#304254]">{item.name}</p>
+                          <p className="font-medium text-[#4f5843]">{item.name}</p>
                           <p className="mt-0.5 text-xs text-[#777e78]">{fullyFunded ? "Sasaran sumbangan telah dicapai" : "Terbuka untuk sumbangan bersama"}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => openContribution(item.id)}
                           disabled={fullyFunded}
-                          className="rounded-full bg-[#304254] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#455d72] disabled:cursor-not-allowed disabled:bg-[#778b78]"
+                          className="rounded-full bg-[#4f5843] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#5f684d] disabled:cursor-not-allowed disabled:bg-[#778b78]"
                         >
                           {fullyFunded ? "Lengkap" : "Sumbang"}
                         </button>
                       </div>
                       <div className="mt-5">
                         <div className="mb-2 flex items-end justify-between gap-4 text-xs">
-                          <span className="font-semibold text-[#304254]">
+                          <span className="font-semibold text-[#4f5843]">
                             {formatRinggit(item.contribution.contributed)} / {formatRinggit(item.contribution.target)}
                           </span>
-                          <span className="font-bold text-[#9a5d6c]">{percentage.toFixed(1)}%</span>
+                          <span className="font-bold text-[#747d59]">{percentage.toFixed(1)}%</span>
                         </div>
                         <div
                           className="h-2.5 overflow-hidden rounded-full bg-[#e7dfd4]"
@@ -606,7 +566,7 @@ export default function JemputanPerkahwinan() {
                           aria-valuemax={item.contribution.target}
                           aria-valuenow={item.contribution.contributed}
                         >
-                          <div className="h-full rounded-full bg-[#9a5d6c] transition-all duration-500" style={{ width: `${percentage}%` }} />
+                          <div className="h-full rounded-full bg-[#747d59] transition-all duration-500" style={{ width: `${percentage}%` }} />
                         </div>
                       </div>
                     </div>
@@ -614,24 +574,24 @@ export default function JemputanPerkahwinan() {
                 }
 
                 return (
-                  <div key={item.id} className={`flex items-center gap-4 rounded-lg border p-4 transition ${item.claimed ? "border-[#93a38e]/40 bg-[#e4ebe1]" : "border-[#9a5d6c]/15 bg-white/70"}`}>
-                    <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${item.claimed ? "bg-[#778b78] text-white" : "bg-[#ead9dc] text-[#814a58]"}`}>
+                  <div key={item.id} className={`flex items-center gap-4 rounded-lg border p-4 transition ${item.claimed ? "border-[#93a38e]/40 bg-[#e4ebe1]" : "border-[#747d59]/15 bg-white/70"}`}>
+                    <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${item.claimed ? "bg-[#778b78] text-white" : "bg-[#e5e8df] text-[#5d664b]"}`}>
                       {item.claimed ? <Check className="h-5 w-5" /> : <Gift className="h-5 w-5" />}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className={`font-medium ${item.claimed ? "text-[#718077] line-through" : "text-[#304254]"}`}>{item.name}</p>
+                      <p className={`font-medium ${item.claimed ? "text-[#718077] line-through" : "text-[#4f5843]"}`}>{item.name}</p>
                       <p className="mt-0.5 text-xs text-[#777e78]">{item.claimed ? "Sudah dipilih oleh tetamu" : "Masih tersedia"}</p>
                     </div>
-                    <button type="button" onClick={() => toggleGift(item.id)} className="rounded-full border border-[#304254]/15 px-4 py-2 text-xs font-bold">
+                    <button type="button" onClick={() => toggleGift(item.id)} className="rounded-full border border-[#4f5843]/15 px-4 py-2 text-xs font-bold">
                       {item.claimed ? "Batalkan" : "Saya pilih"}
                     </button>
                   </div>
                 );
               })}
             </div>
-            <form onSubmit={addGift} className="mt-6 flex gap-3 rounded-lg border border-dashed border-[#9a5d6c]/40 bg-white/40 p-3">
+            <form onSubmit={addGift} className="mt-6 flex gap-3 rounded-lg border border-dashed border-[#747d59]/40 bg-white/40 p-3">
               <input value={newGift} onChange={(event) => setNewGift(event.target.value)} placeholder="Hadiah lain yang anda ingin berikan" aria-label="Hadiah lain yang anda ingin berikan" className="min-w-0 flex-1 border-0 bg-transparent focus:ring-0" />
-              <button aria-label="Simpan pilihan hadiah" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#9a5d6c] text-white"><Plus className="h-5 w-5" /></button>
+              <button aria-label="Simpan pilihan hadiah" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#747d59] text-white"><Plus className="h-5 w-5" /></button>
             </form>
             <p className="mt-3 text-center text-xs leading-5 text-[#777e78]">Jika hadiah anda tiada dalam senarai, masukkan namanya di atas. Ia akan terus ditandakan sebagai sudah dipilih.</p>
             </div>
@@ -648,27 +608,27 @@ export default function JemputanPerkahwinan() {
               if (event.target === event.currentTarget) closeContribution();
             }}
           >
-            <div className="relative my-6 w-full max-w-md rounded-sm bg-[#fff8ef] p-6 shadow-2xl sm:p-8">
+            <div className="stationery-panel relative my-6 w-full max-w-md p-6 shadow-2xl sm:p-8">
               <button
                 type="button"
                 onClick={closeContribution}
                 aria-label="Tutup"
-                className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-full bg-[#f3dde1] text-[#304254] transition hover:bg-[#e2d8ca]"
+                className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-full bg-[#e9ebe4] text-[#4f5843] transition hover:bg-[#e2d8ca]"
               >
                 <X className="h-5 w-5" />
               </button>
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#9a5d6c]">Sumbangan hadiah</p>
-              <h2 id="contribution-title" className={`${titleFont.className} mt-2 pr-12 text-4xl font-medium text-[#304254]`}>{selectedGift.name}</h2>
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#747d59]">Sumbangan hadiah</p>
+              <h2 id="contribution-title" className={`${titleFont.className} mt-2 pr-12 text-4xl font-medium text-[#4f5843]`}>{selectedGift.name}</h2>
               <p className="mt-3 text-sm leading-6 text-[#6f786f]">Sekiranya tuan/puan ingin menyumbang buat hadiah pengantin, imbas kod DuitNow, buat pembayaran, kemudian catat jumlah sumbangan.</p>
 
-              <div className="mx-auto mt-6 w-full max-w-[240px] overflow-hidden rounded-lg border border-[#304254]/10 bg-white p-3 shadow-sm">
+              <div className="mx-auto mt-6 w-full max-w-[240px] overflow-hidden rounded-lg border border-[#4f5843]/10 bg-white p-3 shadow-sm">
                 <img src={selectedGift.contribution.duitNowQr} alt="Kod QR DuitNow untuk sumbangan hadiah" className="aspect-square h-auto w-full" />
               </div>
 
               <form onSubmit={submitContribution} className="mt-6">
-                <label htmlFor="contribution-amount" className="text-sm font-semibold text-[#304254]">Jumlah yang telah disumbangkan</label>
-                <div className="mt-2 flex overflow-hidden rounded-sm border border-[#304254]/15 bg-white focus-within:border-[#9a5d6c] focus-within:ring-1 focus-within:ring-[#9a5d6c]">
-                  <span className="grid place-items-center border-r border-[#304254]/10 px-4 text-sm font-bold text-[#68776d]">RM</span>
+                <label htmlFor="contribution-amount" className="text-sm font-semibold text-[#4f5843]">Jumlah yang telah disumbangkan</label>
+                <div className="mt-2 flex overflow-hidden rounded-sm border border-[#4f5843]/15 bg-white focus-within:border-[#747d59] focus-within:ring-1 focus-within:ring-[#747d59]">
+                  <span className="grid place-items-center border-r border-[#4f5843]/10 px-4 text-sm font-bold text-[#68776d]">RM</span>
                   <input
                     id="contribution-amount"
                     type="number"
@@ -691,7 +651,7 @@ export default function JemputanPerkahwinan() {
                 <p className="mt-2 text-xs text-[#777e78]">
                   Baki diperlukan: {formatRinggit(Math.max(0, selectedGift.contribution.target - selectedGift.contribution.contributed))}
                 </p>
-                <button className="mt-5 w-full rounded-full bg-[#9a5d6c] px-6 py-3.5 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#814a58]">
+                <button className="mt-5 w-full rounded-full bg-[#747d59] px-6 py-3.5 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5d664b]">
                   Saya telah menyumbang
                 </button>
               </form>
@@ -700,16 +660,14 @@ export default function JemputanPerkahwinan() {
         )}
 
         {showSalam && (
-          <section id="salam-kaut" className="relative scroll-mt-6 overflow-hidden border-y border-[#b7a16e]/40 bg-[#304254] px-6 py-24 text-white">
-            <BotanicalCorner className="pointer-events-none absolute -left-12 -top-16 w-64 rotate-90 opacity-25 sm:w-80" />
-            <BotanicalCorner className="pointer-events-none absolute -bottom-16 -right-12 w-64 -rotate-90 opacity-25 sm:w-80" />
+          <section id="salam-kaut" className="stationery-section relative scroll-mt-6 overflow-hidden border-y border-[#a79a78]/20 bg-[#efefeb] px-6 py-24 text-[#4f5843]">
             <div className="relative">
               <SectionTitle eyebrow="Tanda ingatan buat pengantin" light>Salam Kaut</SectionTitle>
-              <div className="mx-auto max-w-xl rounded-sm border-4 border-double border-[#e8d8b5]/25 bg-white/5 p-7 text-center backdrop-blur sm:p-10">
-                <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#fff8ef] text-[#304254]"><QrCode className="h-10 w-10" /></span>
-                <h3 className={`${titleFont.className} mt-6 text-4xl font-medium text-[#e8d8b5]`}>Sedikit tanda ingatan</h3>
-                <p className="mt-4 leading-7 text-white/70">Sekiranya tuan/puan berhasrat berkongsi rezeki buat pasangan pengantin, silakan imbas kod DuitNow ini. Kehadiran dan doa restu tuan/puan tetap menjadi hadiah yang paling bermakna.</p>
-                <div className="mx-auto mt-7 w-full max-w-[260px] overflow-hidden rounded-lg border border-white/15 bg-white p-3 shadow-xl shadow-black/15">
+              <div className="stationery-panel mx-auto max-w-xl p-7 text-center sm:p-10">
+                <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#fffdf8] text-[#4f5843]"><QrCode className="h-10 w-10" /></span>
+                <h3 className={`${titleFont.className} mt-6 text-4xl font-medium text-[#66704b]`}>Sedikit tanda ingatan</h3>
+                <p className="mt-4 leading-7 text-[#6f786f]">Sekiranya tuan/puan berhasrat berkongsi rezeki buat pasangan pengantin, silakan imbas kod DuitNow ini. Kehadiran dan doa restu tuan/puan tetap menjadi hadiah yang paling bermakna.</p>
+                <div className="mx-auto mt-7 w-full max-w-[260px] overflow-hidden rounded-sm border border-[#7c8467]/15 bg-white p-3 shadow-lg shadow-[#4f5843]/10">
                   <img src="/images/duitnow-qr-placeholder.svg" alt="Kod QR DuitNow untuk Salam Kaut" className="aspect-square h-auto w-full" />
                 </div>
               </div>
@@ -717,12 +675,12 @@ export default function JemputanPerkahwinan() {
           </section>
         )}
 
-        <footer className="border-t border-[#b7a16e]/25 px-6 py-20 text-center">
+        <footer className="stationery-section border-t border-[#a79a78]/20 bg-[#efefeb] px-6 py-20 text-center">
           <Ornament />
-          <Heart className="mx-auto mt-2 h-5 w-5 fill-[#9a5d6c] text-[#9a5d6c]" />
-          <p className={`${titleFont.className} mt-5 text-4xl font-medium text-[#304254]`}>Kehadiran tuan dan puan amat kami hargai.</p>
+          <Heart className="mx-auto mt-2 h-5 w-5 fill-[#747d59] text-[#747d59]" />
+          <p className={`${titleFont.className} mt-5 text-4xl font-medium text-[#4f5843]`}>Kehadiran tuan dan puan amat kami hargai.</p>
           <p className="mx-auto mt-4 max-w-xl leading-7 text-[#6f786f]">Dengan ingatan tulus daripada {wedding.hosts}.</p>
-          <p className={`${namesFont.className} mt-7 text-5xl text-[#806b62]`}>{wedding.bride} & {wedding.groom}</p>
+          <p className={`${namesFont.className} mt-7 text-5xl text-[#66704b]`}>{wedding.bride} & {wedding.groom}</p>
         </footer>
         </main>
       )}
