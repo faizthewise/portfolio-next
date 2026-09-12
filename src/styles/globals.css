@@ -4,10 +4,10 @@
 
 .english-wedding-paper {
   background-color: #fffdf8;
-  background-image:
-    radial-gradient(circle at 15% 20%, rgb(124 119 101 / 4%) 0 0.7px, transparent 0.9px),
-    linear-gradient(98deg, rgb(232 228 216 / 14%), transparent 32%, rgb(255 255 255 / 35%) 57%, transparent 82%);
-  background-size: 18px 21px, 100% 100%;
+  background-image: url("/images/wedding-page-botanical-background-v2.png");
+  background-position: center top;
+  background-repeat: repeat-y;
+  background-size: 100% 1500px;
 }
 
 .english-wedding-hero {
@@ -73,10 +73,8 @@
 }
 
 .stationery-section {
-  background-image:
-    radial-gradient(circle at 12% 15%, rgb(107 112 75 / 4%) 0 0.7px, transparent 0.9px),
-    linear-gradient(108deg, rgb(255 255 255 / 28%), transparent 38%, rgb(118 122 98 / 3%));
-  background-size: 21px 23px, 100% 100%;
+  background-color: rgb(239 239 235 / 82%);
+  backdrop-filter: saturate(82%);
 }
 
 .stationery-panel {
@@ -104,14 +102,11 @@
   animation: invitation-enter 700ms ease-out both;
 }
 
-.english-wedding-blush {
-  background-image:
-    radial-gradient(circle at 12% 15%, rgb(107 112 75 / 4%) 0 0.7px, transparent 0.9px),
-    linear-gradient(108deg, rgb(255 255 255 / 28%), transparent 38%, rgb(118 122 98 / 3%));
-  background-size: 21px 23px, 100% 100%;
-}
-
 @media (max-width: 639px) {
+  .english-wedding-paper {
+    background-size: 100% 1250px;
+  }
+
   .english-invitation-card {
     border-radius: 50% 50% 3px 3px / 18% 18% 3px 3px;
   }

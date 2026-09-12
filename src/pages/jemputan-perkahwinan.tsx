@@ -487,7 +487,7 @@ export default function JemputanPerkahwinan() {
           </div>
         </section>
 
-        <section id="ucapan" className="relative scroll-mt-6 overflow-hidden border-b border-[#a79a78]/25 bg-[#fffdf8] px-6 py-24">
+        <section id="ucapan" className="relative scroll-mt-6 overflow-hidden border-b border-[#a79a78]/25 bg-[#fffdf8]/70 px-6 py-24">
           <div className="relative mx-auto max-w-5xl">
             <SectionTitle eyebrow="Titipan buat pengantin">Ucapan dan doa</SectionTitle>
             <p className="mx-auto -mt-6 mb-10 max-w-xl text-center leading-7 text-[#6f786f]">
