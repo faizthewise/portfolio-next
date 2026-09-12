@@ -154,7 +154,7 @@ function InvitationCoverArtwork({ onOpen }: { onOpen: () => void }) {
         aria-label="Buka undangan perkahwinan Harissa Amani dan Muhammad Faiz"
       >
         <img
-          src="/images/gatefold-cover-minimal-sage-v3.png"
+          src="/images/gatefold-cover-minimal-sage-v4.png"
           alt=""
           aria-hidden="true"
           draggable={false}
