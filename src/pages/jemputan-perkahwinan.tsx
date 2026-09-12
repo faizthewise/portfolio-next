@@ -1,6 +1,6 @@
 import Head from "next/head";
 import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   Banknote,
   CalendarDays,
@@ -153,29 +153,16 @@ function InvitationCoverArtwork({ onOpen }: { onOpen: () => void }) {
         className="sealed-invitation group relative block w-full overflow-hidden text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#747d59] focus-visible:ring-offset-4 focus-visible:ring-offset-[#dfe1dc]"
         aria-label="Buka undangan perkahwinan Harissa Amani dan Muhammad Faiz"
       >
-        <span className="seal-inner-card absolute inset-4 grid place-items-center px-12 py-20">
-          <span>
-            <span className="block text-[9px] font-semibold uppercase tracking-[0.32em] text-[#777d72]">Walimatulurus</span>
-            <span className={`${titleFont.className} mt-4 block text-xl tracking-wide text-[#66704b]`}>{wedding.hosts}</span>
-            <span className={`${namesFont.className} mt-7 block text-4xl leading-tight text-[#66704b]`}>
-              {wedding.bride} <span className={`${titleFont.className} text-base italic text-[#9b8b65]`}>&</span> {wedding.groom}
-            </span>
-            <span className="mt-6 block text-[9px] font-semibold uppercase tracking-[0.2em] text-[#777d72]">{wedding.dateLabel}</span>
-          </span>
-        </span>
-
-        <span className="seal-gate seal-gate-left" aria-hidden="true">
-          {[12, 29, 46, 63, 80].map((top) => <span key={top} className="seal-scallop" style={{ top: `${top}%` }} />)}
-        </span>
-        <span className="seal-gate seal-gate-right" aria-hidden="true">
-          {[12, 29, 46, 63, 80].map((top) => <span key={top} className="seal-scallop" style={{ top: `${top}%` }} />)}
-        </span>
+        <img
+          src="/images/gatefold-cover-minimal-sage-v3.png"
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
 
         <span className="wax-seal absolute left-1/2 top-1/2 z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center transition duration-300 group-hover:scale-105" aria-hidden="true">
-          <svg viewBox="0 0 64 64" className="h-10 w-10" fill="none">
-            <path d="M31 49c1-15 4-25 12-35M33 38c-8-4-11-10-10-16 7 1 11 7 10 16Zm4-9c1-8 6-13 13-14 0 7-5 12-13 14Zm-7 16c-7-1-12-5-14-11 7-1 12 3 14 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="31" cy="49" r="2" fill="currentColor" />
-          </svg>
+          <img src="/images/wax-seal-fh-v1.png" alt="" className="wax-seal-image h-full w-full object-cover" />
         </span>
       </button>
       <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#777d72]">Tekan mohor untuk membuka</p>
@@ -203,6 +190,7 @@ export default function JemputanPerkahwinan() {
   const [selectedGiftId, setSelectedGiftId] = useState<string | null>(null);
   const [contributionAmount, setContributionAmount] = useState("");
   const [contributionError, setContributionError] = useState("");
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -336,6 +324,18 @@ export default function JemputanPerkahwinan() {
     { name: "Apple Maps", href: `https://maps.apple.com/?q=${encodedVenue}` },
   ];
 
+  const openInvitation = () => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio("/audio/malam-bulan.mp3");
+      audioRef.current.loop = true;
+      audioRef.current.preload = "auto";
+    }
+    audioRef.current.volume = 0.55;
+    void audioRef.current.play().catch(() => undefined);
+    window.scrollTo({ top: 0 });
+    setInvitationOpened(true);
+  };
+
   return (
     <>
       <Head>
@@ -348,12 +348,7 @@ export default function JemputanPerkahwinan() {
         <main className="english-wedding-hero relative grid min-h-screen place-items-center overflow-hidden px-5 py-10 text-center text-[#4f5843] sm:px-8 sm:py-14">
           <div className="relative z-10 mx-auto w-full max-w-xl">
             <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.38em] text-[#777d72]">Sebuah undangan daripada keluarga pengantin perempuan</p>
-            <InvitationCoverArtwork
-              onOpen={() => {
-                window.scrollTo({ top: 0 });
-                setInvitationOpened(true);
-              }}
-            />
+            <InvitationCoverArtwork onOpen={openInvitation} />
           </div>
         </main>
       ) : (
