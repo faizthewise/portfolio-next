@@ -1,4 +1,6 @@
 import Head from "next/head";
+import { getWeddingGuest } from "@/lib/wedding/firebase";
+import { GiftItem, WeddingWish, initialGifts, subscribeWedding, saveRsvp, reserveGift, createGift, recordContribution } from "@/lib/wedding/data";
 import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -42,78 +44,12 @@ const wedding = {
   hosts: "Ts. Razak & Dr Rina",
 };
 
-type GiftItem = {
-  id: string;
-  name: string;
-  claimed: boolean;
-  contribution?: {
-    target: number;
-    contributed: number;
-    duitNowQr: string;
-  };
-};
-
-type WeddingWish = {
-  name: string;
-  message: string;
-};
-
-const initialGifts: GiftItem[] = [
-  { id: "air-fryer", name: "Air fryer", claimed: false },
-  { id: "dinnerware", name: "Set pinggan mangkuk", claimed: false },
-  { id: "vacuum", name: "Penyedut hampagas", claimed: false },
-  { id: "bedding", name: "Set cadar king", claimed: false },
-  {
-    id: "coffee",
-    name: "Mesin kopi",
-    claimed: false,
-    contribution: {
-      target: 3000,
-      contributed: 0,
-      duitNowQr: "/images/duitnow-qr-placeholder.svg",
-    },
-  },
-];
-
 const formatRinggit = (amount: number) =>
   new Intl.NumberFormat("ms-MY", {
     style: "currency",
     currency: "MYR",
     maximumFractionDigits: 2,
   }).format(amount);
-
-const mergeSavedGifts = (saved: GiftItem[]) => {
-  const savedById = new Map(saved.map((gift) => [gift.id, gift]));
-  const configuredGifts = initialGifts.map((gift) => {
-    const savedGift = savedById.get(gift.id);
-    if (!savedGift) return gift;
-
-    return {
-      ...gift,
-      ...savedGift,
-      contribution: gift.contribution
-        ? { ...gift.contribution, ...(savedGift.contribution ?? {}) }
-        : undefined,
-    };
-  });
-  const customGifts = saved.filter((gift) => !initialGifts.some((item) => item.id === gift.id));
-
-  return [...configuredGifts, ...customGifts];
-};
-
-const getWishesFromEntries = (entries: unknown): WeddingWish[] => {
-  if (!Array.isArray(entries)) return [];
-
-  return entries.reduce<WeddingWish[]>((wishes, entry) => {
-    if (!entry || typeof entry !== "object") return wishes;
-
-    const { nama, ucapan } = entry as Record<string, unknown>;
-    if (typeof nama === "string" && typeof ucapan === "string" && ucapan.trim()) {
-      wishes.push({ name: nama.trim() || "Tetamu", message: ucapan.trim() });
-    }
-    return wishes;
-  }, []);
-};
 
 function WhiteFlower({ x, y, scale = 1, rotation = 0 }: { x: number; y: number; scale?: number; rotation?: number }) {
   return (
@@ -190,27 +126,44 @@ export default function JemputanPerkahwinan() {
   const [selectedGiftId, setSelectedGiftId] = useState<string | null>(null);
   const [contributionAmount, setContributionAmount] = useState("");
   const [contributionError, setContributionError] = useState("");
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const [guestId, setGuestId] = useState("");
+  const [backendReady, setBackendReady] = useState(false);
+  const [backendError, setBackendError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const contributionId = useRef("");
+  const customGiftId = useRef("");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setShowSalam(params.get("salam") === "1");
 
-    const savedGifts = window.localStorage.getItem("faiz-harissa-wedding-gifts");
-    if (savedGifts) {
-      try {
-        setGifts(mergeSavedGifts(JSON.parse(savedGifts)));
-      } catch {
-        setGifts(initialGifts);
-      }
-    }
-
-    try {
-      const savedRsvp = JSON.parse(window.localStorage.getItem("faiz-harissa-wedding-rsvp") || "[]");
-      setWishes(getWishesFromEntries(savedRsvp));
-    } catch {
-      setWishes([]);
-    }
+    let disposed = false;
+    let unsubscribe: (() => void) | undefined;
+    void getWeddingGuest().then((uid) => {
+      if (disposed) return;
+      setGuestId(uid);
+      let giftsLoaded = false;
+      let wishesLoaded = false;
+      let failed = false;
+      unsubscribe = subscribeWedding(
+        (items) => { setGifts(items); giftsLoaded = true; setBackendReady(!failed && giftsLoaded && wishesLoaded); },
+        (items) => { setWishes(items); wishesLoaded = true; setBackendReady(!failed && giftsLoaded && wishesLoaded); },
+        (error, source) => {
+          if (disposed) return;
+          console.error(`[Wedding Firebase] ${source} read failed`, error.code, error.message);
+          failed = true;
+          setBackendReady(false);
+          setBackendError("Tidak dapat memuatkan data. Sila muat semula halaman dan cuba lagi.");
+        },
+      );
+    }).catch((error) => {
+      if (disposed) return;
+      console.error("[Wedding Firebase] Connection failed", error);
+      setBackendError("Tidak dapat menyambung. Sila muat semula halaman dan cuba lagi.");
+    });
+    return () => { disposed = true; unsubscribe?.(); };
   }, []);
 
   useEffect(() => {
@@ -218,7 +171,7 @@ export default function JemputanPerkahwinan() {
 
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSelectedGiftId(null);
+      if (event.key === "Escape" && !savingRef.current) setSelectedGiftId(null);
     };
     document.addEventListener("keydown", closeOnEscape);
     document.body.style.overflow = "hidden";
@@ -238,24 +191,38 @@ export default function JemputanPerkahwinan() {
     };
   }, []);
 
-  const saveGifts = (next: GiftItem[]) => {
-    setGifts(next);
-    window.localStorage.setItem("faiz-harissa-wedding-gifts", JSON.stringify(next));
+  const performSave = async (action: () => Promise<void>) => {
+    if (savingRef.current || !backendReady) return;
+    savingRef.current = true;
+    setSaving(true);
+    setBackendError("");
+    try {
+      await action();
+    } catch (error) {
+      setBackendError(error instanceof Error && !error.message.includes("Firebase")
+        ? error.message : "Maklumat belum disimpan. Sila cuba lagi.");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   };
 
   const toggleGift = (id: string) => {
-    saveGifts(gifts.map((item) => (item.id === id ? { ...item, claimed: !item.claimed } : item)));
+    const gift = gifts.find((item) => item.id === id);
+    if (gift) void performSave(() => reserveGift(gift));
   };
 
   const selectedGift = gifts.find((gift) => gift.id === selectedGiftId);
 
   const openContribution = (id: string) => {
+    contributionId.current = crypto.randomUUID();
     setSelectedGiftId(id);
     setContributionAmount("");
     setContributionError("");
   };
 
   const closeContribution = () => {
+    if (savingRef.current) return;
     setSelectedGiftId(null);
     setContributionAmount("");
     setContributionError("");
@@ -276,45 +243,40 @@ export default function JemputanPerkahwinan() {
       return;
     }
 
-    saveGifts(
-      gifts.map((gift) =>
-        gift.id === selectedGift.id && gift.contribution
-          ? {
-              ...gift,
-              contribution: {
-                ...gift.contribution,
-                contributed: gift.contribution.contributed + amount,
-              },
-            }
-          : gift,
-      ),
-    );
-    closeContribution();
+    void performSave(async () => {
+      try {
+        await recordContribution(amount, contributionId.current);
+        setSelectedGiftId(null);
+        setContributionAmount("");
+      } catch (error) {
+        setContributionError(error instanceof Error && !error.message.includes("Firebase")
+          ? error.message : "Sumbangan belum direkodkan. Sila cuba lagi.");
+      }
+    });
   };
 
   const addGift = (event: FormEvent) => {
     event.preventDefault();
     const name = newGift.trim();
     if (!name) return;
-    saveGifts([...gifts, { id: `${Date.now()}`, name, claimed: true }]);
-    setNewGift("");
+    if (!customGiftId.current) customGiftId.current = `custom-${crypto.randomUUID()}`;
+    void performSave(async () => {
+      await createGift(name, customGiftId.current);
+      customGiftId.current = "";
+      setNewGift("");
+    });
   };
 
   const submitRsvp = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    let entries: unknown[] = [];
-    try {
-      const savedEntries = JSON.parse(window.localStorage.getItem("faiz-harissa-wedding-rsvp") || "[]");
-      if (Array.isArray(savedEntries)) entries = savedEntries;
-    } catch {
-      entries = [];
-    }
-    entries.push(Object.fromEntries(form.entries()));
-    window.localStorage.setItem("faiz-harissa-wedding-rsvp", JSON.stringify(entries));
-    setWishes(getWishesFromEntries(entries));
-    setRsvpSent(true);
-    event.currentTarget.reset();
+    const element = event.currentTarget;
+    const form = new FormData(element);
+    setRsvpSent(false);
+    void performSave(async () => {
+      await saveRsvp(form);
+      setRsvpSent(true);
+      element.reset();
+    });
   };
 
   const encodedVenue = encodeURIComponent(wedding.mapQuery);
@@ -461,7 +423,7 @@ export default function JemputanPerkahwinan() {
             <p className="mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]">Bagi membantu kami membuat persiapan, mohon sahkan kehadiran sebelum hari majlis.</p>
             <form onSubmit={submitRsvp} className="stationery-panel mx-auto grid max-w-2xl gap-5 p-6 sm:p-10">
             <label className="grid gap-2 text-sm font-semibold">Nama
-              <input name="nama" required placeholder="Nama anda" className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]" />
+              <input name="nama" maxLength={100} required placeholder="Nama anda" className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]" />
             </label>
             <fieldset>
               <legend className="mb-3 text-sm font-semibold">Kehadiran</legend>
@@ -479,9 +441,12 @@ export default function JemputanPerkahwinan() {
               </select>
             </label>
             <label className="grid gap-2 text-sm font-semibold">Ucapan dan doa buat pasangan pengantin
-              <textarea name="ucapan" rows={4} placeholder="Titipkan doa dan ucapan buat pengantin..." className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]" />
+              <textarea name="ucapan" maxLength={2000} rows={4} placeholder="Titipkan doa dan ucapan buat pengantin..." className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]" />
             </label>
-            <button className="mt-2 rounded-full bg-[#4f5843] px-6 py-4 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5f684d]">Hantar RSVP</button>
+            <p className="text-xs text-[#6f786f]">Nama dan ucapan akan dipaparkan kepada tetamu lain. Maklumat kehadiran adalah peribadi.</p>
+            {!backendReady && !backendError && <p role="status">Sedang menyambung...</p>}
+            {backendError && <p role="alert" className="text-sm text-red-700">{backendError}</p>}
+            <button disabled={!backendReady || saving} className="mt-2 rounded-full bg-[#4f5843] px-6 py-4 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5f684d]">{saving ? "Sedang menyimpan..." : "Hantar RSVP"}</button>
             {rsvpSent && <p className="text-center text-sm font-medium text-[#637d6d]">Terima kasih. Maklum balas tuan/puan telah kami terima.</p>}
             </form>
           </div>
@@ -535,12 +500,12 @@ export default function JemputanPerkahwinan() {
                         </span>
                         <div className="min-w-0 flex-1">
                           <p className="font-medium text-[#4f5843]">{item.name}</p>
-                          <p className="mt-0.5 text-xs text-[#777e78]">{fullyFunded ? "Sasaran sumbangan telah dicapai" : "Terbuka untuk sumbangan bersama"}</p>
+                          <p className="mt-0.5 text-xs text-[#777e78]">{fullyFunded ? "Sasaran laporan sumbangan telah dicapai" : "Sumbangan dilaporkan oleh tetamu"}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => openContribution(item.id)}
-                          disabled={fullyFunded}
+                          disabled={fullyFunded || !backendReady || saving}
                           className="rounded-full bg-[#4f5843] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#5f684d] disabled:cursor-not-allowed disabled:bg-[#778b78]"
                         >
                           {fullyFunded ? "Lengkap" : "Sumbang"}
@@ -577,16 +542,17 @@ export default function JemputanPerkahwinan() {
                       <p className={`font-medium ${item.claimed ? "text-[#718077] line-through" : "text-[#4f5843]"}`}>{item.name}</p>
                       <p className="mt-0.5 text-xs text-[#777e78]">{item.claimed ? "Sudah dipilih oleh tetamu" : "Masih tersedia"}</p>
                     </div>
-                    <button type="button" onClick={() => toggleGift(item.id)} className="rounded-full border border-[#4f5843]/15 px-4 py-2 text-xs font-bold">
-                      {item.claimed ? "Batalkan" : "Saya pilih"}
+                    <button disabled={!backendReady || saving || (item.claimed && item.claimedBy !== guestId)} type="button" onClick={() => toggleGift(item.id)} className="rounded-full border border-[#4f5843]/15 px-4 py-2 text-xs font-bold">
+                      {item.claimed ? (item.claimedBy === guestId ? "Batalkan" : "Sudah dipilih") : "Saya pilih"}
                     </button>
                   </div>
                 );
               })}
             </div>
+            {backendError && <p role="alert" className="mt-3 text-sm text-red-700">{backendError}</p>}
             <form onSubmit={addGift} className="mt-6 flex gap-3 rounded-lg border border-dashed border-[#747d59]/40 bg-white/40 p-3">
-              <input value={newGift} onChange={(event) => setNewGift(event.target.value)} placeholder="Hadiah lain yang anda ingin berikan" aria-label="Hadiah lain yang anda ingin berikan" className="min-w-0 flex-1 border-0 bg-transparent focus:ring-0" />
-              <button aria-label="Simpan pilihan hadiah" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#747d59] text-white"><Plus className="h-5 w-5" /></button>
+              <input maxLength={100} value={newGift} onChange={(event) => setNewGift(event.target.value)} placeholder="Hadiah lain yang anda ingin berikan" aria-label="Hadiah lain yang anda ingin berikan" className="min-w-0 flex-1 border-0 bg-transparent focus:ring-0" />
+              <button disabled={!backendReady || saving} aria-label="Simpan pilihan hadiah" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#747d59] text-white"><Plus className="h-5 w-5" /></button>
             </form>
             <p className="mt-3 text-center text-xs leading-5 text-[#777e78]">Jika hadiah anda tiada dalam senarai, masukkan namanya di atas. Ia akan terus ditandakan sebagai sudah dipilih.</p>
             </div>
@@ -614,7 +580,7 @@ export default function JemputanPerkahwinan() {
               </button>
               <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#747d59]">Sumbangan hadiah</p>
               <h2 id="contribution-title" className={`${titleFont.className} mt-2 pr-12 text-4xl font-medium text-[#4f5843]`}>{selectedGift.name}</h2>
-              <p className="mt-3 text-sm leading-6 text-[#6f786f]">Sekiranya tuan/puan ingin menyumbang buat hadiah pengantin, imbas kod DuitNow, buat pembayaran, kemudian catat jumlah sumbangan.</p>
+              <p className="mt-3 text-sm leading-6 text-[#6f786f]">Sekiranya tuan/puan ingin menyumbang buat hadiah pengantin, imbas kod DuitNow, buat pembayaran, kemudian catat jumlah sumbangan. Catatan ini bukan pengesahan pembayaran oleh bank.</p>
 
               <div className="mx-auto mt-6 w-full max-w-[240px] overflow-hidden rounded-lg border border-[#4f5843]/10 bg-white p-3 shadow-sm">
                 <img src={selectedGift.contribution.duitNowQr} alt="Kod QR DuitNow untuk sumbangan hadiah" className="aspect-square h-auto w-full" />
@@ -646,7 +612,7 @@ export default function JemputanPerkahwinan() {
                 <p className="mt-2 text-xs text-[#777e78]">
                   Baki diperlukan: {formatRinggit(Math.max(0, selectedGift.contribution.target - selectedGift.contribution.contributed))}
                 </p>
-                <button className="mt-5 w-full rounded-full bg-[#747d59] px-6 py-3.5 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5d664b]">
+                <button disabled={!backendReady || saving} className="mt-5 w-full rounded-full bg-[#747d59] px-6 py-3.5 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5d664b]">
                   Saya telah menyumbang
                 </button>
               </form>

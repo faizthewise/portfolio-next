@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owner(uid) { return signedIn() && request.auth.uid == uid; }
+    function shortName(value) { return value is string && value.size() > 0 && value.size() <= 100; }
+
+    match /weddings/faiz-harissa/rsvps/{uid} {
+      allow get: if owner(uid);
+      allow create, update: if owner(uid)
+        && request.resource.data.keys().hasOnly(['name', 'attendance', 'guests', 'updatedAt'])
+        && shortName(request.resource.data.name)
+        && request.resource.data.attendance in ['Hadir, insya-Allah', 'Maaf, tidak dapat hadir']
+        && request.resource.data.guests is int
+        && ((request.resource.data.attendance == 'Hadir, insya-Allah'
+          && request.resource.data.guests >= 1 && request.resource.data.guests <= 5)
+          || (request.resource.data.attendance == 'Maaf, tidak dapat hadir' && request.resource.data.guests == 0))
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    match /weddings/faiz-harissa/wishes/{uid} {
+      allow read: if signedIn();
+      allow create, update: if owner(uid)
+        && request.resource.data.keys().hasOnly(['name', 'message', 'updatedAt'])
+        && shortName(request.resource.data.name)
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if owner(uid);
+    }
+
+    match /weddings/faiz-harissa/gifts/{id} {
+      allow read: if signedIn();
+      function validGift() {
+        let value = request.resource.data;
+        return value.keys().hasOnly(['name', 'claimedBy', 'updatedAt'])
+          && shortName(value.name) && value.claimedBy is string
+          && value.updatedAt == request.time;
+      }
+      function configuredName() {
+        return (id == 'air-fryer' && request.resource.data.name == 'Air fryer')
+          || (id == 'dinnerware' && request.resource.data.name == 'Set pinggan mangkuk')
+          || (id == 'vacuum' && request.resource.data.name == 'Penyedut hampagas')
+          || (id == 'bedding' && request.resource.data.name == 'Set cadar king')
+          || id.matches('custom-[a-zA-Z0-9-]{36}');
+      }
+      allow create: if signedIn() && id != 'coffee' && validGift() && configuredName()
+        && request.resource.data.claimedBy == request.auth.uid;
+      allow update: if signedIn() && id != 'coffee' && validGift()
+        && request.resource.data.name == resource.data.name
+        && ((resource.data.claimedBy == '' && request.resource.data.claimedBy == request.auth.uid)
+          || (resource.data.claimedBy == request.auth.uid && request.resource.data.claimedBy == ''));
+
+      function validContributionTotal() {
+        let value = request.resource.data;
+        let path = /databases/$(database)/documents/weddings/faiz-harissa/contributions/$(value.lastContribution);
+        let contribution = getAfter(path).data;
+        let previous = exists(/databases/$(database)/documents/weddings/faiz-harissa/gifts/coffee)
+          ? get(/databases/$(database)/documents/weddings/faiz-harissa/gifts/coffee).data.contributedCents : 0;
+        return value.keys().hasOnly(['name', 'contributedCents', 'lastContribution'])
+          && value.name == 'Mesin kopi'
+          && value.contributedCents is int && value.contributedCents <= 300000
+          && !exists(path) && contribution.uid == request.auth.uid
+          && value.contributedCents == previous + contribution.amountCents;
+      }
+      allow create, update: if signedIn() && id == 'coffee' && validContributionTotal();
+    }
+
+    match /weddings/faiz-harissa/contributions/{id} {
+      allow get: if signedIn() && (!exists(/databases/$(database)/documents/weddings/faiz-harissa/contributions/$(id))
+        || resource.data.uid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'amountCents', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.amountCents is int
+        && request.resource.data.amountCents > 0 && request.resource.data.amountCents <= 300000
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/weddings/faiz-harissa/gifts/coffee).data.lastContribution == id;
+    }
+  }
+}
