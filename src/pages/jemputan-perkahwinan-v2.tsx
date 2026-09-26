@@ -51,28 +51,44 @@ const formatRinggit = (amount: number) =>
     maximumFractionDigits: 2,
   }).format(amount);
 
-function WhiteFlower({ x, y, scale = 1, rotation = 0 }: { x: number; y: number; scale?: number; rotation?: number }) {
+function GardenFlower({ x, y, scale = 1, rotation = 0, color = "#fffdf8" }: { x: number; y: number; scale?: number; rotation?: number; color?: string }) {
   return (
     <g transform={`translate(${x} ${y}) rotate(${rotation}) scale(${scale})`}>
-      <ellipse cx="0" cy="-11" rx="7" ry="12" fill="#fffdf8" stroke="#c5ad78" strokeWidth="1" />
-      <ellipse cx="10.5" cy="-3.5" rx="7" ry="12" transform="rotate(72 10.5 -3.5)" fill="#fffdf8" stroke="#c5ad78" strokeWidth="1" />
-      <ellipse cx="6.5" cy="9" rx="7" ry="12" transform="rotate(144 6.5 9)" fill="#fffdf8" stroke="#c5ad78" strokeWidth="1" />
-      <ellipse cx="-6.5" cy="9" rx="7" ry="12" transform="rotate(216 -6.5 9)" fill="#fffdf8" stroke="#c5ad78" strokeWidth="1" />
-      <ellipse cx="-10.5" cy="-3.5" rx="7" ry="12" transform="rotate(288 -10.5 -3.5)" fill="#fffdf8" stroke="#c5ad78" strokeWidth="1" />
+      <ellipse cx="0" cy="-11" rx="7" ry="12" fill={color} stroke="#ab9d86" strokeWidth="1" />
+      <ellipse cx="10.5" cy="-3.5" rx="7" ry="12" transform="rotate(72 10.5 -3.5)" fill={color} stroke="#ab9d86" strokeWidth="1" />
+      <ellipse cx="6.5" cy="9" rx="7" ry="12" transform="rotate(144 6.5 9)" fill={color} stroke="#ab9d86" strokeWidth="1" />
+      <ellipse cx="-6.5" cy="9" rx="7" ry="12" transform="rotate(216 -6.5 9)" fill={color} stroke="#ab9d86" strokeWidth="1" />
+      <ellipse cx="-10.5" cy="-3.5" rx="7" ry="12" transform="rotate(288 -10.5 -3.5)" fill={color} stroke="#ab9d86" strokeWidth="1" />
       <circle r="5.2" fill="#d1af63" />
       <circle r="2" fill="#8f7440" />
     </g>
   );
 }
 
+function Butterfly({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 80 64" aria-hidden="true" focusable="false" className={`pointer-events-none drop-shadow-[0_3px_3px_rgba(119,88,49,0.22)] ${className}`}>
+      <g fill="#eacfdc" fillOpacity=".95" stroke="#99703c" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M39 32C30 13 10 3 5 8C0 16 9 34 30 38C13 33 9 43 17 53C25 61 36 48 39 35Z" />
+        <path fill="#ded3ee" d="M41 32C50 13 70 3 75 8C80 16 71 34 50 38C67 33 71 43 63 53C55 61 44 48 41 35Z" />
+        <g fill="none" strokeOpacity=".8" strokeWidth=".85">
+          <path d="M38 33L9 12M36 34L10 24M37 36L21 50M42 33L71 12M44 34L70 24M43 36L59 50" />
+          <path d="M14 14Q17 27 31 32M66 14Q63 27 49 32M22 40L25 48M58 40L55 48" />
+        </g>
+        <path d="M40 26C38 32 39 43 40 46C41 43 42 32 40 26ZM39 27Q32 15 29 18M41 27Q48 15 51 18" fill="none" />
+      </g>
+    </svg>
+  );
+}
+
 function Ornament() {
   return (
     <svg viewBox="0 0 260 80" aria-hidden="true" className="mx-auto h-16 w-56">
-      <path d="M20 48c40 0 54-21 87-13M240 48c-40 0-54-21-87-13" fill="none" stroke="#879783" strokeWidth="1.4" />
-      <path d="M68 39c-12-14-25-11-29-2 13-3 22 0 29 2Zm31-7c-5-15-17-20-26-13 12 3 19 8 26 13Zm93 7c12-14 25-11 29-2-13-3-22 0-29 2Zm-31-7c5-15 17-20 26-13-12 3-19 8-26 13Z" fill="#879783" opacity=".82" />
-      <WhiteFlower x={108} y={37} scale={0.72} rotation={-12} />
-      <WhiteFlower x={130} y={32} scale={0.92} rotation={8} />
-      <WhiteFlower x={153} y={38} scale={0.68} rotation={24} />
+      <path d="M20 48c40 0 54-21 87-13M240 48c-40 0-54-21-87-13" fill="none" stroke="#6e896b" strokeWidth="1.4" />
+      <path d="M68 39c-12-14-25-11-29-2 13-3 22 0 29 2Zm31-7c-5-15-17-20-26-13 12 3 19 8 26 13Zm93 7c12-14 25-11 29-2-13-3-22 0-29 2Zm-31-7c5-15 17-20 26-13-12 3-19 8-26 13Z" fill="#6e896b" opacity=".82" />
+      <GardenFlower color="#e8c7d3" x={108} y={37} scale={0.72} rotation={-12} />
+      <GardenFlower color="#ddd4ed" x={130} y={32} scale={0.92} rotation={8} />
+      <GardenFlower color="#cfdeeb" x={153} y={38} scale={0.68} rotation={24} />
       <path d="M112 62h36" stroke="#a79a78" strokeWidth="1.4" />
       <circle cx="104" cy="62" r="2" fill="#a79a78" />
       <circle cx="156" cy="62" r="2" fill="#a79a78" />
@@ -86,22 +102,23 @@ function InvitationCoverArtwork({ onOpen }: { onOpen: () => void }) {
       <button
         type="button"
         onClick={onOpen}
-        className="sealed-invitation group relative block w-full overflow-hidden text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#747d59] focus-visible:ring-offset-4 focus-visible:ring-offset-[#dfe1dc]"
+        className="sealed-invitation group relative block w-full overflow-hidden text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#607a60] focus-visible:ring-offset-4 focus-visible:ring-offset-[#e4e9df]"
         aria-label="Buka undangan perkahwinan Harissa Amani dan Muhammad Faiz"
       >
         <img
-          src="/images/gatefold-cover-minimal-sage-v4.png"
+          src="/images/gatefold-cover-garden-v1.webp"
           alt=""
           aria-hidden="true"
           draggable={false}
           className="absolute inset-0 h-full w-full object-cover"
         />
 
+        <Butterfly className="absolute right-[6%] top-[39%] w-20 -rotate-[22deg] sm:w-24" />
         <span className="wax-seal absolute left-1/2 top-1/2 z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center transition duration-300 group-hover:scale-105" aria-hidden="true">
           <img src="/images/wax-seal-fh-v1.png" alt="" className="wax-seal-image h-full w-full object-cover" />
         </span>
       </button>
-      <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#777d72]">Tekan mohor untuk membuka</p>
+      <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#6e7b70]">Tekan mohor untuk membuka</p>
     </div>
   );
 }
@@ -109,14 +126,14 @@ function InvitationCoverArtwork({ onOpen }: { onOpen: () => void }) {
 function SectionTitle({ eyebrow, children, light = false }: { eyebrow: string; children: ReactNode; light?: boolean }) {
   return (
     <div className="mx-auto mb-10 max-w-xl text-center">
-      <p className={`text-[10px] font-semibold uppercase tracking-[0.34em] ${light ? "text-[#66704b]" : "text-[#7c8467]"}`}>{eyebrow}</p>
-      <h2 className={`${titleFont.className} mt-3 text-4xl font-medium tracking-wide text-[#4f5843] sm:text-5xl`}>{children}</h2>
+      <p className={`text-[10px] font-semibold uppercase tracking-[0.34em] ${light ? "text-[#496851]" : "text-[#71866d]"}`}>{eyebrow}</p>
+      <h2 className={`${titleFont.className} mt-3 text-4xl font-medium tracking-wide text-[#3e5949] sm:text-5xl`}>{children}</h2>
       <Ornament />
     </div>
   );
 }
 
-export default function JemputanPerkahwinan() {
+export default function JemputanPerkahwinanV2() {
   const [showSalam, setShowSalam] = useState(false);
   const [invitationOpened, setInvitationOpened] = useState(false);
   const [rsvpSent, setRsvpSent] = useState(false);
@@ -288,7 +305,7 @@ export default function JemputanPerkahwinan() {
 
   const openInvitation = () => {
     if (!audioRef.current) {
-      audioRef.current = new Audio("/audio/malam-bulan.mp3");
+      audioRef.current = new Audio("/audio/terukir-di-bintang-v2.mp3");
       audioRef.current.loop = true;
       audioRef.current.preload = "auto";
     }
@@ -303,70 +320,71 @@ export default function JemputanPerkahwinan() {
       <Head>
         <title>{`${wedding.bride} & ${wedding.groom} — Undangan Walimatulurus`}</title>
         <meta name="description" content={`Dengan penuh kesyukuran, ${wedding.hosts} menjemput anda ke majlis perkahwinan puteri mereka, ${wedding.bride}, bersama ${wedding.groom} pada 28 November 2026.`} />
-        <meta name="theme-color" content="#dfe1dc" />
+        <meta name="theme-color" content="#e4e9df" />
       </Head>
 
       {!invitationOpened ? (
-        <main className="english-wedding-hero relative grid min-h-screen place-items-center overflow-hidden px-5 py-10 text-center text-[#4f5843] sm:px-8 sm:py-14">
+        <main className="english-wedding-hero garden-english-wedding-hero relative grid min-h-screen place-items-center overflow-hidden px-5 py-10 text-center text-[#3e5949] sm:px-8 sm:py-14">
           <div className="relative z-10 mx-auto w-full max-w-xl">
-            <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.38em] text-[#777d72]">Sebuah undangan daripada keluarga pengantin perempuan</p>
+            <p className="mb-5 text-[10px] font-semibold uppercase tracking-[0.38em] text-[#6e7b70]">Sebuah undangan daripada keluarga pengantin perempuan</p>
             <InvitationCoverArtwork onOpen={openInvitation} />
           </div>
         </main>
       ) : (
-        <main className="english-invitation-enter english-wedding-paper min-h-screen bg-[#fffdf8] text-[#4f5843] antialiased selection:bg-[#dfe3da]">
-        <section className="english-wedding-hero relative grid min-h-screen place-items-center overflow-x-hidden px-5 py-20 text-center sm:px-8 sm:py-24">
-          <div className="english-invitation-card relative z-10 mx-auto w-full max-w-3xl px-7 pb-28 pt-32 sm:px-16 sm:pb-36 sm:pt-44">
+        <main className="english-invitation-enter english-wedding-paper garden-english-wedding-paper min-h-screen bg-[#fffdf8] text-[#3e5949] antialiased selection:bg-[#dfe3da]">
+        <section className="english-wedding-hero garden-english-wedding-hero relative grid min-h-screen place-items-center overflow-x-hidden px-5 py-20 text-center sm:px-8 sm:py-24">
+          <div className="english-invitation-card garden-english-invitation-card relative z-10 mx-auto w-full max-w-3xl px-7 pb-28 pt-32 sm:px-16 sm:pb-36 sm:pt-44">
+            <Butterfly className="garden-butterfly-accent right-[18%] top-[5%] w-20 rotate-[18deg] sm:w-24" />
             <p className="text-[10px] font-semibold uppercase tracking-[0.38em] text-[#747b70]">Walimatulurus</p>
             <p className="mt-5 font-serif text-xl italic text-[#68776d]">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيم</p>
             <p className="mx-auto mt-6 max-w-lg text-sm leading-7 text-[#68776d]">
               Dengan penuh kesyukuran ke hadrat Allah SWT, kami
             </p>
-            <p className={`${titleFont.className} mt-2 text-3xl font-medium tracking-wide text-[#66704b] sm:text-4xl`}>{wedding.hosts}</p>
+            <p className={`${titleFont.className} mt-2 text-3xl font-medium tracking-wide text-[#496851] sm:text-4xl`}>{wedding.hosts}</p>
             <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-[#68776d]">
-              dengan segala hormatnya menjemput Dato&apos;, Datin, Tuan, Puan, Encik dan Cik seisi keluarga ke majlis perkahwinan puteri kami
+              dengan segala hormatnya menjemput Dato&apos;, Datin, Tuan, Puan, Encik dan Cik dan pasangan ke majlis perkahwinan puteri kami
             </p>
-            <h1 className={`${namesFont.className} mt-7 text-4xl font-normal leading-[0.95] text-[#66704b] sm:text-6xl`}>
+            <h1 className={`${namesFont.className} mt-7 text-4xl font-normal leading-[0.95] text-[#496851] sm:text-6xl`}>
               {wedding.brideFullName}
               <span className={`${titleFont.className} mx-auto my-3 block text-xl font-normal italic text-[#9b8b65]`}>&</span>
               {wedding.groomFullName}
             </h1>
             <Ornament />
             <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <a href="#lokasi" className="inline-flex items-center gap-2 rounded-full border border-[#7c8467]/25 bg-[#fffdf8]/80 px-5 py-3 text-sm font-semibold text-[#4f5843] shadow-sm transition hover:-translate-y-0.5 hover:border-[#747d59]">
+              <a href="#lokasi" className="inline-flex items-center gap-2 rounded-full border border-[#71866d]/25 bg-[#fffdf8]/80 px-5 py-3 text-sm font-semibold text-[#3e5949] shadow-sm transition hover:-translate-y-0.5 hover:border-[#607a60]">
                 <MapPin className="h-4 w-4" /> Lokasi
               </a>
-              <a href="#rsvp" className="inline-flex items-center gap-2 rounded-full bg-[#5f684d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#4f5843]">
+              <a href="#rsvp" className="inline-flex items-center gap-2 rounded-full bg-[#4c6b55] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#3e5949]">
                 <Heart className="h-4 w-4" /> RSVP
               </a>
-              <a href="#hadiah" className="inline-flex items-center gap-2 rounded-full border border-[#4f5843]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#4f5843] shadow-sm transition hover:-translate-y-0.5 hover:border-[#747d59]">
+              <a href="#hadiah" className="inline-flex items-center gap-2 rounded-full border border-[#3e5949]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#3e5949] shadow-sm transition hover:-translate-y-0.5 hover:border-[#607a60]">
                 <Gift className="h-4 w-4" /> Hadiah
               </a>
               {showSalam && (
-                <a href="#salam-kaut" className="inline-flex items-center gap-2 rounded-full border border-[#747d59]/30 bg-[#747d59] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#5d664b]">
+                <a href="#salam-kaut" className="inline-flex items-center gap-2 rounded-full border border-[#607a60]/30 bg-[#607a60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#4f7058]">
                   <QrCode className="h-4 w-4" /> Salam Kaut
                 </a>
               )}
             </div>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-medium text-[#4f5843]">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-medium text-[#3e5949]">
               <span>{wedding.dateLabel}</span>
-              <span className="hidden h-1 w-1 rounded-full bg-[#747d59] sm:block" />
+              <span className="hidden h-1 w-1 rounded-full bg-[#607a60] sm:block" />
               <span>{wedding.timeLabel}</span>
             </div>
-            <a href="#butiran" className="mx-auto mt-9 grid h-12 w-12 place-items-center rounded-full border border-[#747d59]/40 text-[#747d59] transition hover:-translate-y-1 hover:bg-white/60" aria-label="Lihat butiran majlis">
+            <a href="#butiran" className="mx-auto mt-9 grid h-12 w-12 place-items-center rounded-full border border-[#607a60]/40 text-[#607a60] transition hover:-translate-y-1 hover:bg-white/60" aria-label="Lihat butiran majlis">
               <ChevronDown className="h-5 w-5" />
             </a>
           </div>
         </section>
 
-        <section id="butiran" className="stationery-section relative overflow-hidden border-y border-[#a79a78]/20 bg-[#efefeb] px-6 py-24 text-[#4f5843]">
+        <section id="butiran" className="stationery-section garden-stationery-section relative overflow-hidden border-y border-[#a79a78]/20 bg-[#eef0e8] px-6 py-24 text-[#3e5949]">
           <div className="relative">
             <SectionTitle eyebrow="Dengan segala hormatnya" light>Majlis perkahwinan puteri kami</SectionTitle>
             <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
               {[["Hari", countdown.hari], ["Jam", countdown.jam], ["Minit", countdown.minit]].map(([label, value]) => (
                 <div key={label} className="stationery-panel p-7 text-center">
-                  <strong className={`${titleFont.className} block text-6xl font-medium text-[#66704b]`}>{value}</strong>
-                  <span className="mt-2 block text-xs uppercase tracking-[0.25em] text-[#777d72]">{label}</span>
+                  <strong className={`${titleFont.className} block text-6xl font-medium text-[#496851]`}>{value}</strong>
+                  <span className="mt-2 block text-xs uppercase tracking-[0.25em] text-[#6e7b70]">{label}</span>
                 </div>
               ))}
             </div>
@@ -376,8 +394,8 @@ export default function JemputanPerkahwinan() {
                 { icon: Sparkles, label: wedding.timeLabel },
                 { icon: MapPin, label: wedding.venue },
               ].map(({ icon: Icon, label }) => (
-                <div key={label} className="stationery-panel flex items-center gap-4 p-5 text-[#4f5843]">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#e4e5dc]"><Icon className="h-5 w-5" /></span>
+                <div key={label} className="stationery-panel flex items-center gap-4 p-5 text-[#3e5949]">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#e3e9de]"><Icon className="h-5 w-5" /></span>
                   <span className="font-medium">{label}</span>
                 </div>
               ))}
@@ -387,7 +405,7 @@ export default function JemputanPerkahwinan() {
                 href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Majlis Perkahwinan ${wedding.bride} & ${wedding.groom}`)}&dates=20261128T113000/20261128T123000&ctz=Asia%2FKuala_Lumpur&location=${encodeURIComponent(wedding.venue)}&details=${encodeURIComponent(`Dengan penuh kesyukuran, ${wedding.hosts} menjemput tuan/puan ke majlis perkahwinan puteri mereka, ${wedding.bride}, bersama ${wedding.groom}.`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-[#5f684d] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#4f5843]/10 transition hover:-translate-y-0.5 hover:bg-[#4f5843]"
+                className="inline-flex items-center gap-2 rounded-full bg-[#4c6b55] px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#3e5949]/10 transition hover:-translate-y-0.5 hover:bg-[#3e5949]"
               >
                 <CalendarDays className="h-4 w-4" /> Tambah ke Google Calendar
               </a>
@@ -401,13 +419,13 @@ export default function JemputanPerkahwinan() {
             <div className="stationery-panel mx-auto max-w-4xl p-6 sm:p-10">
               <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
                 <div>
-                  <MapPin className="h-9 w-9 text-[#747d59]" />
-                  <h3 className={`${titleFont.className} mt-4 text-4xl font-medium text-[#4f5843]`}>{wedding.venue}</h3>
+                  <MapPin className="h-9 w-9 text-[#607a60]" />
+                  <h3 className={`${titleFont.className} mt-4 text-4xl font-medium text-[#3e5949]`}>{wedding.venue}</h3>
                   <p className="mt-3 max-w-lg leading-7 text-[#6f786f]">Kami berdua dan sekeluarga berbesar hati menyambut kehadiran tuan/puan. Pilih aplikasi navigasi untuk mendapatkan arah ke lokasi majlis.</p>
                 </div>
                 <div className="grid gap-3">
                   {maps.map((map) => (
-                    <a key={map.name} href={map.href} target="_blank" rel="noreferrer" className="flex min-w-[190px] items-center justify-between rounded-full border border-[#4f5843]/15 bg-white px-5 py-3 font-medium transition hover:-translate-y-0.5 hover:border-[#747d59]">
+                    <a key={map.name} href={map.href} target="_blank" rel="noreferrer" className="flex min-w-[190px] items-center justify-between rounded-full border border-[#3e5949]/15 bg-white px-5 py-3 font-medium transition hover:-translate-y-0.5 hover:border-[#607a60]">
                       {map.name}<ExternalLink className="h-4 w-4" />
                     </a>
                   ))}
@@ -417,36 +435,36 @@ export default function JemputanPerkahwinan() {
           </div>
         </section>
 
-        <section id="rsvp" className="english-wedding-blush stationery-section relative scroll-mt-6 overflow-hidden border-y border-[#a79a78]/20 bg-[#efefeb] px-6 py-24">
+        <section id="rsvp" className="english-wedding-blush garden-english-wedding-blush stationery-section garden-stationery-section relative scroll-mt-6 overflow-hidden border-y border-[#a79a78]/20 bg-[#eef0e8] px-6 py-24">
           <div className="relative">
             <SectionTitle eyebrow="Mohon maklum balas">Khabarkan kehadiran tuan dan puan</SectionTitle>
             <p className="mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]">Bagi membantu kami membuat persiapan, mohon sahkan kehadiran sebelum hari majlis.</p>
             <form onSubmit={submitRsvp} className="stationery-panel mx-auto grid max-w-2xl gap-5 p-6 sm:p-10">
             <label className="grid gap-2 text-sm font-semibold">Nama
-              <input name="nama" maxLength={100} required placeholder="Nama anda" className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]" />
+              <input name="nama" maxLength={100} required placeholder="Nama anda" className="rounded-sm border-[#3e5949]/15 bg-white focus:border-[#607a60] focus:ring-[#607a60]" />
             </label>
             <fieldset>
               <legend className="mb-3 text-sm font-semibold">Kehadiran</legend>
               <div className="grid grid-cols-2 gap-3">
                 {["Hadir, insya-Allah", "Maaf, tidak dapat hadir"].map((answer, index) => (
-                  <label key={answer} className="flex cursor-pointer items-center gap-3 rounded-sm border border-[#4f5843]/15 bg-white p-4 text-sm">
-                    <input type="radio" name="kehadiran" value={answer} required defaultChecked={index === 0} className="text-[#747d59] focus:ring-[#747d59]" />{answer}
+                  <label key={answer} className="flex cursor-pointer items-center gap-3 rounded-sm border border-[#3e5949]/15 bg-white p-4 text-sm">
+                    <input type="radio" name="kehadiran" value={answer} required defaultChecked={index === 0} className="text-[#607a60] focus:ring-[#607a60]" />{answer}
                   </label>
                 ))}
               </div>
             </fieldset>
             <label className="grid gap-2 text-sm font-semibold">Jumlah tetamu
-              <select name="tetamu" className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]">
+              <select name="tetamu" className="rounded-sm border-[#3e5949]/15 bg-white focus:border-[#607a60] focus:ring-[#607a60]">
                 {[1, 2, 3, 4, 5].map((count) => <option key={count}>{count}</option>)}
               </select>
             </label>
             <label className="grid gap-2 text-sm font-semibold">Ucapan dan doa buat pasangan pengantin
-              <textarea name="ucapan" maxLength={2000} rows={4} placeholder="Titipkan doa dan ucapan buat pengantin..." className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]" />
+              <textarea name="ucapan" maxLength={2000} rows={4} placeholder="Titipkan doa dan ucapan buat pengantin..." className="rounded-sm border-[#3e5949]/15 bg-white focus:border-[#607a60] focus:ring-[#607a60]" />
             </label>
             <p className="text-xs text-[#6f786f]">Nama dan ucapan akan dipaparkan kepada tetamu lain. Maklumat kehadiran adalah peribadi.</p>
             {!backendReady && !backendError && <p role="status">Sedang menyambung...</p>}
             {backendError && <p role="alert" className="text-sm text-red-700">{backendError}</p>}
-            <button disabled={!backendReady || saving} className="mt-2 rounded-full bg-[#4f5843] px-6 py-4 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5f684d]">{saving ? "Sedang menyimpan..." : "Hantar RSVP"}</button>
+            <button disabled={!backendReady || saving} className="mt-2 rounded-full bg-[#3e5949] px-6 py-4 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#4c6b55]">{saving ? "Sedang menyimpan..." : "Hantar RSVP"}</button>
             {rsvpSent && <p className="text-center text-sm font-medium text-[#637d6d]">Terima kasih. Maklum balas tuan/puan telah kami terima.</p>}
             </form>
           </div>
@@ -463,16 +481,16 @@ export default function JemputanPerkahwinan() {
               <div className="grid gap-5 md:grid-cols-2">
                 {wishes.slice().reverse().map((wish, index) => (
                   <blockquote key={`${wish.name}-${index}`} className="stationery-panel relative p-6 sm:p-8">
-                    <Quote className="h-8 w-8 fill-[#dfe3da] text-[#747d59]" aria-hidden="true" />
-                    <p className={`${titleFont.className} mt-4 text-2xl leading-9 text-[#4f5843]`}>&ldquo;{wish.message}&rdquo;</p>
-                    <footer className="mt-5 text-sm font-semibold uppercase tracking-[0.16em] text-[#747d59]">— {wish.name}</footer>
+                    <Quote className="h-8 w-8 fill-[#dfe3da] text-[#607a60]" aria-hidden="true" />
+                    <p className={`${titleFont.className} mt-4 text-2xl leading-9 text-[#3e5949]`}>&ldquo;{wish.message}&rdquo;</p>
+                    <footer className="mt-5 text-sm font-semibold uppercase tracking-[0.16em] text-[#607a60]">— {wish.name}</footer>
                   </blockquote>
                 ))}
               </div>
             ) : (
               <div className="stationery-panel mx-auto max-w-xl px-6 py-10 text-center">
-                <Quote className="mx-auto h-8 w-8 text-[#747d59]" aria-hidden="true" />
-                <p className={`${titleFont.className} mt-4 text-2xl text-[#4f5843]`}>Belum ada ucapan dititipkan.</p>
+                <Quote className="mx-auto h-8 w-8 text-[#607a60]" aria-hidden="true" />
+                <p className={`${titleFont.className} mt-4 text-2xl text-[#3e5949]`}>Belum ada ucapan dititipkan.</p>
                 <p className="mt-2 text-sm leading-6 text-[#6f786f]">Ucapan daripada borang RSVP akan dipaparkan di sini.</p>
               </div>
             )}
@@ -493,40 +511,40 @@ export default function JemputanPerkahwinan() {
                   const fullyFunded = percentage >= 100;
 
                   return (
-                    <div key={item.id} className={`rounded-lg border p-5 transition ${fullyFunded ? "border-[#93a38e]/40 bg-[#e4ebe1]" : "border-[#747d59]/15 bg-white/70"}`}>
+                    <div key={item.id} className={`rounded-lg border p-5 transition ${fullyFunded ? "border-[#93a38e]/40 bg-[#e4ebe1]" : "border-[#607a60]/15 bg-white/70"}`}>
                       <div className="flex items-center gap-4">
-                        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${fullyFunded ? "bg-[#778b78] text-white" : "bg-[#e5e8df] text-[#5d664b]"}`}>
+                        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${fullyFunded ? "bg-[#778b78] text-white" : "bg-[#e4ebe1] text-[#4f7058]"}`}>
                           {fullyFunded ? <Check className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-[#4f5843]">{item.name}</p>
+                          <p className="font-medium text-[#3e5949]">{item.name}</p>
                           <p className="mt-0.5 text-xs text-[#777e78]">{fullyFunded ? "Sasaran laporan sumbangan telah dicapai" : "Sumbangan dilaporkan oleh tetamu"}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => openContribution(item.id)}
                           disabled={fullyFunded || !backendReady || saving}
-                          className="rounded-full bg-[#4f5843] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#5f684d] disabled:cursor-not-allowed disabled:bg-[#778b78]"
+                          className="rounded-full bg-[#3e5949] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#4c6b55] disabled:cursor-not-allowed disabled:bg-[#778b78]"
                         >
                           {fullyFunded ? "Lengkap" : "Sumbang"}
                         </button>
                       </div>
                       <div className="mt-5">
                         <div className="mb-2 flex items-end justify-between gap-4 text-xs">
-                          <span className="font-semibold text-[#4f5843]">
+                          <span className="font-semibold text-[#3e5949]">
                             {formatRinggit(item.contribution.contributed)} / {formatRinggit(item.contribution.target)}
                           </span>
-                          <span className="font-bold text-[#747d59]">{percentage.toFixed(1)}%</span>
+                          <span className="font-bold text-[#607a60]">{percentage.toFixed(1)}%</span>
                         </div>
                         <div
-                          className="h-2.5 overflow-hidden rounded-full bg-[#e7dfd4]"
+                          className="h-2.5 overflow-hidden rounded-full bg-[#e9e1e8]"
                           role="progressbar"
                           aria-label={`Kemajuan sumbangan untuk ${item.name}`}
                           aria-valuemin={0}
                           aria-valuemax={item.contribution.target}
                           aria-valuenow={item.contribution.contributed}
                         >
-                          <div className="h-full rounded-full bg-[#747d59] transition-all duration-500" style={{ width: `${percentage}%` }} />
+                          <div className="h-full rounded-full bg-[#607a60] transition-all duration-500" style={{ width: `${percentage}%` }} />
                         </div>
                       </div>
                     </div>
@@ -534,15 +552,15 @@ export default function JemputanPerkahwinan() {
                 }
 
                 return (
-                  <div key={item.id} className={`flex items-center gap-4 rounded-lg border p-4 transition ${item.claimed ? "border-[#93a38e]/40 bg-[#e4ebe1]" : "border-[#747d59]/15 bg-white/70"}`}>
-                    <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${item.claimed ? "bg-[#778b78] text-white" : "bg-[#e5e8df] text-[#5d664b]"}`}>
+                  <div key={item.id} className={`flex items-center gap-4 rounded-lg border p-4 transition ${item.claimed ? "border-[#93a38e]/40 bg-[#e4ebe1]" : "border-[#607a60]/15 bg-white/70"}`}>
+                    <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${item.claimed ? "bg-[#778b78] text-white" : "bg-[#e4ebe1] text-[#4f7058]"}`}>
                       {item.claimed ? <Check className="h-5 w-5" /> : <Gift className="h-5 w-5" />}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className={`font-medium ${item.claimed ? "text-[#718077] line-through" : "text-[#4f5843]"}`}>{item.name}</p>
+                      <p className={`font-medium ${item.claimed ? "text-[#718077] line-through" : "text-[#3e5949]"}`}>{item.name}</p>
                       <p className="mt-0.5 text-xs text-[#777e78]">{item.claimed ? "Sudah dipilih oleh tetamu" : "Masih tersedia"}</p>
                     </div>
-                    <button disabled={!backendReady || saving || (item.claimed && item.claimedBy !== guestId)} type="button" onClick={() => toggleGift(item.id)} className="rounded-full border border-[#4f5843]/15 px-4 py-2 text-xs font-bold">
+                    <button disabled={!backendReady || saving || (item.claimed && item.claimedBy !== guestId)} type="button" onClick={() => toggleGift(item.id)} className="rounded-full border border-[#3e5949]/15 px-4 py-2 text-xs font-bold">
                       {item.claimed ? (item.claimedBy === guestId ? "Batalkan" : "Sudah dipilih") : "Saya pilih"}
                     </button>
                   </div>
@@ -550,9 +568,9 @@ export default function JemputanPerkahwinan() {
               })}
             </div>
             {backendError && <p role="alert" className="mt-3 text-sm text-red-700">{backendError}</p>}
-            <form onSubmit={addGift} className="mt-6 flex gap-3 rounded-lg border border-dashed border-[#747d59]/40 bg-white/40 p-3">
+            <form onSubmit={addGift} className="mt-6 flex gap-3 rounded-lg border border-dashed border-[#607a60]/40 bg-white/40 p-3">
               <input maxLength={100} value={newGift} onChange={(event) => setNewGift(event.target.value)} placeholder="Hadiah lain yang anda ingin berikan" aria-label="Hadiah lain yang anda ingin berikan" className="min-w-0 flex-1 border-0 bg-transparent focus:ring-0" />
-              <button disabled={!backendReady || saving} aria-label="Simpan pilihan hadiah" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#747d59] text-white"><Plus className="h-5 w-5" /></button>
+              <button disabled={!backendReady || saving} aria-label="Simpan pilihan hadiah" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#607a60] text-white"><Plus className="h-5 w-5" /></button>
             </form>
             <p className="mt-3 text-center text-xs leading-5 text-[#777e78]">Jika hadiah anda tiada dalam senarai, masukkan namanya di atas. Ia akan terus ditandakan sebagai sudah dipilih.</p>
             </div>
@@ -574,22 +592,22 @@ export default function JemputanPerkahwinan() {
                 type="button"
                 onClick={closeContribution}
                 aria-label="Tutup"
-                className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-full bg-[#e9ebe4] text-[#4f5843] transition hover:bg-[#e2d8ca]"
+                className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-full bg-[#e9ebe4] text-[#3e5949] transition hover:bg-[#e2d8ca]"
               >
                 <X className="h-5 w-5" />
               </button>
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#747d59]">Sumbangan hadiah</p>
-              <h2 id="contribution-title" className={`${titleFont.className} mt-2 pr-12 text-4xl font-medium text-[#4f5843]`}>{selectedGift.name}</h2>
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#607a60]">Sumbangan hadiah</p>
+              <h2 id="contribution-title" className={`${titleFont.className} mt-2 pr-12 text-4xl font-medium text-[#3e5949]`}>{selectedGift.name}</h2>
               <p className="mt-3 text-sm leading-6 text-[#6f786f]">Sekiranya tuan/puan ingin menyumbang buat hadiah pengantin, imbas kod DuitNow, buat pembayaran, kemudian catat jumlah sumbangan. Catatan ini bukan pengesahan pembayaran oleh bank.</p>
 
-              <div className="mx-auto mt-6 w-full max-w-[240px] overflow-hidden rounded-lg border border-[#4f5843]/10 bg-white p-3 shadow-sm">
+              <div className="mx-auto mt-6 w-full max-w-[240px] overflow-hidden rounded-lg border border-[#3e5949]/10 bg-white p-3 shadow-sm">
                 <img src={selectedGift.contribution.duitNowQr} alt="Kod QR DuitNow untuk sumbangan hadiah" className="aspect-square h-auto w-full" />
               </div>
 
               <form onSubmit={submitContribution} className="mt-6">
-                <label htmlFor="contribution-amount" className="text-sm font-semibold text-[#4f5843]">Jumlah yang telah disumbangkan</label>
-                <div className="mt-2 flex overflow-hidden rounded-sm border border-[#4f5843]/15 bg-white focus-within:border-[#747d59] focus-within:ring-1 focus-within:ring-[#747d59]">
-                  <span className="grid place-items-center border-r border-[#4f5843]/10 px-4 text-sm font-bold text-[#68776d]">RM</span>
+                <label htmlFor="contribution-amount" className="text-sm font-semibold text-[#3e5949]">Jumlah yang telah disumbangkan</label>
+                <div className="mt-2 flex overflow-hidden rounded-sm border border-[#3e5949]/15 bg-white focus-within:border-[#607a60] focus-within:ring-1 focus-within:ring-[#607a60]">
+                  <span className="grid place-items-center border-r border-[#3e5949]/10 px-4 text-sm font-bold text-[#68776d]">RM</span>
                   <input
                     id="contribution-amount"
                     type="number"
@@ -612,7 +630,7 @@ export default function JemputanPerkahwinan() {
                 <p className="mt-2 text-xs text-[#777e78]">
                   Baki diperlukan: {formatRinggit(Math.max(0, selectedGift.contribution.target - selectedGift.contribution.contributed))}
                 </p>
-                <button disabled={!backendReady || saving} className="mt-5 w-full rounded-full bg-[#747d59] px-6 py-3.5 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#5d664b]">
+                <button disabled={!backendReady || saving} className="mt-5 w-full rounded-full bg-[#607a60] px-6 py-3.5 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#4f7058]">
                   Saya telah menyumbang
                 </button>
               </form>
@@ -621,14 +639,14 @@ export default function JemputanPerkahwinan() {
         )}
 
         {showSalam && (
-          <section id="salam-kaut" className="stationery-section relative scroll-mt-6 overflow-hidden border-y border-[#a79a78]/20 bg-[#efefeb] px-6 py-24 text-[#4f5843]">
+          <section id="salam-kaut" className="stationery-section garden-stationery-section relative scroll-mt-6 overflow-hidden border-y border-[#a79a78]/20 bg-[#eef0e8] px-6 py-24 text-[#3e5949]">
             <div className="relative">
               <SectionTitle eyebrow="Tanda ingatan buat pengantin" light>Salam Kaut</SectionTitle>
               <div className="stationery-panel mx-auto max-w-xl p-7 text-center sm:p-10">
-                <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#fffdf8] text-[#4f5843]"><QrCode className="h-10 w-10" /></span>
-                <h3 className={`${titleFont.className} mt-6 text-4xl font-medium text-[#66704b]`}>Sedikit tanda ingatan</h3>
+                <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#fffdf8] text-[#3e5949]"><QrCode className="h-10 w-10" /></span>
+                <h3 className={`${titleFont.className} mt-6 text-4xl font-medium text-[#496851]`}>Sedikit tanda ingatan</h3>
                 <p className="mt-4 leading-7 text-[#6f786f]">Sekiranya tuan/puan berhasrat berkongsi rezeki buat pasangan pengantin, silakan imbas kod DuitNow ini. Kehadiran dan doa restu tuan/puan tetap menjadi hadiah yang paling bermakna.</p>
-                <div className="mx-auto mt-7 w-full max-w-[260px] overflow-hidden rounded-sm border border-[#7c8467]/15 bg-white p-3 shadow-lg shadow-[#4f5843]/10">
+                <div className="mx-auto mt-7 w-full max-w-[260px] overflow-hidden rounded-sm border border-[#71866d]/15 bg-white p-3 shadow-lg shadow-[#3e5949]/10">
                   <img src="/images/duitnow-qr-placeholder.svg" alt="Kod QR DuitNow untuk Salam Kaut" className="aspect-square h-auto w-full" />
                 </div>
               </div>
@@ -636,12 +654,13 @@ export default function JemputanPerkahwinan() {
           </section>
         )}
 
-        <footer className="stationery-section border-t border-[#a79a78]/20 bg-[#efefeb] px-6 py-20 text-center">
+        <footer className="stationery-section garden-stationery-section relative border-t border-[#a79a78]/20 bg-[#eef0e8] px-6 py-20 text-center">
+          <Butterfly className="absolute right-[8%] top-4 w-20 -rotate-[20deg] sm:right-[22%] sm:w-24" />
           <Ornament />
-          <Heart className="mx-auto mt-2 h-5 w-5 fill-[#747d59] text-[#747d59]" />
-          <p className={`${titleFont.className} mt-5 text-4xl font-medium text-[#4f5843]`}>Kehadiran tuan dan puan amat kami hargai.</p>
+          <Heart className="mx-auto mt-2 h-5 w-5 fill-[#607a60] text-[#607a60]" />
+          <p className={`${titleFont.className} mt-5 text-4xl font-medium text-[#3e5949]`}>Kehadiran tuan dan puan amat kami hargai.</p>
           <p className="mx-auto mt-4 max-w-xl leading-7 text-[#6f786f]">Dengan ingatan tulus daripada {wedding.hosts}.</p>
-          <p className={`${namesFont.className} mt-7 text-5xl text-[#66704b]`}>{wedding.bride} & {wedding.groom}</p>
+          <p className={`${namesFont.className} mt-7 text-5xl text-[#496851]`}>{wedding.bride} & {wedding.groom}</p>
         </footer>
         </main>
       )}

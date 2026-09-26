@@ -143,3 +143,41 @@
 .animate-slide-in-right {
   animation: slide-in-right 0.5s ease-in-out forwards;
 }
+
+/* Garden edition: only the v2 route adds these classes. */
+.garden-english-wedding-paper {
+  background-image: url("/images/wedding-page-garden-v1.webp");
+}
+
+.garden-english-wedding-hero {
+  background-color: #e4e9df;
+  background-image:
+    radial-gradient(ellipse at 50% 45%, rgb(255 255 255 / 30%), transparent 58%),
+    linear-gradient(115deg, rgb(255 255 255 / 20%), transparent 42%, rgb(86 117 87 / 10%));
+}
+
+.garden-english-invitation-card {
+  background-image:
+    linear-gradient(rgb(255 253 248 / 7%), rgb(255 253 248 / 7%)),
+    url("/images/arched-invitation-garden-v1.webp");
+  background-size: 100% 100%;
+}
+
+.garden-stationery-section {
+  background-color: rgb(236 240 230 / 86%);
+  backdrop-filter: saturate(95%);
+}
+
+.garden-english-invitation-card > .garden-butterfly-accent {
+  position: absolute;
+}
+
+.garden-english-wedding-blush {
+  background-color: rgb(244 234 237 / 88%);
+}
+
+@media (max-width: 639px) {
+  .garden-english-invitation-card {
+    background-size: cover;
+  }
+}
