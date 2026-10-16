@@ -30,7 +30,9 @@ import {
   Gift,
   Heart,
   MapPin,
+  MessageCircle,
   Music2,
+  Phone,
   Plus,
   QrCode,
   Quote,
@@ -63,6 +65,14 @@ const wedding = {
   mapQuery: "LeQAMR Glasshall, Melaka",
   hosts: "Ts. Razak & Dr Rina",
 };
+
+const weddingContacts = [
+  { name: "Razak", phone: "0126365859" },
+  { name: "Hasuarina", phone: "0126237859" },
+  { name: "Amira", phone: "0192115859" },
+  { name: "Hanani", phone: "0196345859" },
+  { name: "Harris", phone: "0133635859" },
+];
 
 const formatRinggit = (amount: number) =>
   new Intl.NumberFormat("ms-MY", {
@@ -251,7 +261,7 @@ function InvitationCoverArtwork({
         </span>
       </button>
       <p
-        className={`${styles["cover-hint"]} mt-6 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#6e7b70]`}
+        className={`${styles["cover-hint"]} ${namesFont.className} mt-6 text-[#536858]`}
       >
         Tekan mohor untuk membuka
       </p>
@@ -605,9 +615,9 @@ export default function JemputanPerkahwinanV2() {
             className={`${styles["cover-content"]} relative z-10 mx-auto w-full max-w-xl`}
           >
             <p
-              className={`${styles["cover-label"]} mb-7 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#6e7b70]`}
+              className={`${styles["cover-label"]} ${namesFont.className} mb-7 text-[#536858]`}
             >
-              Sebuah undangan daripada keluarga pengantin perempuan
+              Dengan penuh kasih, kami menjemput
             </p>
             <InvitationCoverArtwork onOpen={openInvitation} opening={opening} />
             <p
@@ -742,7 +752,7 @@ export default function JemputanPerkahwinanV2() {
 
           <GardenReveal className={styles.interlude}>
             <blockquote className={titleFont.className}>
-              &ldquo;And We created you in pairs.&rdquo;
+              &ldquo;Dan Kami menciptakan kamu berpasang-pasangan.&rdquo;
               <cite>Surah An-Naba · 78:8</cite>
             </blockquote>
           </GardenReveal>
@@ -839,6 +849,10 @@ export default function JemputanPerkahwinanV2() {
                         kehadiran tuan/puan. Pilih aplikasi navigasi untuk
                         mendapatkan arah ke lokasi majlis.
                       </p>
+                      <a href="#hubungi" className={styles["contact-link"]}>
+                        <Phone className="h-4 w-4" aria-hidden="true" />
+                        Hubungi kami untuk bantuan
+                      </a>
                     </div>
                     <div className={`${styles["map-links"]} grid gap-3`}>
                       {maps.map((map) => (
@@ -1060,7 +1074,10 @@ export default function JemputanPerkahwinanV2() {
                       return (
                         <GardenReveal key={item.id}>
                           <div
-                            className={`rounded-lg border p-5 transition ${
+                            data-reserved={fullyFunded}
+                            className={`${
+                              styles["gift-card"]
+                            } rounded-lg border p-5 transition ${
                               fullyFunded
                                 ? "border-[#93a38e]/40 bg-[#e4ebe1]"
                                 : "border-[#607a60]/15 bg-white/70"
@@ -1133,7 +1150,10 @@ export default function JemputanPerkahwinanV2() {
                     return (
                       <GardenReveal key={item.id}>
                         <div
-                          className={`flex items-center gap-4 rounded-lg border p-4 transition ${
+                          data-reserved={item.claimed}
+                          className={`${
+                            styles["gift-card"]
+                          } flex items-center gap-4 rounded-lg border p-4 transition ${
                             item.claimed
                               ? "border-[#93a38e]/40 bg-[#e4ebe1]"
                               : "border-[#607a60]/15 bg-white/70"
@@ -1358,6 +1378,64 @@ export default function JemputanPerkahwinanV2() {
             </section>
           )}
 
+          <section
+            id="hubungi"
+            aria-label="Hubungi kami"
+            className="relative overflow-hidden border-t border-[#a79a78]/20 px-6 py-24"
+          >
+            <div className="relative mx-auto max-w-xl">
+              <SectionTitle eyebrow="Kami sedia membantu">
+                Hubungi kami
+              </SectionTitle>
+              <p
+                className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]`}
+              >
+                Sebarang pertanyaan, sila hubungi kami melalui telefon atau
+                WhatsApp.
+              </p>
+              <ul className={styles["contact-list"]}>
+                {weddingContacts.map(({ name, phone }, index) => {
+                  const internationalPhone = `60${phone.slice(1)}`;
+                  return (
+                    <li key={phone}>
+                      <GardenReveal delay={index * 60}>
+                        <div
+                          className={`${styles["contact-card"]} stationery-panel`}
+                        >
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-medium">{name}</h3>
+                            <p className="mt-1 text-xs tracking-wide text-[#6f786f]">
+                              {phone.slice(0, 3)} {phone.slice(3, 6)}{" "}
+                              {phone.slice(6)}
+                            </p>
+                          </div>
+                          <div className={styles["contact-actions"]}>
+                            <a
+                              href={`tel:+${internationalPhone}`}
+                              aria-label={`Telefon ${name}`}
+                              title={`Telefon ${name}`}
+                            >
+                              <Phone aria-hidden="true" />
+                            </a>
+                            <a
+                              href={`https://wa.me/${internationalPhone}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={`WhatsApp ${name}`}
+                              title={`WhatsApp ${name}`}
+                            >
+                              <MessageCircle aria-hidden="true" />
+                            </a>
+                          </div>
+                        </div>
+                      </GardenReveal>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </section>
+
           <footer
             className={`${styles.closing} stationery-section garden-stationery-section relative border-t border-[#a79a78]/20 bg-[#eef0e8] px-6 py-20 text-center`}
           >
@@ -1389,6 +1467,9 @@ export default function JemputanPerkahwinanV2() {
             </a>
             <a href="#hadiah">
               <Gift aria-hidden="true" /> Hadiah
+            </a>
+            <a href="#hubungi">
+              <Phone aria-hidden="true" /> Hubungi
             </a>
             <button
               type="button"
