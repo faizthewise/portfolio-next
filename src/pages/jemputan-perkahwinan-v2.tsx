@@ -1,5 +1,6 @@
 import Head from "next/head";
 import GardenReveal from "@/components/wedding/GardenReveal";
+import GardenButterflyFlight from "@/components/wedding/GardenButterflyFlight";
 import styles from "@/styles/WeddingGarden.module.css";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
 import {
@@ -167,14 +168,19 @@ function Butterfly({ className = "" }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        <path d="M39 32C30 13 10 3 5 8C0 16 9 34 30 38C13 33 9 43 17 53C25 61 36 48 39 35Z" />
-        <path
-          fill="#ded3ee"
-          d="M41 32C50 13 70 3 75 8C80 16 71 34 50 38C67 33 71 43 63 53C55 61 44 48 41 35Z"
-        />
-        <g fill="none" strokeOpacity=".8" strokeWidth=".85">
-          <path d="M38 33L9 12M36 34L10 24M37 36L21 50M42 33L71 12M44 34L70 24M43 36L59 50" />
-          <path d="M14 14Q17 27 31 32M66 14Q63 27 49 32M22 40L25 48M58 40L55 48" />
+        <g data-wing="left">
+          <path d="M39 32C30 13 10 3 5 8C0 16 9 34 30 38C13 33 9 43 17 53C25 61 36 48 39 35Z" />
+          <g fill="none" strokeOpacity=".8" strokeWidth=".85">
+            <path d="M38 33L9 12M36 34L10 24M37 36L21 50" />
+            <path d="M14 14Q17 27 31 32M22 40L25 48" />
+          </g>
+        </g>
+        <g data-wing="right" fill="#ded3ee">
+          <path d="M41 32C50 13 70 3 75 8C80 16 71 34 50 38C67 33 71 43 63 53C55 61 44 48 41 35Z" />
+          <g fill="none" strokeOpacity=".8" strokeWidth=".85">
+            <path d="M42 33L71 12M44 34L70 24M43 36L59 50" />
+            <path d="M66 14Q63 27 49 32M58 40L55 48" />
+          </g>
         </g>
         <path
           d="M40 26C38 32 39 43 40 46C41 43 42 32 40 26ZM39 27Q32 15 29 18M41 27Q48 15 51 18"
@@ -701,37 +707,39 @@ export default function JemputanPerkahwinanV2() {
                 </p>
                 <p className={styles["hero-venue"]}>{wedding.venue}</p>
               </GardenReveal>
-              <GardenReveal delay={360}>
-                <div
-                  className={`${styles["hero-links"]} mt-7 flex flex-wrap justify-center gap-3`}
-                >
-                  <a
-                    href="#lokasi"
-                    className="inline-flex items-center gap-2 rounded-full border border-[#71866d]/25 bg-[#fffdf8]/80 px-5 py-3 text-sm font-semibold text-[#3e5949] shadow-sm transition hover:-translate-y-0.5 hover:border-[#607a60]"
+              <div>
+                <GardenReveal delay={360}>
+                  <div
+                    className={`${styles["hero-links"]} mt-7 flex flex-wrap justify-center gap-3`}
                   >
-                    <MapPin className="h-4 w-4" /> Lokasi
-                  </a>
-                  <a
-                    href="#rsvp"
-                    className="inline-flex items-center gap-2 rounded-full bg-[#4c6b55] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#3e5949]"
-                  >
-                    <Heart className="h-4 w-4" /> RSVP
-                  </a>
-                  <a
-                    href="#hadiah"
-                    className="inline-flex items-center gap-2 rounded-full border border-[#3e5949]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#3e5949] shadow-sm transition hover:-translate-y-0.5 hover:border-[#607a60]"
-                  >
-                    <Gift className="h-4 w-4" /> Hadiah
-                  </a>
-                  {showSalam && (
                     <a
-                      href="#salam-kaut"
-                      className="inline-flex items-center gap-2 rounded-full border border-[#607a60]/30 bg-[#607a60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#4f7058]"
+                      href="#lokasi"
+                      className="inline-flex items-center gap-2 rounded-full border border-[#71866d]/25 bg-[#fffdf8]/80 px-5 py-3 text-sm font-semibold text-[#3e5949] shadow-sm transition hover:-translate-y-0.5 hover:border-[#607a60]"
                     >
-                      <QrCode className="h-4 w-4" /> Salam Kaut
+                      <MapPin className="h-4 w-4" /> Lokasi
                     </a>
-                  )}
-                </div>
+                    <a
+                      href="#rsvp"
+                      className="inline-flex items-center gap-2 rounded-full bg-[#4c6b55] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#3e5949]"
+                    >
+                      <Heart className="h-4 w-4" /> RSVP
+                    </a>
+                    <a
+                      href="#hadiah"
+                      className="inline-flex items-center gap-2 rounded-full border border-[#3e5949]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#3e5949] shadow-sm transition hover:-translate-y-0.5 hover:border-[#607a60]"
+                    >
+                      <Gift className="h-4 w-4" /> Hadiah
+                    </a>
+                    {showSalam && (
+                      <a
+                        href="#salam-kaut"
+                        className="inline-flex items-center gap-2 rounded-full border border-[#607a60]/30 bg-[#607a60] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#4f7058]"
+                      >
+                        <QrCode className="h-4 w-4" /> Salam Kaut
+                      </a>
+                    )}
+                  </div>
+                </GardenReveal>
                 <div
                   className={`${styles["hero-schedule"]} ${titleFont.className} mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[#3e5949]`}
                 >
@@ -739,14 +747,16 @@ export default function JemputanPerkahwinanV2() {
                   <span className="hidden h-1 w-1 rounded-full bg-[#607a60] sm:block" />
                   <span>{wedding.timeLabel}</span>
                 </div>
-                <a
-                  href="#butiran"
-                  className={`${styles["scroll-cue"]} mx-auto mt-9 grid h-12 w-12 place-items-center rounded-full border border-[#a48b60]/40 text-[#8e7956] transition hover:-translate-y-1 hover:bg-white/60`}
-                  aria-label="Lihat butiran majlis"
-                >
-                  <ChevronDown className="h-5 w-5" />
-                </a>
-              </GardenReveal>
+                <GardenReveal delay={360}>
+                  <a
+                    href="#butiran"
+                    className={`${styles["scroll-cue"]} mx-auto mt-9 grid h-12 w-12 place-items-center rounded-full border border-[#a48b60]/40 text-[#8e7956] transition hover:-translate-y-1 hover:bg-white/60`}
+                    aria-label="Lihat butiran majlis"
+                  >
+                    <ChevronDown className="h-5 w-5" />
+                  </a>
+                </GardenReveal>
+              </div>
             </div>
           </section>
 
@@ -985,6 +995,9 @@ export default function JemputanPerkahwinanV2() {
             id="ucapan"
             className="relative scroll-mt-6 overflow-hidden border-b border-[#a79a78]/25 bg-[#fffdf8]/70 px-6 py-24"
           >
+            <GardenButterflyFlight>
+              <Butterfly />
+            </GardenButterflyFlight>
             <div className="relative mx-auto max-w-5xl">
               <SectionTitle eyebrow="Titipan buat pengantin">
                 Ucapan dan doa
@@ -1439,7 +1452,6 @@ export default function JemputanPerkahwinanV2() {
           <footer
             className={`${styles.closing} stationery-section garden-stationery-section relative border-t border-[#a79a78]/20 bg-[#eef0e8] px-6 py-20 text-center`}
           >
-            <Butterfly className="absolute right-[8%] top-4 w-20 -rotate-[20deg] sm:right-[22%] sm:w-24" />
             <GardenReveal>
               <Ornament />
               <Heart className="mx-auto mt-2 h-5 w-5 fill-[#607a60] text-[#607a60]" />

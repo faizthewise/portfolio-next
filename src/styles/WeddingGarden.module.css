@@ -642,6 +642,74 @@
   text-underline-offset: 4px;
 }
 
+.butterfly-flight {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.flight-trigger {
+  position: absolute;
+  top: 35%;
+  left: 50%;
+  width: 1px;
+  height: 1px;
+}
+
+.flying-butterfly {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--flight-size);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.flying-butterfly > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  animation: none;
+}
+
+.flying-butterfly > svg > g {
+  animation: none;
+}
+
+.flying-butterfly [data-wing] {
+  --wing-fold: 72deg;
+
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: garden-wingbeat var(--wing-duration) ease-in-out var(--wing-phase)
+    infinite;
+}
+
+.flying-butterfly [data-wing="right"] {
+  --wing-fold: -72deg;
+}
+
+@keyframes garden-wingbeat {
+  0%,
+  34%,
+  68%,
+  100% {
+    transform: perspective(160px) rotateY(0deg);
+  }
+
+  17%,
+  51% {
+    transform: perspective(160px) rotateY(var(--wing-fold));
+  }
+
+  84% {
+    transform: perspective(160px) rotateY(calc(var(--wing-fold) * 0.15));
+  }
+}
+
 @keyframes page-enter {
   from {
     opacity: 0;
