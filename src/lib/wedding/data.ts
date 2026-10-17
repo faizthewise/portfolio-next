@@ -22,6 +22,8 @@ export type GiftItem = {
   contribution?: { target: number; contributed: number; duitNowQr: string };
 };
 
+export const WISH_CHARACTER_LIMIT = 200;
+
 export type WeddingWish = { name: string; message: string };
 
 export const initialGifts: GiftItem[] = [
@@ -104,7 +106,6 @@ export function subscribeWedding(
 }
 
 export async function saveRsvp(form: FormData) {
-  const uid = await getWeddingGuest();
   const name = String(form.get("nama") ?? "").trim();
   const attendance = String(form.get("kehadiran") ?? "");
   const guests =
@@ -113,7 +114,7 @@ export async function saveRsvp(form: FormData) {
   if (
     !name ||
     name.length > 100 ||
-    message.length > 2000 ||
+    message.length > WISH_CHARACTER_LIMIT ||
     !["Hadir, insya-Allah", "Maaf, tidak dapat hadir"].includes(attendance) ||
     !Number.isInteger(guests) ||
     guests < 0 ||
@@ -121,6 +122,7 @@ export async function saveRsvp(form: FormData) {
   ) {
     throw new Error("Maklumat RSVP tidak sah.");
   }
+  const uid = await getWeddingGuest();
   const batch = writeBatch(getWeddingFirestore());
   batch.set(doc(records("rsvps"), uid), {
     name,

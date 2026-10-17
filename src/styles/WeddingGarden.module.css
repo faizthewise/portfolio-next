@@ -519,6 +519,7 @@
   box-shadow: 0 8px 32px rgb(62 89 73 / 14%);
   transform: translateX(-50%);
   backdrop-filter: blur(12px);
+  animation: dock-enter 400ms ease-out both;
 }
 
 .dock a,
@@ -618,17 +619,6 @@
   height: 18px;
 }
 
-.contact-link {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  font-size: 0.8125rem;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-
 .butterfly-flight {
   position: absolute;
   z-index: 10;
@@ -694,6 +684,18 @@
 
   84% {
     transform: perspective(160px) rotateY(calc(var(--wing-fold) * 0.15));
+  }
+}
+
+@keyframes dock-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
 }
 
@@ -790,7 +792,7 @@
 
   .hero-card h1 > span {
     margin-block: 0.25rem;
-    font-size: 1rem;
+    font-size: 1.25rem;
   }
 
   .hero-card > :global(.garden-butterfly-accent) {
@@ -1118,11 +1120,14 @@
 
   .page section[id] {
     display: flex;
-    min-height: var(--garden-section-height);
     flex-direction: column;
-    justify-content: center;
     padding-block: 2.5rem;
     padding-inline: 1.25rem;
+  }
+
+  .page section[id]:not(.wishes-section) {
+    min-height: var(--garden-section-height);
+    justify-content: center;
   }
 
   .page section[id] > div {
@@ -1192,4 +1197,24 @@
     opacity: 1;
     transform: none;
   }
+}
+
+.page section.wishes-section {
+  display: grid;
+  grid-template-rows: 1fr;
+  height: auto;
+  min-height: max(46.25rem, 100svh);
+  padding-block: clamp(2rem, 5vw, 3.5rem);
+}
+
+.wishes-content {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.wishes-list {
+  display: flex;
+  flex: 1;
 }

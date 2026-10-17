@@ -3,7 +3,7 @@
 - `/wedding-registry` contains the full nine-item catalogue and reservation controls.
 - `/wedding-registry?gift=air-fryer` opens a particular item. The `gift` value is the catalogue slug.
 - The garden invitation shows the gift preview and gift navigation only with
-  `?friend=1`. Its return URL `/jemputan-perkahwinan-v2?friend=1&registry=1#hadiah`
+  `?friend=1`. Its return URL `/jemputan-walimatulurus-harissa-faiz?friend=1&registry=1#hadiah`
   preserves this option and opens directly at the gift section.
 - Clock and blanket are omitted at the owner's request; their supplied URLs were video shares.
 

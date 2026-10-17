@@ -1,6 +1,6 @@
 # Garden artwork
 
-The garden design is version 2 at `/jemputan-perkahwinan-v2`. The original
+The garden design is version 2 at `/jemputan-walimatulurus-harissa-faiz`. The original
 design remains at `/jemputan-perkahwinan`. Both routes share the same Firebase
 data; append `?salam=1` to either route to show Salam Kaut.
 

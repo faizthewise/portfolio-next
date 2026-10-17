@@ -1,6 +1,6 @@
 import Head from "next/head";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
-import { GiftItem, WeddingWish, initialGifts, subscribeWedding, saveRsvp, reserveGift, createGift, recordContribution } from "@/lib/wedding/data";
+import { GiftItem, WeddingWish, WISH_CHARACTER_LIMIT, initialGifts, subscribeWedding, saveRsvp, reserveGift, createGift, recordContribution } from "@/lib/wedding/data";
 import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -441,7 +441,7 @@ export default function JemputanPerkahwinan() {
               </select>
             </label>
             <label className="grid gap-2 text-sm font-semibold">Ucapan dan doa buat pasangan pengantin
-              <textarea name="ucapan" maxLength={2000} rows={4} placeholder="Titipkan doa dan ucapan buat pengantin..." className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]" />
+              <textarea name="ucapan" maxLength={WISH_CHARACTER_LIMIT} rows={4} placeholder="Titipkan doa dan ucapan buat pengantin..." className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]" />
             </label>
             <p className="text-xs text-[#6f786f]">Nama dan ucapan akan dipaparkan kepada tetamu lain. Maklumat kehadiran adalah peribadi.</p>
             {!backendReady && !backendError && <p role="status">Sedang menyambung...</p>}
