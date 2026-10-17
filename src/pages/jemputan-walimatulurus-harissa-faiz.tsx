@@ -983,8 +983,10 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 <p
                   className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]`}
                 >
-                  Kehadiran dan doa restu anda sudah cukup bermakna. Jika ingin
-                  menitipkan hadiah, lihat pilihan buat kediaman kami.
+                  Kehadiran dan doa restu anda sudah cukup bermakna. Senarai
+                  hadiah ini disediakan untuk membantu tetamu mengelakkan
+                  pembelian hadiah yang sama. Jika ingin menitipkan hadiah,
+                  semak senarai dan tandakan pilihan anda sebelum membeli.
                 </p>
                 <GardenReveal>
                   <div className={registryStyles.preview}>
