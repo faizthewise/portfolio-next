@@ -375,19 +375,6 @@
   background-size: 160px 160px, auto, auto;
 }
 
-.gift-card {
-  background-image: var(--garden-grain),
-    linear-gradient(125deg, rgb(255 253 246 / 95%), rgb(234 232 220 / 85%));
-  background-size: 160px 160px, auto;
-  box-shadow: 0 1px 0 rgb(255 255 255 / 80%) inset,
-    0 8px 24px -20px rgb(62 89 73 / 30%);
-}
-
-.gift-card[data-reserved="true"] {
-  background-image: var(--garden-grain),
-    linear-gradient(125deg, #edf0e5, #dce5d8);
-}
-
 .calendar-action a,
 .rsvp-form > button {
   background-image: linear-gradient(125deg, #60785e, #3e5949 70%, #334d40);
@@ -938,6 +925,10 @@
     display: grid;
     width: calc(100% - 1.5rem);
     max-width: 22rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 44px;
+  }
+
+  .dock[data-has-gifts="true"] {
     grid-template-columns: repeat(4, minmax(0, 1fr)) 44px;
   }
 

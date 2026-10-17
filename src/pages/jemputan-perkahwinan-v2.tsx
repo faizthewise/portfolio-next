@@ -1,18 +1,14 @@
 import Head from "next/head";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import RegistryProductImage from "@/components/wedding/RegistryProductImage";
+import { registryPath, registryProducts } from "@/lib/wedding/registry";
+import registryStyles from "@/styles/WeddingRegistry.module.css";
 import GardenReveal from "@/components/wedding/GardenReveal";
 import GardenButterflyFlight from "@/components/wedding/GardenButterflyFlight";
 import styles from "@/styles/WeddingGarden.module.css";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
-import {
-  GiftItem,
-  WeddingWish,
-  initialGifts,
-  subscribeWedding,
-  saveRsvp,
-  reserveGift,
-  createGift,
-  recordContribution,
-} from "@/lib/wedding/data";
+import { WeddingWish, subscribeWedding, saveRsvp } from "@/lib/wedding/data";
 import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
 import {
   FormEvent,
@@ -23,9 +19,8 @@ import {
   useState,
 } from "react";
 import {
-  Banknote,
+  ArrowRight,
   CalendarDays,
-  Check,
   ChevronDown,
   ExternalLink,
   Gift,
@@ -34,12 +29,10 @@ import {
   MessageCircle,
   Music2,
   Phone,
-  Plus,
   QrCode,
   Quote,
   Sparkles,
   VolumeX,
-  X,
 } from "lucide-react";
 
 const titleFont = Cormorant_Garamond({
@@ -74,13 +67,6 @@ const weddingContacts = [
   { name: "Hanani", phone: "0196345859" },
   { name: "Harris", phone: "0133635859" },
 ];
-
-const formatRinggit = (amount: number) =>
-  new Intl.NumberFormat("ms-MY", {
-    style: "currency",
-    currency: "MYR",
-    maximumFractionDigits: 2,
-  }).format(amount);
 
 function GardenFlower({
   x,
@@ -306,25 +292,19 @@ function SectionTitle({
 }
 
 export default function JemputanPerkahwinanV2() {
+  const router = useRouter();
+  const showGifts = router.isReady && router.query.friend === "1";
   const [showSalam, setShowSalam] = useState(false);
   const [invitationOpened, setInvitationOpened] = useState(false);
   const [opening, setOpening] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(false);
   const [now, setNow] = useState<number | null>(null);
   const [rsvpSent, setRsvpSent] = useState(false);
-  const [gifts, setGifts] = useState<GiftItem[]>(initialGifts);
-  const [newGift, setNewGift] = useState("");
   const [wishes, setWishes] = useState<WeddingWish[]>([]);
-  const [selectedGiftId, setSelectedGiftId] = useState<string | null>(null);
-  const [contributionAmount, setContributionAmount] = useState("");
-  const [contributionError, setContributionError] = useState("");
-  const [guestId, setGuestId] = useState("");
   const [backendReady, setBackendReady] = useState(false);
   const [backendError, setBackendError] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-  const contributionId = useRef("");
-  const customGiftId = useRef("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const openingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -342,6 +322,15 @@ export default function JemputanPerkahwinanV2() {
     if (!invitationOpened) return;
     // Focus the new document, not an off-screen reveal inside the invitation.
     invitationRef.current?.focus({ preventScroll: true });
+    const returnFrame =
+      showGifts &&
+      new URLSearchParams(window.location.search).get("registry") === "1"
+        ? requestAnimationFrame(() =>
+            document
+              .getElementById("hadiah")
+              ?.scrollIntoView({ behavior: "auto" })
+          )
+        : 0;
     setNow(Date.now());
     const tick = window.setInterval(() => setNow(Date.now()), 60_000);
     let frame = 0;
@@ -361,29 +350,29 @@ export default function JemputanPerkahwinanV2() {
     window.addEventListener("resize", schedule);
     update();
     return () => {
+      cancelAnimationFrame(returnFrame);
       clearInterval(tick);
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
-  }, [invitationOpened]);
+  }, [invitationOpened, showGifts]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setShowSalam(params.get("salam") === "1");
+    if (params.get("registry") === "1") setInvitationOpened(true);
 
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
     void getWeddingGuest()
-      .then((uid) => {
+      .then(() => {
         if (disposed) return;
-        setGuestId(uid);
         let giftsLoaded = false;
         let wishesLoaded = false;
         let failed = false;
         unsubscribe = subscribeWedding(
-          (items) => {
-            setGifts(items);
+          () => {
             giftsLoaded = true;
             setBackendReady(!failed && giftsLoaded && wishesLoaded);
           },
@@ -420,22 +409,6 @@ export default function JemputanPerkahwinanV2() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!selectedGiftId) return;
-
-    const previousOverflow = document.body.style.overflow;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !savingRef.current) setSelectedGiftId(null);
-    };
-    document.addEventListener("keydown", closeOnEscape);
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", closeOnEscape);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [selectedGiftId]);
-
   const countdown = useMemo(() => {
     if (now === null) return { hari: "—", jam: "—", minit: "—" };
     const distance = Math.max(0, wedding.date.getTime() - now);
@@ -463,77 +436,6 @@ export default function JemputanPerkahwinanV2() {
       savingRef.current = false;
       setSaving(false);
     }
-  };
-
-  const toggleGift = (id: string) => {
-    const gift = gifts.find((item) => item.id === id);
-    if (gift) void performSave(() => reserveGift(gift));
-  };
-
-  const selectedGift = gifts.find((gift) => gift.id === selectedGiftId);
-
-  const openContribution = (id: string) => {
-    contributionId.current = crypto.randomUUID();
-    setSelectedGiftId(id);
-    setContributionAmount("");
-    setContributionError("");
-  };
-
-  const closeContribution = () => {
-    if (savingRef.current) return;
-    setSelectedGiftId(null);
-    setContributionAmount("");
-    setContributionError("");
-  };
-
-  const submitContribution = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!selectedGift?.contribution) return;
-
-    const amount = Number(contributionAmount);
-    const remaining = Math.max(
-      0,
-      selectedGift.contribution.target - selectedGift.contribution.contributed
-    );
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setContributionError("Masukkan jumlah sumbangan yang sah.");
-      return;
-    }
-    if (amount > remaining) {
-      setContributionError(
-        `Jumlah maksimum yang masih diperlukan ialah ${formatRinggit(
-          remaining
-        )}.`
-      );
-      return;
-    }
-
-    void performSave(async () => {
-      try {
-        await recordContribution(amount, contributionId.current);
-        setSelectedGiftId(null);
-        setContributionAmount("");
-      } catch (error) {
-        setContributionError(
-          error instanceof Error && !error.message.includes("Firebase")
-            ? error.message
-            : "Sumbangan belum direkodkan. Sila cuba lagi."
-        );
-      }
-    });
-  };
-
-  const addGift = (event: FormEvent) => {
-    event.preventDefault();
-    const name = newGift.trim();
-    if (!name) return;
-    if (!customGiftId.current)
-      customGiftId.current = `custom-${crypto.randomUUID()}`;
-    void performSave(async () => {
-      await createGift(name, customGiftId.current);
-      customGiftId.current = "";
-      setNewGift("");
-    });
   };
 
   const submitRsvp = (event: FormEvent<HTMLFormElement>) => {
@@ -584,8 +486,12 @@ export default function JemputanPerkahwinanV2() {
   };
 
   const toggleMusic = () => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio("/audio/terukir-di-bintang-v2.mp3");
+      audioRef.current.loop = true;
+      audioRef.current.volume = 0.55;
+    }
     const audio = audioRef.current;
-    if (!audio) return;
     if (audio.paused) {
       void audio
         .play()
@@ -623,7 +529,7 @@ export default function JemputanPerkahwinanV2() {
             <p
               className={`${styles["cover-label"]} ${namesFont.className} mb-7 text-[#536858]`}
             >
-              Dengan penuh kasih, kami menjemput
+              Jemputan ke Walimatulurus
             </p>
             <InvitationCoverArtwork onOpen={openInvitation} opening={opening} />
             <p
@@ -724,12 +630,14 @@ export default function JemputanPerkahwinanV2() {
                     >
                       <Heart className="h-4 w-4" /> RSVP
                     </a>
-                    <a
-                      href="#hadiah"
-                      className="inline-flex items-center gap-2 rounded-full border border-[#3e5949]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#3e5949] shadow-sm transition hover:-translate-y-0.5 hover:border-[#607a60]"
-                    >
-                      <Gift className="h-4 w-4" /> Hadiah
-                    </a>
+                    {showGifts && (
+                      <a
+                        href="#hadiah"
+                        className="inline-flex items-center gap-2 rounded-full border border-[#3e5949]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#3e5949] shadow-sm transition hover:-translate-y-0.5 hover:border-[#607a60]"
+                      >
+                        <Gift className="h-4 w-4" /> Hadiah
+                      </a>
+                    )}
                     {showSalam && (
                       <a
                         href="#salam-kaut"
@@ -1056,304 +964,54 @@ export default function JemputanPerkahwinanV2() {
             </div>
           </section>
 
-          <section
-            id="hadiah"
-            className="relative scroll-mt-6 overflow-hidden px-6 py-24"
-          >
-            <div className="relative">
-              <SectionTitle eyebrow="Buat pasangan pengantin">
-                Senarai hadiah pengantin
-              </SectionTitle>
-              <div className="mx-auto max-w-3xl">
-                <p
-                  className={`${styles["section-intro"]} mx-auto -mt-6 mb-10 max-w-xl text-center leading-7 text-[#6f786f]`}
-                >
-                  Kehadiran dan doa restu tuan/puan buat Harissa dan Faiz sudah
-                  cukup bermakna. Senarai ini disediakan sekiranya tuan/puan
-                  berhasrat memberi hadiah, agar hadiah yang sama tidak dibeli
-                  lebih daripada sekali.
-                </p>
-                <div className="grid gap-3">
-                  {gifts.map((item) => {
-                    if (item.contribution) {
-                      const percentage = Math.min(
-                        100,
-                        (item.contribution.contributed /
-                          item.contribution.target) *
-                          100
-                      );
-                      const fullyFunded = percentage >= 100;
-
-                      return (
-                        <GardenReveal key={item.id}>
-                          <div
-                            data-reserved={fullyFunded}
-                            className={`${
-                              styles["gift-card"]
-                            } rounded-lg border p-5 transition ${
-                              fullyFunded
-                                ? "border-[#93a38e]/40 bg-[#e4ebe1]"
-                                : "border-[#607a60]/15 bg-white/70"
-                            }`}
-                          >
-                            <div className="flex items-center gap-4">
-                              <span
-                                className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${
-                                  fullyFunded
-                                    ? "bg-[#778b78] text-white"
-                                    : "bg-[#e4ebe1] text-[#4f7058]"
-                                }`}
-                              >
-                                {fullyFunded ? (
-                                  <Check className="h-5 w-5" />
-                                ) : (
-                                  <Banknote className="h-5 w-5" />
-                                )}
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-medium text-[#3e5949]">
-                                  {item.name}
-                                </p>
-                                <p className="mt-0.5 text-xs text-[#777e78]">
-                                  {fullyFunded
-                                    ? "Sasaran laporan sumbangan telah dicapai"
-                                    : "Sumbangan dilaporkan oleh tetamu"}
-                                </p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => openContribution(item.id)}
-                                disabled={
-                                  fullyFunded || !backendReady || saving
-                                }
-                                className="rounded-full bg-[#3e5949] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#4c6b55] disabled:cursor-not-allowed disabled:bg-[#778b78]"
-                              >
-                                {fullyFunded ? "Lengkap" : "Sumbang"}
-                              </button>
-                            </div>
-                            <div className="mt-5">
-                              <div className="mb-2 flex items-end justify-between gap-4 text-xs">
-                                <span className="font-semibold text-[#3e5949]">
-                                  {formatRinggit(item.contribution.contributed)}{" "}
-                                  / {formatRinggit(item.contribution.target)}
-                                </span>
-                                <span className="font-bold text-[#607a60]">
-                                  {percentage.toFixed(1)}%
-                                </span>
-                              </div>
-                              <div
-                                className="h-2.5 overflow-hidden rounded-full bg-[#e9e1e8]"
-                                role="progressbar"
-                                aria-label={`Kemajuan sumbangan untuk ${item.name}`}
-                                aria-valuemin={0}
-                                aria-valuemax={item.contribution.target}
-                                aria-valuenow={item.contribution.contributed}
-                              >
-                                <div
-                                  className="h-full rounded-full bg-[#607a60] transition-all duration-500"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </GardenReveal>
-                      );
-                    }
-
-                    return (
-                      <GardenReveal key={item.id}>
-                        <div
-                          data-reserved={item.claimed}
-                          className={`${
-                            styles["gift-card"]
-                          } flex items-center gap-4 rounded-lg border p-4 transition ${
-                            item.claimed
-                              ? "border-[#93a38e]/40 bg-[#e4ebe1]"
-                              : "border-[#607a60]/15 bg-white/70"
-                          }`}
-                        >
-                          <span
-                            className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${
-                              item.claimed
-                                ? "bg-[#778b78] text-white"
-                                : "bg-[#e4ebe1] text-[#4f7058]"
-                            }`}
-                          >
-                            {item.claimed ? (
-                              <Check className="h-5 w-5" />
-                            ) : (
-                              <Gift className="h-5 w-5" />
-                            )}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className={`font-medium ${
-                                item.claimed
-                                  ? "text-[#718077] line-through"
-                                  : "text-[#3e5949]"
-                              }`}
-                            >
-                              {item.name}
-                            </p>
-                            <p className="mt-0.5 text-xs text-[#777e78]">
-                              {item.claimed
-                                ? "Sudah dipilih oleh tetamu"
-                                : "Masih tersedia"}
-                            </p>
-                          </div>
-                          <button
-                            disabled={
-                              !backendReady ||
-                              saving ||
-                              (item.claimed && item.claimedBy !== guestId)
-                            }
-                            type="button"
-                            onClick={() => toggleGift(item.id)}
-                            className="rounded-full border border-[#3e5949]/15 px-4 py-2 text-xs font-bold"
-                          >
-                            {item.claimed
-                              ? item.claimedBy === guestId
-                                ? "Batalkan"
-                                : "Sudah dipilih"
-                              : "Saya pilih"}
-                          </button>
-                        </div>
-                      </GardenReveal>
-                    );
-                  })}
-                </div>
-                {backendError && (
-                  <p role="alert" className="mt-3 text-sm text-red-700">
-                    {backendError}
-                  </p>
-                )}
-                <form
-                  onSubmit={addGift}
-                  className="mt-6 flex gap-3 rounded-lg border border-dashed border-[#607a60]/40 bg-white/40 p-3"
-                >
-                  <input
-                    maxLength={100}
-                    value={newGift}
-                    onChange={(event) => setNewGift(event.target.value)}
-                    placeholder="Hadiah lain yang anda ingin berikan"
-                    aria-label="Hadiah lain yang anda ingin berikan"
-                    className="min-w-0 flex-1 border-0 bg-transparent focus:ring-0"
-                  />
-                  <button
-                    disabled={!backendReady || saving}
-                    aria-label="Simpan pilihan hadiah"
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#607a60] text-white"
-                  >
-                    <Plus className="h-5 w-5" />
-                  </button>
-                </form>
-                <p className="mt-3 text-center text-xs leading-5 text-[#777e78]">
-                  Jika hadiah anda tiada dalam senarai, masukkan namanya di
-                  atas. Ia akan terus ditandakan sebagai sudah dipilih.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {selectedGift?.contribution && (
-            <div
-              className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-[#24342c]/75 p-4 backdrop-blur-sm"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="contribution-title"
-              onMouseDown={(event) => {
-                if (event.target === event.currentTarget) closeContribution();
-              }}
+          {showGifts && (
+            <section
+              id="hadiah"
+              className="relative scroll-mt-6 overflow-hidden px-6 py-24"
             >
-              <div className="stationery-panel relative my-6 w-full max-w-md p-6 shadow-2xl sm:p-8">
-                <button
-                  type="button"
-                  onClick={closeContribution}
-                  aria-label="Tutup"
-                  className="absolute right-5 top-5 grid h-10 w-10 place-items-center rounded-full bg-[#e9ebe4] text-[#3e5949] transition hover:bg-[#e2d8ca]"
+              <div className="relative mx-auto max-w-3xl">
+                <SectionTitle eyebrow="Buat kehidupan bersama">
+                  Hadiah penuh makna
+                </SectionTitle>
+                <p
+                  className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]`}
                 >
-                  <X className="h-5 w-5" />
-                </button>
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#607a60]">
-                  Sumbangan hadiah
+                  Kehadiran dan doa restu anda sudah cukup bermakna. Jika ingin
+                  menitipkan hadiah, lihat pilihan buat kediaman kami.
                 </p>
-                <h2
-                  id="contribution-title"
-                  className={`${titleFont.className} mt-2 pr-12 text-4xl font-medium text-[#3e5949]`}
-                >
-                  {selectedGift.name}
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-[#6f786f]">
-                  Sekiranya tuan/puan ingin menyumbang buat hadiah pengantin,
-                  imbas kod DuitNow, buat pembayaran, kemudian catat jumlah
-                  sumbangan. Catatan ini bukan pengesahan pembayaran oleh bank.
-                </p>
-
-                <div className="mx-auto mt-6 w-full max-w-[240px] overflow-hidden rounded-lg border border-[#3e5949]/10 bg-white p-3 shadow-sm">
-                  <img
-                    src={selectedGift.contribution.duitNowQr}
-                    alt="Kod QR DuitNow untuk sumbangan hadiah"
-                    className="aspect-square h-auto w-full"
-                  />
-                </div>
-
-                <form onSubmit={submitContribution} className="mt-6">
-                  <label
-                    htmlFor="contribution-amount"
-                    className="text-sm font-semibold text-[#3e5949]"
-                  >
-                    Jumlah yang telah disumbangkan
-                  </label>
-                  <div className="mt-2 flex overflow-hidden rounded-sm border border-[#3e5949]/15 bg-white focus-within:border-[#607a60] focus-within:ring-1 focus-within:ring-[#607a60]">
-                    <span className="grid place-items-center border-r border-[#3e5949]/10 px-4 text-sm font-bold text-[#68776d]">
-                      RM
-                    </span>
-                    <input
-                      id="contribution-amount"
-                      type="number"
-                      inputMode="decimal"
-                      min="0.01"
-                      step="0.01"
-                      max={Math.max(
-                        0,
-                        selectedGift.contribution.target -
-                          selectedGift.contribution.contributed
-                      )}
-                      required
-                      autoFocus
-                      value={contributionAmount}
-                      onChange={(event) => {
-                        setContributionAmount(event.target.value);
-                        setContributionError("");
-                      }}
-                      placeholder="100.00"
-                      className="min-w-0 flex-1 border-0 bg-transparent px-4 py-3 focus:ring-0"
-                    />
+                <GardenReveal>
+                  <div className={registryStyles.preview}>
+                    {registryProducts.slice(0, 3).map((product) => (
+                      <Link
+                        key={product.slug}
+                        href={`${registryPath}?gift=${product.slug}`}
+                        className={registryStyles["preview-card"]}
+                        aria-label={product.name}
+                      >
+                        <div className={registryStyles["image-wrap"]}>
+                          <RegistryProductImage product={product} />
+                        </div>
+                        <span className={titleFont.className}>
+                          {product.name}
+                        </span>
+                      </Link>
+                    ))}
                   </div>
-                  {contributionError && (
-                    <p className="mt-2 text-xs font-medium text-red-700">
-                      {contributionError}
+                  <div className={registryStyles["preview-action"]}>
+                    <Link
+                      href={registryPath}
+                      className={registryStyles.primary}
+                    >
+                      Lihat semua hadiah <ArrowRight aria-hidden="true" />
+                    </Link>
+                    <p>
+                      {registryProducts.length} pilihan · Semak dan pilih hadiah
+                      di senarai penuh
                     </p>
-                  )}
-                  <p className="mt-2 text-xs text-[#777e78]">
-                    Baki diperlukan:{" "}
-                    {formatRinggit(
-                      Math.max(
-                        0,
-                        selectedGift.contribution.target -
-                          selectedGift.contribution.contributed
-                      )
-                    )}
-                  </p>
-                  <button
-                    disabled={!backendReady || saving}
-                    className="mt-5 w-full rounded-full bg-[#607a60] px-6 py-3.5 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#4f7058]"
-                  >
-                    Saya telah menyumbang
-                  </button>
-                </form>
+                  </div>
+                </GardenReveal>
               </div>
-            </div>
+            </section>
           )}
 
           {showSalam && (
@@ -1470,16 +1128,22 @@ export default function JemputanPerkahwinanV2() {
               </p>
             </GardenReveal>
           </footer>
-          <nav className={styles.dock} aria-label="Navigasi undangan">
+          <nav
+            className={styles.dock}
+            aria-label="Navigasi undangan"
+            data-has-gifts={showGifts}
+          >
             <a href="#lokasi">
               <MapPin aria-hidden="true" /> Lokasi
             </a>
             <a href="#rsvp">
               <Heart aria-hidden="true" /> RSVP
             </a>
-            <a href="#hadiah">
-              <Gift aria-hidden="true" /> Hadiah
-            </a>
+            {showGifts && (
+              <a href="#hadiah">
+                <Gift aria-hidden="true" /> Hadiah
+              </a>
+            )}
             <a href="#hubungi">
               <Phone aria-hidden="true" /> Hubungi
             </a>
