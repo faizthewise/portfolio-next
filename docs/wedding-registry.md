@@ -1,24 +1,30 @@
 # Wedding registry
 
-- `/wedding-registry` contains the full nine-item catalogue and reservation controls.
+- `/wedding-registry` contains the 12-item catalogue, shared guest-added gifts and reservation controls.
+- `/wedding-registry-en` is the English copy, with the same products and shared reservations.
+  Both routes use `WeddingRegistryPage.tsx`; copy is maintained in `src/lib/wedding/registryCopy.ts`.
+  English item links stay on `/wedding-registry-en?gift=<slug>`.
 - `/wedding-registry?gift=air-fryer` opens a particular item. The `gift` value is the catalogue slug.
 - The garden invitation shows the gift preview and gift navigation only with
   `?friend=1`. Its return URL `/jemputan-walimatulurus-harissa-faiz?friend=1&registry=1#hadiah`
   preserves this option and opens directly at the gift section.
-- Clock and blanket are omitted at the owner's request; their supplied URLs were video shares.
+- Clock remains omitted. Vacuum, blanket and king-size bedsheet use the owner's supplied links.
 
 ## Product content
 
 Edit `src/lib/wedding/registry.ts` to add items. `name` is the short label;
-`fullName` is the exact branded listing title used in the details dialog.
+`fullName` is the branded product name used in the details dialog.
 `image` can point to a locally saved product photo or its public image URL.
 `shopUrl` retains the owner's original Shopee link.
 
-The nine product pages currently require verification/login when fetched. Their
-exact titles and images have **not** been verified, so these optional fields
-are intentionally empty. The UI uses an explicit image fallback and points to
-Shopee for the full details. Add verified listing photos/titles before treating
-product content as complete. Do not substitute photographs of similar products.
+Owner-supplied photos are stored in `public/images/wedding-registry/` and mapped
+in the catalogue using `/images/wedding-registry/<filename>.JPG`. All 12 items have photos; `bath-towel.JPG` maps to Towel and
+`cooking-utensils.jpg` maps to Cooking utensils.
+
+`blanket.JPG`, `bed-sheet-set.JPG`, and `vacuum.JPG` map to Blanket, Bedsheet —
+King size, and Vacuum respectively. Branded product names and readable model
+numbers come from supplied photos and the owner’s edits to `fullName`. Shopee links are references only; guests may buy from
+any shop. Do not infer unknown brands/models.
 
 ## Reservations
 
@@ -33,8 +39,86 @@ Keep `reservationId` and `name` stable once an item has been reserved. Adding a
 new item needs a new permanent `custom-<UUID>` ID. The route slug, branded title,
 and photo can be edited independently of reservation records. The original
 invitation's older gift list and contribution records remain intact; this page
-shows the curated catalogue only.
+shows the curated catalogue plus actively reserved guest-added custom gifts.
+
+Reserved gifts sort after available gifts and show a prominent reserved banner.
+The “Saya ingin beri hadiah lain” form saves a named gift with a stable
+`custom-<UUID>` ID through the existing `createGift` transaction and immediately
+reserves it for the current guest. All visitors receive it through the shared
+Firestore subscription. Its owner can cancel from the detail dialog; cancelled
+guest-added gifts disappear from the list without deleting the stored record.
 
 Availability filters and reservation buttons are disabled until a successful
 subscription. Shopee links remain available when the backend is unavailable.
 Opening a purchase link does not automatically reserve an item or place an order.
+
+## Big wedding gifts and contributions
+
+A catalogue item with a `contribution` field appears in the separate big-gift
+section on both language routes, instead of the ordinary gift list. Dyson is
+the first such item. Add the same field to any future item:
+
+```ts
+contribution: {
+  targetCents: 209900, // RM2,099; initial display price
+  qrImage: "/images/your-payment-qr.png",
+  qrIsPlaceholder: false,
+},
+```
+
+The transfer reference is generated from the stable product slug:
+`vacuum` → `wedding-vacuum`. Guests choose an amount, copy that reference into
+their banking app, make the transfer, then confirm and record the amount.
+The Dyson target is **RM2,099** (`209900` sen). Cards and details show the price,
+reported contributions, progress and remaining amount. Fully funded gifts show
+“Target reached” / “Sasaran tercapai”, sort last in their section and disappear
+from the Available filter. The contribution form and QR are hidden at the target.
+Existing whole-gift reservations remain respected and can still be cancelled by
+their owner.
+
+Configure each fund in the Firebase console at
+`weddings/faiz-harissa/gift-funds/{slug}` before opening contributions. For the
+Dyson document (`vacuum`), set these **number** fields:
+
+- `targetCents`: `209900`
+- `contributedCents`: `0` **only for a new fund**. Preserve any existing total and
+  `lastContributionId` when adding a target to an existing fund.
+
+The rules accept whole-number values stored as either Firestore integers or
+doubles, since the console can encode numeric fields as doubles. Fractional sen,
+negative amounts and totals above the target are still rejected. No conversion
+or reset of existing fund values is needed after publishing these rules.
+
+The Firestore `targetCents` is authoritative and updates the UI live. The catalogue
+`contribution.targetCents` is the initial display price while the fund is not yet
+configured or its data is loading. A missing server target blocks contributions;
+guests cannot set or alter targets. Future gifts use the same setup without
+editing the rules. Change prices in the console and keep the catalogue fallback
+in sync.
+
+At the owner's request, the current QR asset is treated as the payment QR, with
+`qrIsPlaceholder: false`. The asset path remains `/images/duitnow-qr-placeholder.svg`;
+the sample label and placeholder recording restriction are removed. This setting
+does not modify or verify the QR image itself.
+To open contributions, configure the fund as above and publish
+the updated `firestore.rules` to project `jemputan-kahwin-6bd29`. The rules in
+this change have been tested locally; this does not deploy them to production.
+
+New records use these paths:
+
+- `weddings/faiz-harissa/gift-funds/{slug}`: `targetCents`, `contributedCents`
+  (both integer sen) and `lastContributionId` after the first contribution.
+- `weddings/faiz-harissa/contributions/{receiptId}`: private, immutable record
+  with `uid`, `giftId`, `reference`, `amountCents`, and `createdAt`.
+
+Each increment is committed atomically with its matching receipt. Retry IDs
+prevent double-counting, and separate gifts have independent totals. The form
+limits amounts to the remaining balance, the saving code rechecks the server,
+and Firestore rules reject any increment above the target, including simultaneous
+submissions. Guests cannot raise the cap. An exact final contribution succeeds;
+further receipts are rejected atomically. External bank transfers are not
+controlled by the website: if two guests transfer before recording and one loses
+the remaining capacity, they are directed to contact the couple, not transfer again. Legacy
+coffee contribution records and rules remain supported. Recorded amounts are
+self-reported by guests, not bank-verified payments. No transfer is initiated
+by the website.

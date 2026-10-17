@@ -4,6 +4,12 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function owner(uid) { return signedIn() && request.auth.uid == uid; }
     function shortName(value) { return value is string && value.size() > 0 && value.size() <= 100; }
+    // Console-created numeric fields may use doubles even for whole numbers.
+    // Validate exact, non-negative sen without requiring an integer encoding.
+    function wholeSen(value) {
+      return value is number && value >= 0 && value <= 9007199254740991
+        && value == int(value);
+    }
 
     match /weddings/faiz-harissa/rsvps/{uid} {
       allow get: if owner(uid);
@@ -66,6 +72,30 @@ service cloud.firestore {
       allow create, update: if signedIn() && id == 'coffee' && validContributionTotal();
     }
 
+    // New shared-gift funds keep their totals separate from whole-gift claims.
+    match /weddings/faiz-harissa/gift-funds/{giftId} {
+      allow read: if signedIn();
+      function validFundTotal() {
+        let value = request.resource.data;
+        let receiptPath = /databases/$(database)/documents/weddings/faiz-harissa/contributions/$(value.lastContributionId);
+        let receipt = getAfter(receiptPath).data;
+        let previous = resource.data.contributedCents;
+        return giftId.matches('[a-z0-9]+(-[a-z0-9]+)*') && giftId.size() <= 100
+          && value.keys().hasOnly(['targetCents', 'contributedCents', 'lastContributionId'])
+          && wholeSen(resource.data.targetCents) && resource.data.targetCents > 0
+          && value.targetCents == resource.data.targetCents
+          && wholeSen(previous)
+          && wholeSen(value.contributedCents) && value.contributedCents > 0
+          && value.contributedCents <= resource.data.targetCents
+          && !exists(receiptPath) && receipt.uid == request.auth.uid
+          && receipt.giftId == giftId && receipt.reference == 'wedding-' + giftId
+          && value.contributedCents == previous + receipt.amountCents;
+      }
+      // The owner configures the price through the console/Admin SDK. Guests
+      // cannot create funds or increase the target to bypass the cap.
+      allow update: if signedIn() && validFundTotal();
+    }
+
     match /weddings/faiz-harissa/contributions/{id} {
       allow get: if signedIn() && (!exists(/databases/$(database)/documents/weddings/faiz-harissa/contributions/$(id))
         || resource.data.uid == request.auth.uid);
@@ -76,6 +106,17 @@ service cloud.firestore {
         && request.resource.data.amountCents > 0 && request.resource.data.amountCents <= 300000
         && request.resource.data.createdAt == request.time
         && getAfter(/databases/$(database)/documents/weddings/faiz-harissa/gifts/coffee).data.lastContribution == id;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'giftId', 'reference', 'amountCents', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.giftId is string
+        && request.resource.data.giftId.matches('[a-z0-9]+(-[a-z0-9]+)*')
+        && request.resource.data.giftId.size() <= 100
+        && request.resource.data.reference == 'wedding-' + request.resource.data.giftId
+        && request.resource.data.amountCents is int
+        && request.resource.data.amountCents > 0 && request.resource.data.amountCents <= 100000000
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/weddings/faiz-harissa/gift-funds/$(request.resource.data.giftId)).data.lastContributionId == id;
     }
   }
 }

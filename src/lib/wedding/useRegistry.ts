@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 
 import { getWeddingFirestore, getWeddingGuest } from "./firebase";
-import { GiftItem, reserveGift } from "./data";
+import { GiftItem, reserveGift, createGift } from "./data";
 import { registryProducts, RegistryProduct } from "./registry";
 
 export default function useRegistry() {
+  const [products, setProducts] = useState(registryProducts);
   const [reservations, setReservations] = useState<Record<string, GiftItem>>(
     {}
   );
@@ -33,9 +34,28 @@ export default function useRegistry() {
             const saved = new Map(
               snapshot.docs.map((item) => [item.id, item.data()])
             );
+            const customProducts: RegistryProduct[] = snapshot.docs
+              .filter(
+                (item) =>
+                  item.id.startsWith("custom-") &&
+                  !registryProducts.some(
+                    (product) => product.reservationId === item.id
+                  ) &&
+                  typeof item.data().name === "string" &&
+                  !!item.data().claimedBy
+              )
+              .map((item) => ({
+                slug: item.id,
+                reservationId: item.id,
+                name: item.data().name,
+                category: "Hadiah tetamu",
+                custom: true,
+              }));
+            const allProducts = [...registryProducts, ...customProducts];
+            setProducts(allProducts);
             setReservations(
               Object.fromEntries(
-                registryProducts.map((product) => {
+                allProducts.map((product) => {
                   const owner = saved.get(product.reservationId)?.claimedBy;
                   return [
                     product.reservationId,
@@ -86,5 +106,27 @@ export default function useRegistry() {
     }
   };
 
-  return { reservations, guestId, ready, error, pendingId, toggleReservation };
+  const addCustomGift = async (name: string, id: string) => {
+    if (!ready || pending.current) return false;
+    pending.current = true;
+    setPendingId(id);
+    try {
+      await createGift(name, id);
+      return true;
+    } finally {
+      pending.current = false;
+      setPendingId(null);
+    }
+  };
+
+  return {
+    products,
+    reservations,
+    guestId,
+    ready,
+    error,
+    pendingId,
+    toggleReservation,
+    addCustomGift,
+  };
 }

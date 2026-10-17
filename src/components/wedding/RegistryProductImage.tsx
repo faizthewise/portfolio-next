@@ -2,12 +2,15 @@ import { useState } from "react";
 import { Gift } from "lucide-react";
 
 import { RegistryProduct } from "@/lib/wedding/registry";
+import { RegistryLocale, registryCopy } from "@/lib/wedding/registryCopy";
 import styles from "@/styles/WeddingRegistry.module.css";
 
 export default function RegistryProductImage({
   product,
+  locale = "ms",
 }: {
   product: RegistryProduct;
+  locale?: RegistryLocale;
 }) {
   const [failedImage, setFailedImage] = useState<string>();
 
@@ -29,7 +32,11 @@ export default function RegistryProductImage({
   return (
     <div className={styles["image-fallback"]}>
       <Gift aria-hidden="true" />
-      <span>Gambar di Shopee</span>
+      <span>
+        {product.custom
+          ? registryCopy[locale].guestImage
+          : registryCopy[locale].shopeeImage}
+      </span>
     </div>
   );
 }
