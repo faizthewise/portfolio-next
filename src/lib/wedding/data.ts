@@ -118,7 +118,7 @@ export async function saveRsvp(form: FormData) {
     !["Hadir, insya-Allah", "Maaf, tidak dapat hadir"].includes(attendance) ||
     !Number.isInteger(guests) ||
     guests < 0 ||
-    guests > 5
+    guests > 4
   ) {
     throw new Error("Maklumat RSVP tidak sah.");
   }

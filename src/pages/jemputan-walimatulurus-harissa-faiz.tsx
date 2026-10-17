@@ -60,7 +60,7 @@ const wedding = {
   groomFullName: "Muhammad Faiz",
   date: new Date("2026-11-28T11:30:00+08:00"),
   dateLabel: "Sabtu, 28 November 2026",
-  timeLabel: "11.30 pagi",
+  timeLabel: "11.30 pagi - 4.00 petang",
   venue: "LeQAMR Glasshall, Melaka",
   mapQuery: "LeQAMR Glasshall, Melaka",
   hosts: "Ts. Razak & Dr Rina",
@@ -749,7 +749,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 <a
                   href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
                     `Majlis Perkahwinan ${wedding.bride} & ${wedding.groom}`
-                  )}&dates=20261128T113000/20261128T123000&ctz=Asia%2FKuala_Lumpur&location=${encodeURIComponent(
+                  )}&dates=20261128T113000/20261128T160000&ctz=Asia%2FKuala_Lumpur&location=${encodeURIComponent(
                     wedding.venue
                   )}&details=${encodeURIComponent(
                     `Dengan penuh kesyukuran, ${wedding.hosts} menjemput tuan/puan ke majlis perkahwinan puteri mereka, ${wedding.bride}, bersama ${wedding.groom}.`
@@ -847,7 +847,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                       name="tetamu"
                       className="rounded-sm border-[#3e5949]/15 bg-white focus:border-[#607a60] focus:ring-[#607a60]"
                     >
-                      {[1, 2, 3, 4, 5].map((count) => (
+                      {[1, 2, 3, 4].map((count) => (
                         <option key={count}>{count}</option>
                       ))}
                     </select>

@@ -437,7 +437,7 @@ export default function JemputanPerkahwinan() {
             </fieldset>
             <label className="grid gap-2 text-sm font-semibold">Jumlah tetamu
               <select name="tetamu" className="rounded-sm border-[#4f5843]/15 bg-white focus:border-[#747d59] focus:ring-[#747d59]">
-                {[1, 2, 3, 4, 5].map((count) => <option key={count}>{count}</option>)}
+                {[1, 2, 3, 4].map((count) => <option key={count}>{count}</option>)}
               </select>
             </label>
             <label className="grid gap-2 text-sm font-semibold">Ucapan dan doa buat pasangan pengantin
