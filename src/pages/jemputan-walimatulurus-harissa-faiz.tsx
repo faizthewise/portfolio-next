@@ -56,14 +56,14 @@ const namesFont = Great_Vibes({
 const wedding = {
   bride: "Harissa",
   groom: "Faiz",
-  brideFullName: "Harissa Amani",
-  groomFullName: "Muhammad Faiz",
+  brideFullName: "Harissa Amani binti Abd Razak",
+  groomFullName: "Muhammad Faiz bin Hasnul",
   date: new Date("2026-11-28T11:30:00+08:00"),
   dateLabel: "Sabtu, 28 November 2026",
   timeLabel: "11.30 pagi - 4.00 petang",
   venue: "LeQAMR Glasshall, Melaka",
   mapQuery: "LeQAMR Glasshall, Melaka",
-  hosts: "Ts. Razak & Dr Rina",
+  hosts: "Ts. Abd Razak bin Mohamad Zin & Dr Hasuarina binti Hassan",
 };
 
 const weddingContacts = [
@@ -73,6 +73,21 @@ const weddingContacts = [
   { name: "Hanani", phone: "0196345859" },
   { name: "Harris", phone: "0133635859" },
 ];
+
+function CoupleName({ fullName }: { fullName: string }) {
+  const parts = fullName.match(/^(.+?)\s+((?:bin|binti)\s+.+)$/);
+  return (
+    <span className={styles["couple-name"]}>
+      {parts ? parts[1] : fullName}
+      {parts && (
+        <span className={`${styles["couple-lineage"]} ${titleFont.className}`}>
+          {" "}
+          {parts[2]}
+        </span>
+      )}
+    </span>
+  );
+}
 
 function GardenFlower({
   x,
@@ -602,7 +617,14 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 <p
                   className={`${styles["hero-hosts"]} ${titleFont.className} mt-2 font-medium text-[#496851]`}
                 >
-                  {wedding.hosts}
+                  {wedding.hosts.split(" & ").map((host, index) => (
+                    <span key={host} className={styles["host-name"]}>
+                      {index > 0 && (
+                        <span className={styles["host-separator"]}>&amp;</span>
+                      )}
+                      {host}
+                    </span>
+                  ))}
                 </p>
                 <p
                   className={`${styles["hero-invitation"]} mx-auto mt-5 max-w-lg text-[#68776d]`}
@@ -616,13 +638,13 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 <h1
                   className={`${namesFont.className} font-normal focus:outline-none`}
                 >
-                  {wedding.brideFullName}
+                  <CoupleName fullName={wedding.brideFullName} />
                   <span
-                    className={`${namesFont.className} mx-auto my-3 block text-2xl font-normal italic text-[#9b8b65]`}
+                    className={`${styles["couple-connector"]} ${namesFont.className} mx-auto block font-normal italic text-[#9b8b65]`}
                   >
                     dan pilihan hatinya
                   </span>
-                  {wedding.groomFullName}
+                  <CoupleName fullName={wedding.groomFullName} />
                 </h1>
                 <Ornament />
                 <p className={`${styles["hero-date"]} ${titleFont.className}`}>
