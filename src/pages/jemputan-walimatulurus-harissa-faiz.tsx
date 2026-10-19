@@ -8,6 +8,7 @@ import WeddingWishes from "@/components/wedding/WeddingWishes";
 import GardenReveal from "@/components/wedding/GardenReveal";
 import GardenButterflyFlight from "@/components/wedding/GardenButterflyFlight";
 import MohorMagic from "@/components/wedding/MohorMagic";
+import BotanicalArtwork from "@/components/wedding/BotanicalArtwork";
 import { playMohorOpening } from "@/lib/wedding/mohorOpening";
 import styles from "@/styles/WeddingGarden.module.css";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
@@ -639,10 +640,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
             <div
               className={`${styles["hero-card"]} english-invitation-card garden-english-invitation-card relative z-10 mx-auto w-full px-7 pb-28 pt-32 sm:px-16 sm:pb-36 sm:pt-44`}
             >
-              <div className={styles["hero-artwork"]} aria-hidden="true">
-                <span className={styles["artwork-top"]} />
-                <span className={styles["artwork-bottom"]} />
-              </div>
+              <BotanicalArtwork />
               <Butterfly className="garden-butterfly-accent right-[18%] top-[5%] w-20 rotate-[18deg] sm:w-24" />
               <GardenReveal>
                 <p

@@ -16,6 +16,12 @@ Use case: precise-object-edit. Edit target image 1 is the existing gatefold invi
 
 Saved asset: `public/images/arched-invitation-garden-v1.webp`
 
+`BotanicalArtwork.tsx` animates selected flower heads and foliage in this existing
+image, using local stem pivots and separate rhythms. The corner layers themselves
+stay fixed. Rendering pauses outside the viewport and when the tab is hidden;
+reduced motion restores the still artwork. The CSS image remains as a fallback
+when WebGL is unavailable or its context is lost.
+
 Use case: precise-object-edit. Image 1 is the edit target: inner invitation paper background. Image 2 is only a garden pelamin floral reference. Preserve original canvas aspect ratio, ivory textured paper, overall composition and very large blank central space. Replace ONLY the existing corner floral illustrations with delicate printed watercolor garden botanicals: pink lilies, blush roses, lilac hydrangea, powder blue delphinium, ivory blossoms, tiny butter yellow accents, soft fern and deeper muted forest green foliage. Flowers in upper left and lower right corners ONLY, occupy same corner regions as original and stay out of central 65% where text will sit. Refined airy botanical stationery, fine detail, restrained color. Flat paper texture, no people, no venue, no text, no new frames, no arch drawn into the paper.
 
 ## Page background
