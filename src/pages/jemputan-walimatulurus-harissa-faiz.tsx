@@ -9,7 +9,7 @@ import GardenReveal from "@/components/wedding/GardenReveal";
 import GardenButterflyFlight from "@/components/wedding/GardenButterflyFlight";
 import MohorMagic from "@/components/wedding/MohorMagic";
 import BotanicalArtwork from "@/components/wedding/BotanicalArtwork";
-import { playMohorOpening } from "@/lib/wedding/mohorOpening";
+import { useWeddingMusic } from "@/components/wedding/WeddingMusicProvider";
 import styles from "@/styles/WeddingGarden.module.css";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
 import {
@@ -21,8 +21,8 @@ import {
 import {
   Cormorant_Garamond,
   Great_Vibes,
+  Lora,
   Parisienne,
-  Playfair_Display,
 } from "next/font/google";
 import {
   FormEvent,
@@ -69,9 +69,9 @@ const coupleNamesFont = Parisienne({
   display: "swap",
 });
 
-const hashtagFont = Playfair_Display({
+const hashtagFont = Lora({
   subsets: ["latin"],
-  weight: "500",
+  weight: "400",
   style: "italic",
   display: "swap",
 });
@@ -344,12 +344,17 @@ export default function JemputanWalimatulurusHarissaFaiz() {
   const router = useRouter();
   const showGifts = router.isReady && router.query.friend === "1";
   const [showSalam, setShowSalam] = useState(false);
-  const [invitationOpened, setInvitationOpened] = useState(false);
+  const {
+    invitationOpened,
+    revealInvitation: setInvitationOpened,
+    musicPlaying,
+    openingSoundPlaying,
+    startOpening,
+    toggleMusic,
+  } = useWeddingMusic();
   const [showDock, setShowDock] = useState(false);
   const [opening, setOpening] = useState(false);
   const [revealing, setRevealing] = useState(false);
-  const [musicPlaying, setMusicPlaying] = useState(false);
-  const [openingSoundPlaying, setOpeningSoundPlaying] = useState(false);
   const [now, setNow] = useState<number | null>(null);
   const [wishLength, setWishLength] = useState(0);
   const [rsvpSent, setRsvpSent] = useState(false);
@@ -358,9 +363,6 @@ export default function JemputanWalimatulurusHarissaFaiz() {
   const [backendError, setBackendError] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const mohorAudioRef = useRef<HTMLAudioElement | null>(null);
-  const musicContextRef = useRef<AudioContext | null>(null);
   const openingCleanup = useRef<(() => void) | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const countdownRef = useRef<HTMLDivElement>(null);
@@ -369,9 +371,6 @@ export default function JemputanWalimatulurusHarissaFaiz() {
   useEffect(
     () => () => {
       openingCleanup.current?.();
-      audioRef.current?.pause();
-      mohorAudioRef.current?.pause();
-      void musicContextRef.current?.close().catch(() => undefined);
     },
     []
   );
@@ -426,7 +425,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setShowSalam(params.get("salam") === "1");
-    if (params.get("registry") === "1") setInvitationOpened(true);
+    if (params.get("registry") === "1") setInvitationOpened();
 
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
@@ -472,7 +471,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
       disposed = true;
       unsubscribe?.();
     };
-  }, []);
+  }, [setInvitationOpened]);
 
   const countdown = useMemo(() => {
     if (now === null) return { hari: "—", jam: "—", minit: "—" };
@@ -531,62 +530,13 @@ export default function JemputanWalimatulurusHarissaFaiz() {
 
   const openInvitation = () => {
     if (openingCleanup.current || opening || invitationOpened) return;
-    if (!mohorAudioRef.current) {
-      mohorAudioRef.current = new Audio("/audio/mohor-wind-chimes.m4a");
-    }
-    if (!audioRef.current) {
-      audioRef.current = new Audio("/audio/terukir-di-bintang-v2.mp3");
-      audioRef.current.loop = true;
-      audioRef.current.preload = "auto";
-    }
     setOpening(true);
-    setOpeningSoundPlaying(true);
-    let musicGate: GainNode | undefined;
-    try {
-      const context = new window.AudioContext();
-      musicContextRef.current = context;
-      musicGate = context.createGain();
-      musicGate.gain.value = 0;
-      context.createMediaElementSource(audioRef.current).connect(musicGate);
-      musicGate.connect(context.destination);
-      void context.resume().catch(() => undefined);
-    } catch {
-      // Older browsers use muted priming and retain the manual music control.
-    }
-    openingCleanup.current = playMohorOpening({
-      sound: mohorAudioRef.current,
-      music: audioRef.current,
-      musicGate,
+    openingCleanup.current = startOpening({
       reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)")
         .matches,
       onReveal: () => setRevealing(true),
-      onOpen: () => {
-        window.scrollTo({ top: 0, behavior: "auto" });
-        setInvitationOpened(true);
-      },
-      onMusicChange: setMusicPlaying,
-      onSoundFinished: () => setOpeningSoundPlaying(false),
+      onOpen: () => window.scrollTo({ top: 0, behavior: "auto" }),
     });
-  };
-
-  const toggleMusic = () => {
-    if (openingSoundPlaying) return;
-    void musicContextRef.current?.resume().catch(() => undefined);
-    if (!audioRef.current) {
-      audioRef.current = new Audio("/audio/terukir-di-bintang-v2.mp3");
-      audioRef.current.loop = true;
-      audioRef.current.volume = 0.55;
-    }
-    const audio = audioRef.current;
-    if (audio.paused) {
-      void audio
-        .play()
-        .then(() => setMusicPlaying(true))
-        .catch(() => setMusicPlaying(false));
-    } else {
-      audio.pause();
-      setMusicPlaying(false);
-    }
   };
 
   return (
@@ -604,12 +554,6 @@ export default function JemputanWalimatulurusHarissaFaiz() {
           href="/images/gatefold-cover-garden-v1.webp"
         />
       </Head>
-
-      <audio
-        ref={mohorAudioRef}
-        src="/audio/mohor-wind-chimes.m4a"
-        preload="auto"
-      />
 
       {!invitationOpened ? (
         <main
@@ -1213,7 +1157,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 dengan ucapan ribuan terima kasih
               </p>
               <p
-                className={`${styles["closing-hashtag"]} ${hashtagFont.className} mt-7 font-medium italic text-[#496851]`}
+                className={`${styles["closing-hashtag"]} ${hashtagFont.className} mt-7 font-normal italic text-[#496851]`}
               >
                 #FaIzForHarissa
               </p>
