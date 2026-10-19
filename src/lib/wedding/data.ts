@@ -38,7 +38,7 @@ export const initialGifts: GiftItem[] = [
     contribution: {
       target: 3000,
       contributed: 0,
-      duitNowQr: "/images/duitnow-qr-placeholder.svg",
+      duitNowQr: "/images/harissa-qr.jpeg",
     },
   },
 ];

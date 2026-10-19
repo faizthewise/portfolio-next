@@ -96,10 +96,9 @@ guests cannot set or alter targets. Future gifts use the same setup without
 editing the rules. Change prices in the console and keep the catalogue fallback
 in sync.
 
-At the owner's request, the current QR asset is treated as the payment QR, with
-`qrIsPlaceholder: false`. The asset path remains `/images/duitnow-qr-placeholder.svg`;
-the sample label and placeholder recording restriction are removed. This setting
-does not modify or verify the QR image itself.
+The owner-provided payment QR is `/images/harissa-qr.jpeg`, with
+`qrIsPlaceholder: false`. It is shared by gift contributions and Salam Kaut.
+Display the image at its original proportions so the code is not stretched.
 To open contributions, configure the fund as above and publish
 the updated `firestore.rules` to project `jemputan-kahwin-6bd29`. The rules in
 this change have been tested locally; this does not deploy them to production.

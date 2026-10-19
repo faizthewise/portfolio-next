@@ -3,7 +3,7 @@ export const contributionCopy = {
     heading: "Hadiah besar, dikongsi bersama",
     intro:
       "Jika ingin berkongsi menyumbang untuk hadiah yang lebih besar, pilih jumlah yang selesa buat anda. Setiap sumbangan amat kami hargai.",
-    regularHeading: "Senarai hadiah kami",
+    regularHeading: "Pilihan Hadiah",
     contribute: "Sumbang mengikut kemampuan",
     recorded: "Jumlah sumbangan yang dicatat",
     target: "Harga hadiah / Sasaran",

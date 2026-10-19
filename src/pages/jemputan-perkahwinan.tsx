@@ -583,7 +583,7 @@ export default function JemputanPerkahwinan() {
               <p className="mt-3 text-sm leading-6 text-[#6f786f]">Sekiranya tuan/puan ingin menyumbang buat hadiah pengantin, imbas kod DuitNow, buat pembayaran, kemudian catat jumlah sumbangan. Catatan ini bukan pengesahan pembayaran oleh bank.</p>
 
               <div className="mx-auto mt-6 w-full max-w-[240px] overflow-hidden rounded-lg border border-[#4f5843]/10 bg-white p-3 shadow-sm">
-                <img src={selectedGift.contribution.duitNowQr} alt="Kod QR DuitNow untuk sumbangan hadiah" className="aspect-square h-auto w-full" />
+                <img src={selectedGift.contribution.duitNowQr} alt="Kod QR DuitNow untuk sumbangan hadiah" className="h-auto w-full" />
               </div>
 
               <form onSubmit={submitContribution} className="mt-6">
@@ -629,7 +629,7 @@ export default function JemputanPerkahwinan() {
                 <h3 className={`${titleFont.className} mt-6 text-4xl font-medium text-[#66704b]`}>Sedikit tanda ingatan</h3>
                 <p className="mt-4 leading-7 text-[#6f786f]">Sekiranya tuan/puan berhasrat berkongsi rezeki buat pasangan pengantin, silakan imbas kod DuitNow ini. Kehadiran dan doa restu tuan/puan tetap menjadi hadiah yang paling bermakna.</p>
                 <div className="mx-auto mt-7 w-full max-w-[260px] overflow-hidden rounded-sm border border-[#7c8467]/15 bg-white p-3 shadow-lg shadow-[#4f5843]/10">
-                  <img src="/images/duitnow-qr-placeholder.svg" alt="Kod QR DuitNow untuk Salam Kaut" className="aspect-square h-auto w-full" />
+                  <img src="/images/harissa-qr.jpeg" alt="Kod QR DuitNow untuk Salam Kaut" className="h-auto w-full" />
                 </div>
               </div>
             </div>

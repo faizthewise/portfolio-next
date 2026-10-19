@@ -18,7 +18,12 @@ import {
   subscribeWedding,
   saveRsvp,
 } from "@/lib/wedding/data";
-import { Cormorant_Garamond, Great_Vibes, Parisienne } from "next/font/google";
+import {
+  Cormorant_Garamond,
+  Great_Vibes,
+  Parisienne,
+  Playfair_Display,
+} from "next/font/google";
 import {
   FormEvent,
   ReactNode,
@@ -48,6 +53,7 @@ import {
 const titleFont = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 
@@ -60,6 +66,13 @@ const namesFont = Great_Vibes({
 const coupleNamesFont = Parisienne({
   subsets: ["latin"],
   weight: "400",
+  display: "swap",
+});
+
+const hashtagFont = Playfair_Display({
+  subsets: ["latin"],
+  weight: "500",
+  style: "italic",
   display: "swap",
 });
 
@@ -1048,8 +1061,8 @@ export default function JemputanWalimatulurusHarissaFaiz() {
               className="relative scroll-mt-6 overflow-hidden px-6 py-24"
             >
               <div className="relative mx-auto max-w-3xl">
-                <SectionTitle eyebrow="Buat kehidupan bersama">
-                  Hadiah penuh makna
+                <SectionTitle eyebrow="Dari hati, buat yang dirai">
+                  Tanda Kasih
                 </SectionTitle>
                 <p
                   className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]`}
@@ -1119,9 +1132,9 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                   </p>
                   <div className="mx-auto mt-7 w-full max-w-[260px] overflow-hidden rounded-sm border border-[#71866d]/15 bg-white p-3 shadow-lg shadow-[#3e5949]/10">
                     <img
-                      src="/images/duitnow-qr-placeholder.svg"
+                      src="/images/harissa-qr.jpeg"
                       alt="Kod QR DuitNow untuk Salam Kaut"
-                      className="aspect-square h-auto w-full"
+                      className="h-auto w-full"
                     />
                   </div>
                 </GardenReveal>
@@ -1200,9 +1213,9 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 dengan ucapan ribuan terima kasih
               </p>
               <p
-                className={`${namesFont.className} mt-7 text-5xl text-[#496851]`}
+                className={`${styles["closing-hashtag"]} ${hashtagFont.className} mt-7 font-medium italic text-[#496851]`}
               >
-                {wedding.bride} & {wedding.groom}
+                #FaIzForHarissa
               </p>
             </GardenReveal>
           </footer>

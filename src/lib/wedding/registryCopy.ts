@@ -5,10 +5,10 @@ export const registryCopy = {
     pageTitle: "Hadiah buat Harissa & Faiz",
     meta: "Senarai hadiah perkahwinan Harissa dan Faiz. Pilih hadiah atau maklumkan hadiah lain yang ingin diberikan. Beli di mana-mana kedai pilihan anda.",
     back: "Kembali ke undangan",
-    eyebrow: "Untuk sebuah kehidupan bersama",
-    heading: "Hadiah penuh makna",
+    eyebrow: "Dari hati, buat yang dirai",
+    heading: "Tanda Kasih",
     intro:
-      "Kehadiran dan doa restu anda sudah cukup bermakna. Senarai ini menghimpunkan hadiah yang kami inginkan untuk kediaman kami, sambil membantu tetamu mengelakkan pembelian hadiah yang sama. Jika ingin memberi hadiah, tandakan pilihan anda di sini sebelum membeli.",
+      "Kehadiran dan doa restu anda sudah cukup bermakna. Senarai hadiah ini disediakan untuk membantu tetamu mengelakkan pembelian hadiah yang sama. Jika ingin menitipkan hadiah, semak senarai dan tandakan pilihan anda sebelum membeli.",
     guidance:
       "Pautan Shopee hanyalah rujukan produk. Anda bebas membeli di mana-mana kedai pilihan anda.",
     addOther: "Saya ingin beri hadiah lain",

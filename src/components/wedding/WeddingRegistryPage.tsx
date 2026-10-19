@@ -1,7 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
+import { Cormorant_Garamond } from "next/font/google";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -35,11 +35,6 @@ import styles from "@/styles/WeddingRegistry.module.css";
 const titleFont = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  display: "swap",
-});
-const namesFont = Great_Vibes({
-  subsets: ["latin"],
-  weight: "400",
   display: "swap",
 });
 type Filter = "all" | "available" | "mine";
@@ -281,7 +276,6 @@ export function RegistryContent({
           )}
         </div>
         <div className={styles["card-copy"]}>
-          <p className={styles.category}>{copy.categories[product.category]}</p>
           <h2 className={titleFont.className}>
             {product.contribution
               ? product.fullName || product.name
@@ -335,9 +329,6 @@ export function RegistryContent({
           <div className={styles.introduction}>
             <p className={styles.eyebrow}>{copy.eyebrow}</p>
             <h1 className={titleFont.className}>{copy.heading}</h1>
-            <p className={`${namesFont.className} ${styles.names}`}>
-              Harissa &amp; Faiz
-            </p>
             <p className={styles["intro-copy"]}>{copy.intro}</p>
           </div>
 
@@ -553,9 +544,6 @@ export function RegistryContent({
                 />
               </div>
               <div className={styles["detail-copy"]}>
-                <p className={styles.eyebrow}>
-                  {copy.categories[selected.category]}
-                </p>
                 <h2 id="gift-detail-title" className={titleFont.className}>
                   {selected.fullName || selected.name}
                 </h2>
