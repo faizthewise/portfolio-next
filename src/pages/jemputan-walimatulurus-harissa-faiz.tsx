@@ -37,6 +37,7 @@ import {
   Phone,
   QrCode,
   Quote,
+  Shirt,
   Sparkles,
   VolumeX,
 } from "lucide-react";
@@ -62,6 +63,7 @@ const wedding = {
   dateLabel: "Sabtu, 28 November 2026",
   timeLabel: "11.30 pagi - 4.00 petang",
   venue: "LeQAMR Glasshall, Melaka",
+  dresscode: "Traditional/Formal",
   mapQuery: "LeQAMR Glasshall, Melaka",
   hosts: "Ts. Abd Razak bin Mohamad Zin & Dr Hasuarina binti Hassan",
 };
@@ -748,12 +750,13 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 ))}
               </div>
               <div
-                className={`${styles["detail-list"]} mx-auto mt-12 grid max-w-4xl gap-5 sm:grid-cols-3`}
+                className={`${styles["detail-list"]} mx-auto mt-12 grid max-w-4xl gap-5 sm:grid-cols-2 lg:grid-cols-4`}
               >
                 {[
                   { icon: CalendarDays, label: wedding.dateLabel },
                   { icon: Sparkles, label: wedding.timeLabel },
                   { icon: MapPin, label: wedding.venue },
+                  { icon: Shirt, label: `Dresscode: ${wedding.dresscode}` },
                 ].map(({ icon: Icon, label }, index) => (
                   <GardenReveal key={label} delay={index * 100}>
                     <div
