@@ -15,7 +15,7 @@ import {
   subscribeWedding,
   saveRsvp,
 } from "@/lib/wedding/data";
-import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
+import { Cormorant_Garamond, Great_Vibes, Parisienne } from "next/font/google";
 import {
   FormEvent,
   ReactNode,
@@ -49,6 +49,12 @@ const titleFont = Cormorant_Garamond({
 });
 
 const namesFont = Great_Vibes({
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+});
+
+const coupleNamesFont = Parisienne({
   subsets: ["latin"],
   weight: "400",
   display: "swap",
@@ -638,7 +644,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
               </GardenReveal>
               <GardenReveal delay={240}>
                 <h1
-                  className={`${namesFont.className} font-normal focus:outline-none`}
+                  className={`${coupleNamesFont.className} font-normal focus:outline-none`}
                 >
                   <CoupleName fullName={wedding.brideFullName} />
                   <span
@@ -1148,12 +1154,10 @@ export default function JemputanWalimatulurusHarissaFaiz() {
               <Ornament />
               <Heart className="mx-auto mt-2 h-5 w-5 fill-[#607a60] text-[#607a60]" />
               <p
-                className={`${titleFont.className} mt-5 text-4xl font-medium text-[#3e5949]`}
+                className={`${titleFont.className} mx-auto mt-5 max-w-3xl text-4xl font-medium text-[#3e5949]`}
               >
-                Kehadiran tuan dan puan amat kami hargai.
-              </p>
-              <p className="mx-auto mt-4 max-w-xl leading-7 text-[#6f786f]">
-                Dengan ingatan tulus daripada {wedding.hosts}.
+                Kehadiran tuan dan puan amat kami hargai dan kami dahulukan
+                dengan ucapan ribuan terima kasih
               </p>
               <p
                 className={`${namesFont.className} mt-7 text-5xl text-[#496851]`}
