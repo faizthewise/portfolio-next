@@ -72,7 +72,7 @@ const wedding = {
   dateLabel: "Sabtu, 28 November 2026",
   timeLabel: "11.30 pagi - 4.00 petang",
   venue: "LeQAMR Glasshall, Melaka",
-  dresscode: "Traditional/Formal",
+  dresscode: "Tradisional/Formal",
   mapQuery: "LeQAMR Glasshall, Melaka",
   hosts: "Ts. Abd Razak bin Mohamad Zin & Dr Hasuarina binti Hassan",
 };
@@ -802,7 +802,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                   { icon: CalendarDays, label: wedding.dateLabel },
                   { icon: Sparkles, label: wedding.timeLabel },
                   { icon: MapPin, label: wedding.venue },
-                  { icon: Shirt, label: `Dresscode: ${wedding.dresscode}` },
+                  { icon: Shirt, label: `Kod Pakaian: ${wedding.dresscode}` },
                 ].map(({ icon: Icon, label }, index) => (
                   <GardenReveal key={label} delay={index * 100}>
                     <div
