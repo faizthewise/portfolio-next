@@ -7,6 +7,8 @@ import registryStyles from "@/styles/WeddingRegistry.module.css";
 import WeddingWishes from "@/components/wedding/WeddingWishes";
 import GardenReveal from "@/components/wedding/GardenReveal";
 import GardenButterflyFlight from "@/components/wedding/GardenButterflyFlight";
+import MohorMagic from "@/components/wedding/MohorMagic";
+import { playMohorOpening } from "@/lib/wedding/mohorOpening";
 import styles from "@/styles/WeddingGarden.module.css";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
 import {
@@ -243,20 +245,23 @@ function Ornament() {
 function InvitationCoverArtwork({
   onOpen,
   opening,
+  revealing,
 }: {
   onOpen: () => void;
   opening: boolean;
+  revealing: boolean;
 }) {
   return (
     <div
-      className={`${styles["cover-book"]} ${
-        opening ? styles.opening : ""
+      className={`${styles["cover-book"]} ${opening ? styles.enchanting : ""} ${
+        revealing ? styles.opening : ""
       } mx-auto w-full`}
     >
       <button
         type="button"
         onClick={onOpen}
         disabled={opening}
+        aria-busy={opening}
         className={`${styles.envelope} sealed-invitation group relative block w-full text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#607a60] focus-visible:ring-offset-4 focus-visible:ring-offset-[#e4e9df]`}
         aria-label="Buka undangan perkahwinan Harissa Amani dan Muhammad Faiz"
       >
@@ -280,6 +285,7 @@ function InvitationCoverArtwork({
             className="wax-seal-image h-full w-full object-cover"
           />
         </span>
+        {opening && <MohorMagic fading={revealing} />}
       </button>
       <p
         className={`${styles["cover-hint"]} ${namesFont.className} mt-6 text-[#536858]`}
@@ -327,7 +333,9 @@ export default function JemputanWalimatulurusHarissaFaiz() {
   const [invitationOpened, setInvitationOpened] = useState(false);
   const [showDock, setShowDock] = useState(false);
   const [opening, setOpening] = useState(false);
+  const [revealing, setRevealing] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(false);
+  const [openingSoundPlaying, setOpeningSoundPlaying] = useState(false);
   const [now, setNow] = useState<number | null>(null);
   const [wishLength, setWishLength] = useState(0);
   const [rsvpSent, setRsvpSent] = useState(false);
@@ -337,15 +345,19 @@ export default function JemputanWalimatulurusHarissaFaiz() {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const openingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mohorAudioRef = useRef<HTMLAudioElement | null>(null);
+  const musicContextRef = useRef<AudioContext | null>(null);
+  const openingCleanup = useRef<(() => void) | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const countdownRef = useRef<HTMLDivElement>(null);
   const invitationRef = useRef<HTMLElement>(null);
 
   useEffect(
     () => () => {
-      if (openingTimer.current) clearTimeout(openingTimer.current);
+      openingCleanup.current?.();
       audioRef.current?.pause();
+      mohorAudioRef.current?.pause();
+      void musicContextRef.current?.close().catch(() => undefined);
     },
     []
   );
@@ -504,28 +516,48 @@ export default function JemputanWalimatulurusHarissaFaiz() {
   ];
 
   const openInvitation = () => {
-    if (opening || invitationOpened) return;
+    if (openingCleanup.current || opening || invitationOpened) return;
+    if (!mohorAudioRef.current) {
+      mohorAudioRef.current = new Audio("/audio/mohor-wind-chimes.m4a");
+    }
     if (!audioRef.current) {
       audioRef.current = new Audio("/audio/terukir-di-bintang-v2.mp3");
       audioRef.current.loop = true;
       audioRef.current.preload = "auto";
     }
-    audioRef.current.volume = 0.55;
-    void audioRef.current
-      .play()
-      .then(() => setMusicPlaying(true))
-      .catch(() => setMusicPlaying(false));
     setOpening(true);
-    openingTimer.current = setTimeout(
-      () => {
+    setOpeningSoundPlaying(true);
+    let musicGate: GainNode | undefined;
+    try {
+      const context = new window.AudioContext();
+      musicContextRef.current = context;
+      musicGate = context.createGain();
+      musicGate.gain.value = 0;
+      context.createMediaElementSource(audioRef.current).connect(musicGate);
+      musicGate.connect(context.destination);
+      void context.resume().catch(() => undefined);
+    } catch {
+      // Older browsers use muted priming and retain the manual music control.
+    }
+    openingCleanup.current = playMohorOpening({
+      sound: mohorAudioRef.current,
+      music: audioRef.current,
+      musicGate,
+      reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)")
+        .matches,
+      onReveal: () => setRevealing(true),
+      onOpen: () => {
         window.scrollTo({ top: 0, behavior: "auto" });
         setInvitationOpened(true);
       },
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 950
-    );
+      onMusicChange: setMusicPlaying,
+      onSoundFinished: () => setOpeningSoundPlaying(false),
+    });
   };
 
   const toggleMusic = () => {
+    if (openingSoundPlaying) return;
+    void musicContextRef.current?.resume().catch(() => undefined);
     if (!audioRef.current) {
       audioRef.current = new Audio("/audio/terukir-di-bintang-v2.mp3");
       audioRef.current.loop = true;
@@ -559,6 +591,12 @@ export default function JemputanWalimatulurusHarissaFaiz() {
         />
       </Head>
 
+      <audio
+        ref={mohorAudioRef}
+        src="/audio/mohor-wind-chimes.m4a"
+        preload="auto"
+      />
+
       {!invitationOpened ? (
         <main
           className={`${styles.cover} relative grid min-h-screen place-items-center overflow-hidden px-5 py-10 text-center text-[#3e5949] sm:px-8 sm:py-14`}
@@ -571,7 +609,11 @@ export default function JemputanWalimatulurusHarissaFaiz() {
             >
               Jemputan ke Walimatulurus
             </p>
-            <InvitationCoverArtwork onOpen={openInvitation} opening={opening} />
+            <InvitationCoverArtwork
+              onOpen={openInvitation}
+              opening={opening}
+              revealing={revealing}
+            />
             <p
               className={`${titleFont.className} mt-7 text-sm tracking-[0.3em] text-[#8e7956]`}
             >
@@ -1189,6 +1231,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
               <button
                 type="button"
                 onClick={toggleMusic}
+                disabled={openingSoundPlaying}
                 aria-label={musicPlaying ? "Jeda muzik" : "Mainkan muzik"}
                 aria-pressed={musicPlaying}
                 title={musicPlaying ? "Jeda muzik" : "Mainkan muzik"}
