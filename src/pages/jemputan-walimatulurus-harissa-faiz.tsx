@@ -1156,11 +1156,17 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 Kehadiran tuan dan puan amat kami hargai dan kami dahulukan
                 dengan ucapan ribuan terima kasih
               </p>
-              <p
-                className={`${styles["closing-hashtag"]} ${hashtagFont.className} mt-7 font-normal italic text-[#496851]`}
-              >
-                #FaIzTheOneForHarissa
-              </p>
+              {showGifts ? (
+                <p
+                  className={`${styles["closing-hashtag"]} ${hashtagFont.className} mt-7 font-normal italic text-[#496851]`}
+                >
+                  #FaIzTheOneForHarissa
+                </p>
+              ) : (
+                <div className="mt-7">
+                  <Ornament />
+                </div>
+              )}
             </GardenReveal>
           </footer>
           {showDock && (
