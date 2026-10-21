@@ -1159,7 +1159,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
               <p
                 className={`${styles["closing-hashtag"]} ${hashtagFont.className} mt-7 font-normal italic text-[#496851]`}
               >
-                #FaIzForHarissa
+                #FaIzTheOneForHarissa
               </p>
             </GardenReveal>
           </footer>
