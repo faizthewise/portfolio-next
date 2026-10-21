@@ -497,7 +497,6 @@ export function RegistryContent({
               </button>
             </div>
           )}
-          <p className={styles.note}>{copy.reservationNote}</p>
           <footer className={styles.footer}>
             <p className={titleFont.className}>{copy.footer}</p>
             <Link href={invitationReturnPath}>
