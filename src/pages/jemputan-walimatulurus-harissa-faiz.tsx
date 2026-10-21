@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import RegistryProductImage from "@/components/wedding/RegistryProductImage";
 import { registryPath, registryProducts } from "@/lib/wedding/registry";
+import { getInvitationMode } from "@/lib/wedding/invitationMode";
 import registryStyles from "@/styles/WeddingRegistry.module.css";
 import WeddingWishes from "@/components/wedding/WeddingWishes";
 import GardenReveal from "@/components/wedding/GardenReveal";
@@ -342,7 +343,12 @@ function SectionTitle({
 
 export default function JemputanWalimatulurusHarissaFaiz() {
   const router = useRouter();
-  const showGifts = router.isReady && router.query.friend === "1";
+  const mode = getInvitationMode(router.query.mode);
+  const showGifts = router.isReady && mode !== "family";
+  const showHashtag = router.isReady && mode === "friend";
+  const regularGifts = registryProducts.filter(
+    (product) => !product.contribution
+  );
   const [showSalam, setShowSalam] = useState(false);
   const {
     invitationOpened,
@@ -1018,10 +1024,13 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 </p>
                 <GardenReveal>
                   <div className={registryStyles.preview}>
-                    {registryProducts.slice(0, 3).map((product) => (
+                    {regularGifts.slice(0, 3).map((product) => (
                       <Link
                         key={product.slug}
-                        href={`${registryPath}?gift=${product.slug}`}
+                        href={{
+                          pathname: registryPath,
+                          query: { mode, gift: product.slug },
+                        }}
                         className={registryStyles["preview-card"]}
                         aria-label={product.name}
                       >
@@ -1036,14 +1045,14 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                   </div>
                   <div className={registryStyles["preview-action"]}>
                     <Link
-                      href={registryPath}
+                      href={{ pathname: registryPath, query: { mode } }}
                       className={registryStyles.primary}
                     >
                       Lihat semua hadiah <ArrowRight aria-hidden="true" />
                     </Link>
                     <p>
-                      {registryProducts.length} pilihan · Semak dan pilih hadiah
-                      di senarai penuh
+                      {regularGifts.length} pilihan · Semak dan pilih hadiah di
+                      senarai penuh
                     </p>
                   </div>
                 </GardenReveal>
@@ -1156,7 +1165,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 Kehadiran tuan dan puan amat kami hargai dan kami dahulukan
                 dengan ucapan ribuan terima kasih
               </p>
-              {showGifts ? (
+              {showHashtag ? (
                 <p
                   className={`${styles["closing-hashtag"]} ${hashtagFont.className} mt-7 font-normal italic text-[#496851]`}
                 >

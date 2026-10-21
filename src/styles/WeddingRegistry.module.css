@@ -262,6 +262,30 @@
   text-align: center;
 }
 
+.giving-section {
+  display: grid;
+  justify-items: center;
+  gap: 1.25rem;
+  padding: 2rem 1.25rem;
+  margin: 3rem auto 0;
+  border: 1px solid rgb(164 139 96 / 28%);
+  border-radius: 8px;
+  background: linear-gradient(145deg, #fffefa, #f3ecdf);
+  text-align: center;
+}
+
+.giving-section h2 {
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  line-height: 1.2;
+}
+
+.giving-section > p {
+  max-width: 30rem;
+  color: #6f786f;
+  font-size: 0.875rem;
+  line-height: 1.75;
+}
+
 .footer > p {
   margin-bottom: 0.5rem;
   font-size: 1.8rem;

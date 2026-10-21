@@ -3,7 +3,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { getWeddingFirestore, getWeddingGuest } from "./firebase";
 import { recordGiftContribution } from "./contributions";
 
-export default function useGiftContributions() {
+export default function useGiftContributions(enabled = true) {
   const [totals, setTotals] = useState<Record<string, number>>({});
   const [targets, setTargets] = useState<Record<string, number>>({});
   const [ready, setReady] = useState(false);
@@ -12,6 +12,7 @@ export default function useGiftContributions() {
   const pending = useRef(false);
 
   useEffect(() => {
+    if (!enabled) return;
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
     void getWeddingGuest()
@@ -59,7 +60,7 @@ export default function useGiftContributions() {
       disposed = true;
       unsubscribe?.();
     };
-  }, []);
+  }, [enabled]);
 
   const record = async (slug: string, amount: string, id: string) => {
     if (!ready || pending.current) return false;

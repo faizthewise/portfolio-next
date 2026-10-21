@@ -27,7 +27,11 @@ type WeddingMusic = {
 
 const MusicContext = createContext<WeddingMusic | null>(null);
 const invitationPath = "/jemputan-walimatulurus-harissa-faiz";
-const registryPaths = ["/wedding-registry", "/wedding-registry-en"];
+const registryPaths = [
+  "/wedding-registry",
+  "/wedding-registry-en",
+  "/wedding-registry-v2",
+];
 
 export function useWeddingMusic() {
   const music = useContext(MusicContext);

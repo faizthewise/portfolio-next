@@ -14,9 +14,7 @@ export type RegistryProduct = {
   };
 };
 
-export const registryPath = "/wedding-registry";
-export const invitationReturnPath =
-  "/jemputan-walimatulurus-harissa-faiz?friend=1&registry=1#hadiah";
+export const registryPath = "/wedding-registry-v2";
 
 // Stable reservation IDs use the existing custom-gift namespace so the live
 // ownership rules also protect new catalogue items without a rules migration.

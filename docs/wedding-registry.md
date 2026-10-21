@@ -5,9 +5,15 @@
   Both routes use `WeddingRegistryPage.tsx`; copy is maintained in `src/lib/wedding/registryCopy.ts`.
   English item links stay on `/wedding-registry-en?gift=<slug>`.
 - `/wedding-registry?gift=air-fryer` opens a particular item. The `gift` value is the catalogue slug.
-- The garden invitation shows the gift preview and gift navigation only with
-  `?friend=1`. Its return URL `/jemputan-walimatulurus-harissa-faiz?friend=1&registry=1#hadiah`
-  preserves this option and opens directly at the gift section.
+- `/wedding-registry-v2` shows regular gifts and a general giving QR at the bottom,
+  without the big-gift funds. The invitation's gift previews and main gift link use this route.
+- The garden invitation uses `?mode=family`, `?mode=friend`, or `?mode=parentFriend`:
+  family hides the hashtag and gifts; friend shows both; parentFriend shows gifts only.
+  Missing or unrecognised modes use family. The old `friend=1` parameter is no longer used.
+  Guests without the hashtag see the floral ornament in its place.
+- Gift links carry the selected mode, including individual item links. Both registry return links
+  preserve it, for example `/jemputan-walimatulurus-harissa-faiz?mode=parentFriend&registry=1#hadiah`.
+  `registry=1` opens the invitation directly; family return links omit the gift anchor.
 - Clock remains omitted. Vacuum, blanket and king-size bedsheet use the owner's supplied links.
 
 ## Product content

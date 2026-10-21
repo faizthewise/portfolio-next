@@ -1,4 +1,5 @@
 import Head from "next/head";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Cormorant_Garamond } from "next/font/google";
@@ -14,11 +15,11 @@ import {
 } from "lucide-react";
 
 import RegistryProductImage from "@/components/wedding/RegistryProductImage";
+import { RegistryProduct } from "@/lib/wedding/registry";
 import {
+  getInvitationMode,
   invitationReturnPath,
-  registryPath,
-  RegistryProduct,
-} from "@/lib/wedding/registry";
+} from "@/lib/wedding/invitationMode";
 import {
   RegistryLocale,
   registryCopy,
@@ -41,16 +42,19 @@ type Filter = "all" | "available" | "mine";
 
 export default function WeddingRegistryPage({
   locale = "ms",
+  variant = "funds",
 }: {
   locale?: RegistryLocale;
+  variant?: "funds" | "qr";
 }) {
   const registry = useRegistry();
-  const contributions = useGiftContributions();
+  const contributions = useGiftContributions(variant === "funds");
   return (
     <RegistryContent
       registry={registry}
       contributions={contributions}
       locale={locale}
+      variant={variant}
     />
   );
 }
@@ -59,15 +63,18 @@ export function RegistryContent({
   registry,
   contributions,
   locale = "ms",
+  variant = "funds",
 }: {
   locale?: RegistryLocale;
+  variant?: "funds" | "qr";
   registry: ReturnType<typeof useRegistry>;
   contributions: ReturnType<typeof useGiftContributions>;
 }) {
   const router = useRouter();
   const copy = registryCopy[locale];
   const fundCopy = contributionCopy[locale];
-  const pagePath = locale === "en" ? "/wedding-registry-en" : registryPath;
+  const pagePath = router.pathname;
+  const returnPath = invitationReturnPath(getInvitationMode(router.query.mode));
   const {
     products,
     reservations,
@@ -92,7 +99,9 @@ export function RegistryContent({
   const customButton = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const selected = products.find(
-    (product) => product.slug === router.query.gift
+    (product) =>
+      product.slug === router.query.gift &&
+      (variant === "funds" || !product.contribution)
   );
   const selectedSlug = selected?.slug;
   const claim = selected ? reservations[selected.reservationId] : undefined;
@@ -109,6 +118,7 @@ export function RegistryContent({
     () =>
       products
         .filter((product) => {
+          if (variant === "qr" && product.contribution) return false;
           const gift = reservations[product.reservationId];
           const matchesSearch = `${product.name} ${product.fullName || ""} ${
             copy.categories[product.category]
@@ -143,6 +153,7 @@ export function RegistryContent({
       ready,
       copy,
       contributions,
+      variant,
     ]
   );
 
@@ -319,7 +330,7 @@ export function RegistryContent({
         className={`${garden.page} ${styles.page} garden-english-wedding-paper`}
       >
         <header className={styles.topbar}>
-          <Link href={invitationReturnPath}>
+          <Link href={returnPath}>
             <ArrowLeft aria-hidden="true" />
             {copy.back}
           </Link>
@@ -497,9 +508,37 @@ export function RegistryContent({
               </button>
             </div>
           )}
+          {variant === "qr" && (
+            <section
+              className={styles["giving-section"]}
+              aria-labelledby="giving-title"
+            >
+              <h2 id="giving-title" className={titleFont.className}>
+                {copy.qrHeading}
+              </h2>
+              <p>{copy.qrIntro}</p>
+              <figure className={styles["payment-qr"]}>
+                <Image
+                  src="/images/harissa-qr.jpeg"
+                  alt={copy.qrAlt}
+                  width={615}
+                  height={884}
+                  unoptimized
+                />
+                <figcaption>{copy.qrCaption}</figcaption>
+              </figure>
+              <a
+                href="/images/harissa-qr.jpeg"
+                download="harissa-qr.jpeg"
+                className={styles.secondary}
+              >
+                {copy.qrDownload}
+              </a>
+            </section>
+          )}
           <footer className={styles.footer}>
             <p className={titleFont.className}>{copy.footer}</p>
-            <Link href={invitationReturnPath}>
+            <Link href={returnPath}>
               <ArrowLeft aria-hidden="true" />
               {copy.back}
             </Link>
