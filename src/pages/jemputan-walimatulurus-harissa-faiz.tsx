@@ -817,7 +817,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                         {wedding.venue}
                       </h3>
                       <p className="mt-3 max-w-lg leading-7 text-[#6f786f]">
-                        Kami berdua dan sekeluarga berbesar hati menyambut
+                        Kami sekeluarga berbesar hati menyambut
                         kehadiran tuan/puan. Pilih aplikasi navigasi untuk
                         mendapatkan arah ke lokasi majlis.
                       </p>
