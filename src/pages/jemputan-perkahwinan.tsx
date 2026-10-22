@@ -403,7 +403,7 @@ export default function JemputanPerkahwinan() {
                 <div>
                   <MapPin className="h-9 w-9 text-[#747d59]" />
                   <h3 className={`${titleFont.className} mt-4 text-4xl font-medium text-[#4f5843]`}>{wedding.venue}</h3>
-                  <p className="mt-3 max-w-lg leading-7 text-[#6f786f]">Kami berdua dan sekeluarga berbesar hati menyambut kehadiran tuan/puan. Pilih aplikasi navigasi untuk mendapatkan arah ke lokasi majlis.</p>
+                  <p className="mt-3 max-w-lg leading-7 text-[#6f786f]">Kami sekeluarga berbesar hati menyambut kehadiran tuan/puan. Pilih aplikasi navigasi untuk mendapatkan arah ke lokasi majlis.</p>
                 </div>
                 <div className="grid gap-3">
                   {maps.map((map) => (

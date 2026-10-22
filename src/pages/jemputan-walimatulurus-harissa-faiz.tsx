@@ -640,8 +640,8 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 <p
                   className={`${styles["hero-invitation"]} mx-auto mt-5 max-w-lg text-[#68776d]`}
                 >
-                  dengan segala hormatnya menjemput Dato&apos;, Datin, Tuan,
-                  Puan, Encik dan Cik dan pasangan ke majlis perkahwinan puteri
+                  dengan segala hormatnya menjemput Dato&apos; / Datin / Tuan /
+                  Puan / Encik / Cik bersama pasangan ke majlis perkahwinan puteri
                   kami
                 </p>
               </GardenReveal>

@@ -513,9 +513,6 @@ export function RegistryContent({
               className={styles["giving-section"]}
               aria-labelledby="giving-title"
             >
-              <h2 id="giving-title" className={titleFont.className}>
-                {copy.qrHeading}
-              </h2>
               <p>{copy.qrIntro}</p>
               <figure className={styles["payment-qr"]}>
                 <Image
