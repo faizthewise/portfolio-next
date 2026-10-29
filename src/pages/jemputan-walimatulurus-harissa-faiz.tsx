@@ -905,7 +905,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                               defaultChecked={index === 0}
                               className="text-[#607a60] focus:ring-[#607a60]"
                             />
-                            {answer}
+                            {index === 0 ? "Hadir" : answer}
                           </label>
                         )
                       )}

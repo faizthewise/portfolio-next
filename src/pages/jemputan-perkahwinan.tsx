@@ -430,7 +430,7 @@ export default function JemputanPerkahwinan() {
               <div className="grid grid-cols-2 gap-3">
                 {["Hadir, insya-Allah", "Maaf, tidak dapat hadir"].map((answer, index) => (
                   <label key={answer} className="flex cursor-pointer items-center gap-3 rounded-sm border border-[#4f5843]/15 bg-white p-4 text-sm">
-                    <input type="radio" name="kehadiran" value={answer} required defaultChecked={index === 0} className="text-[#747d59] focus:ring-[#747d59]" />{answer}
+                    <input type="radio" name="kehadiran" value={answer} required defaultChecked={index === 0} className="text-[#747d59] focus:ring-[#747d59]" />{index === 0 ? "Hadir" : answer}
                   </label>
                 ))}
               </div>
