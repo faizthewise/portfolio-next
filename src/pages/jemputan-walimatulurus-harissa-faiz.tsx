@@ -854,7 +854,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                 className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]`}
               >
                 Bagi membantu kami membuat persiapan, mohon sahkan kehadiran
-                sebelum hari majlis.
+                sebelum 15 November 2026.
               </p>
               <GardenReveal className="mx-auto max-w-2xl">
                 <form
@@ -1162,7 +1162,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
               <p
                 className={`${titleFont.className} mx-auto mt-5 max-w-3xl text-4xl font-medium text-[#3e5949]`}
               >
-                Kehadiran tuan dan puan amat kami hargai dan kami dahulukan
+                Kehadiran tuan dan puan amat kami hargai dan didahului
                 dengan ucapan ribuan terima kasih
               </p>
               {showHashtag ? (
