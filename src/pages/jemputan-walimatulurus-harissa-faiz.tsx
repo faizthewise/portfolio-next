@@ -344,7 +344,7 @@ function SectionTitle({
 export default function JemputanWalimatulurusHarissaFaiz() {
   const router = useRouter();
   const mode = getInvitationMode(router.query.mode);
-  const showGifts = router.isReady && mode !== "family";
+  const showGifts = router.isReady && mode !== "family" && mode !== "sekeluarga";
   const showHashtag = router.isReady && mode === "friend";
   const regularGifts = registryProducts.filter(
     (product) => !product.contribution
@@ -641,7 +641,9 @@ export default function JemputanWalimatulurusHarissaFaiz() {
                   className={`${styles["hero-invitation"]} mx-auto mt-5 max-w-lg text-[#68776d]`}
                 >
                   dengan segala hormatnya menjemput Dato&apos; / Datin / Tuan /
-                  Puan / Encik / Cik bersama pasangan ke majlis perkahwinan puteri
+                  Puan / Encik / Cik bersama{" "}
+                  {mode === "sekeluarga" ? "keluarga" : "pasangan"} ke majlis
+                  perkahwinan puteri
                   kami
                 </p>
               </GardenReveal>
