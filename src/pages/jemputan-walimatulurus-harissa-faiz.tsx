@@ -853,8 +853,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
               <p
                 className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]`}
               >
-                Bagi membantu kami membuat persiapan, mohon sahkan kehadiran
-                sebelum 15 November 2026.
+                Bagi membantu kami membuat persiapan, mohon sahkan kehadiran anda sebelum 15 November 2026.
               </p>
               <GardenReveal className="mx-auto max-w-2xl">
                 <form
