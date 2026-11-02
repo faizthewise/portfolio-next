@@ -1,0 +1,281 @@
+/* stylelint-disable selector-pseudo-class-no-unknown -- :global is CSS Modules syntax. */
+.theme[data-invitation-stage] {
+  --wedding-rgb-3e5949: 87 35 48;
+  --wedding-rgb-496851: 108 46 60;
+  --wedding-rgb-4c6b55: 108 46 60;
+  --wedding-rgb-607a60: 139 91 51;
+  --wedding-rgb-4f7058: 87 35 48;
+  --wedding-rgb-536858: 240 219 174;
+  --wedding-rgb-68776d: 119 93 77;
+  --wedding-rgb-6f786f: 121 101 83;
+  --wedding-rgb-6e7b70: 121 101 83;
+  --wedding-rgb-71866d: 164 125 64;
+  --wedding-rgb-8e7956: 168 128 65;
+  --wedding-rgb-9b8b65: 168 128 65;
+  --wedding-rgb-a05e73: 122 45 65;
+  --wedding-rgb-a48b60: 183 145 76;
+  --wedding-rgb-a79a78: 183 145 76;
+  --wedding-rgb-eacfdc: 233 213 179;
+  --wedding-rgb-e4e9df: 65 25 36;
+  --wedding-rgb-fffdf8: 255 250 237;
+  --wedding-rgb-eef0e8: 241 229 207;
+  --wedding-rgb-e8ece3: 65 25 36;
+  --wedding-rgb-e6e8dc: 65 25 36;
+  --wedding-rgb-f0e8e4: 85 32 45;
+  --wedding-rgb-e2e8e0: 48 18 27;
+  --wedding-rgb-eee8e2: 91 39 49;
+  --wedding-rgb-edf0e8: 242 228 201;
+  --wedding-rgb-687565: 119 93 77;
+  --wedding-rgb-788078: 143 120 99;
+  --wedding-rgb-60785e: 126 59 72;
+  --wedding-rgb-334d40: 65 25 36;
+
+  background-color: #fff9ed;
+  background-image: none;
+}
+
+.theme[data-invitation-stage="cover"] {
+  background: radial-gradient(ellipse at 50% 40%, #713447, transparent 65%),
+    url("/images/songket-weave.svg"), #34131e;
+  background-size: auto, 120px 160px, auto;
+  box-shadow: inset 0 0 150px #220d17;
+}
+
+.theme[data-invitation-stage="content"] {
+  background-image: none;
+}
+
+.theme[data-invitation-stage] [data-part="cover-label"] {
+  color: #efdbad;
+}
+
+.theme[data-invitation-stage] [data-part="cover-hint"],
+.theme[data-invitation-stage] [data-part="cover-date"] {
+  color: #e1c48a;
+}
+
+.theme[data-invitation-stage] [data-part="envelope"] {
+  filter: drop-shadow(0 28px 30px rgb(16 4 9 / 45%));
+}
+
+.theme[data-invitation-stage] [data-part="cover-leaf"] {
+  border: 7px double #c6a35d;
+  border-radius: 3px;
+  background: linear-gradient(
+      90deg,
+      transparent 49.7%,
+      #c6a35d 50%,
+      transparent 50.3%
+    ),
+    linear-gradient(0deg, #c6a35d 1px, transparent 1px) center 92% / 92% 1px
+      no-repeat,
+    linear-gradient(0deg, #c6a35d 1px, transparent 1px) center 8% / 92% 1px
+      no-repeat,
+    url("/images/songket-weave.svg") center / 120px 160px, #572330;
+  box-shadow: inset 0 0 50px rgb(25 6 14 / 50%);
+}
+
+.theme[data-invitation-stage] [data-part="seal"] {
+  top: 56%;
+  width: 5.2rem;
+  height: 5.2rem;
+  border: 5px double #efdaa2;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 20%, #f0d998, #bc9349 65%, #86622e);
+  box-shadow: 0 6px 18px rgb(24 8 13 / 50%), 0 0 0 7px rgb(209 174 104 / 12%);
+}
+
+.monogram {
+  color: #572330;
+  font-family: Georgia, serif;
+  font-size: 1.6rem;
+  font-style: italic;
+  letter-spacing: -0.15em;
+  padding-right: 0.15em;
+  text-shadow: 0 1px rgb(255 248 213 / 70%);
+}
+
+.cover-inscription {
+  position: absolute;
+  top: 18%;
+  inset-inline: 0;
+  display: grid;
+  gap: 0.85rem;
+  color: #efdbad;
+  font-family: Georgia, serif;
+  pointer-events: none;
+  transition: opacity 600ms ease;
+}
+
+.cover-inscription > span:first-child {
+  font-family: sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.cover-inscription > span:last-child {
+  display: grid;
+  gap: 0.3rem;
+  font-size: clamp(1.7rem, 6vw, 2.5rem);
+  font-style: italic;
+}
+
+.cover-inscription i {
+  color: #c6a35d;
+  font-size: 1.1rem;
+}
+
+.theme[data-invitation-stage]
+  [data-part="envelope"]:disabled
+  .cover-inscription {
+  opacity: 0;
+}
+
+.theme[data-invitation-stage] [data-part="hero"] {
+  background: linear-gradient(rgb(50 17 28 / 25%), rgb(50 17 28 / 55%)),
+    url("/images/songket-weave.svg"), #572330;
+  background-size: auto, 120px 160px, auto;
+}
+
+.theme[data-invitation-stage] [data-part="hero-card"] {
+  border: 1px solid #cfaf70;
+  border-radius: 14rem 14rem 4px 4px / 8rem 8rem 4px 4px;
+  background-color: #fff9ed;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0 3px,
+    rgb(176 136 72 / 3%) 3px 4px
+  );
+  box-shadow: 0 30px 80px rgb(24 7 13 / 35%), 0 0 0 6px rgb(213 175 100 / 10%);
+}
+
+.theme[data-invitation-stage] [data-part="hero-card"]::before {
+  inset: 12px;
+  border-color: rgb(183 145 76 / 45%);
+}
+
+.theme[data-invitation-stage] .artwork {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  color: #b7914c;
+  pointer-events: none;
+}
+
+.crown-top,
+.crown-bottom {
+  position: absolute;
+  inset-inline: 10%;
+  opacity: 0.75;
+}
+
+.crown-top {
+  top: 1.75rem;
+  transform: rotate(180deg);
+}
+
+.crown-bottom {
+  bottom: 1.25rem;
+}
+
+.crown-top svg,
+.crown-bottom svg {
+  display: block;
+  width: 100%;
+  height: 5rem;
+}
+
+.thread {
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgb(213 175 100 / 20%);
+  border-radius: inherit;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgb(226 199 139 / 14%) 50%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: thread-shimmer 12s ease-in-out infinite;
+}
+
+.ornament {
+  display: block;
+  width: 12rem;
+  height: 3rem;
+  margin: 0.75rem auto 0;
+  color: #b08a47;
+}
+
+.theme[data-invitation-stage] :global(.stationery-panel) {
+  border-color: rgb(183 145 76 / 30%);
+  background: repeating-linear-gradient(
+      90deg,
+      transparent 0 3px,
+      rgb(176 136 72 / 2%) 3px 4px
+    ),
+    linear-gradient(130deg, #fffcf4, #f4e9d4);
+  box-shadow: 0 1px 0 #fff inset, 0 14px 35px -22px rgb(87 35 48 / 25%);
+}
+
+.theme[data-invitation-stage] :global(.garden-stationery-section),
+.theme[data-invitation-stage] :global(.garden-english-wedding-blush) {
+  background: radial-gradient(ellipse at 0 0, #efe0c5, transparent 60%), #f5ecdc;
+}
+
+.theme[data-invitation-stage] [data-part="rsvp-form"],
+.theme[data-invitation-stage] [data-part="venue-card"] {
+  background: linear-gradient(135deg, #fffcf4, #f4e9d4);
+}
+
+.theme[data-invitation-stage] [data-part="calendar-action"] a,
+.theme[data-invitation-stage] [data-part="rsvp-form"] > button {
+  background: linear-gradient(125deg, #7e3b48, #572330 70%, #411924);
+  box-shadow: 0 1px 0 rgb(239 219 173 / 25%) inset,
+    0 5px 14px -7px rgb(65 25 36 / 45%);
+}
+
+.theme[data-invitation-stage] [data-part="dock"] {
+  border-color: rgb(183 145 76 / 45%);
+  background: rgb(255 250 237 / 97%);
+  box-shadow: 0 8px 32px rgb(65 25 36 / 20%);
+}
+
+@keyframes thread-shimmer {
+  0%,
+  100% {
+    background-position: 100% 0;
+  }
+
+  50% {
+    background-position: 0 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .theme[data-invitation-stage] [data-part="hero-card"] {
+    padding-top: 7rem;
+    padding-bottom: 6rem;
+    border-radius: 10rem 10rem 3px 3px / 6rem 6rem 3px 3px;
+  }
+
+  .crown-top,
+  .crown-bottom {
+    inset-inline: 12%;
+  }
+
+  .crown-top svg,
+  .crown-bottom svg {
+    height: 4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme[data-invitation-stage] .thread {
+    animation: none;
+  }
+}

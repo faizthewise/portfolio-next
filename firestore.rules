@@ -11,9 +11,13 @@ service cloud.firestore {
         && value == int(value);
     }
 
-    match /weddings/faiz-harissa/rsvps/{uid} {
-      allow get: if owner(uid);
-      allow create, update: if owner(uid)
+    function invitationEvent(eventId) {
+      return eventId in ['faiz-harissa', 'faiz-harissa-groom'];
+    }
+
+    match /weddings/{eventId}/rsvps/{uid} {
+      allow get: if invitationEvent(eventId) && owner(uid);
+      allow create, update: if invitationEvent(eventId) && owner(uid)
         && request.resource.data.keys().hasOnly(['name', 'attendance', 'guests', 'updatedAt'])
         && shortName(request.resource.data.name)
         && request.resource.data.attendance in ['Hadir, insya-Allah', 'Maaf, tidak dapat hadir']
@@ -24,15 +28,15 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
-    match /weddings/faiz-harissa/wishes/{uid} {
-      allow read: if signedIn();
-      allow create, update: if owner(uid)
+    match /weddings/{eventId}/wishes/{uid} {
+      allow read: if invitationEvent(eventId) && signedIn();
+      allow create, update: if invitationEvent(eventId) && owner(uid)
         && request.resource.data.keys().hasOnly(['name', 'message', 'updatedAt'])
         && shortName(request.resource.data.name)
         && request.resource.data.message is string
         && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000
         && request.resource.data.updatedAt == request.time;
-      allow delete: if owner(uid);
+      allow delete: if invitationEvent(eventId) && owner(uid);
     }
 
     match /weddings/faiz-harissa/gifts/{id} {

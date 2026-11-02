@@ -1,6 +1,6 @@
 # Wedding invitation Firebase setup
 
-Firebase is used only by `/jemputan-perkahwinan`. The web configuration is in
+Firebase powers the wedding invitations and gift registry. The web configuration is in
 `src/lib/wedding/firebase.ts`; it is public configuration, not an Admin credential.
 Use Node.js 20+ and pnpm to install and run the project.
 
@@ -26,6 +26,19 @@ firebase deploy --only firestore:rules --project jemputan-kahwin-6bd29
 ```
 
 ## Data and behavior
+
+- `/jemputan-walimatulurus-harissa-faiz` is the bride's garden invitation.
+  `/jemputan-walimatulurus-faiz-harissa` is the groom's songket invitation.
+  Both support the same `mode=family|friend|parentFriend|sekeluarga` options
+  and optional `salam=1` section. Event details and contacts are configured in
+  `src/lib/wedding/invitations.ts`.
+- The groom's RSVPs and wishes use `weddings/faiz-harissa-groom/rsvps` and
+  `weddings/faiz-harissa-groom/wishes`. Guests can respond to both celebrations
+  without replacing their other RSVP. Gifts and contributions remain shared under
+  `weddings/faiz-harissa` to prevent duplicate gift reservations.
+- **Publish the updated `firestore.rules` before using the new invitation's RSVP.**
+  The new event is explicitly allowed; unrelated wedding IDs remain denied.
+  The registry's `invitation=groom` query preserves the return link to songket.
 
 - `weddings/faiz-harissa/rsvps/{anonymousUid}` stores name, attendance, guest count,
   and update time. Only that guest can read/write the RSVP through the app. The

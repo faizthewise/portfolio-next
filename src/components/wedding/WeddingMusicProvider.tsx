@@ -9,6 +9,10 @@ import {
 } from "react";
 import { useRouter } from "next/router";
 import { playMohorOpening } from "@/lib/wedding/mohorOpening";
+import {
+  brideInvitationPath,
+  groomInvitationPath,
+} from "@/lib/wedding/invitations";
 
 type OpeningCallbacks = {
   reducedMotion: boolean;
@@ -26,7 +30,7 @@ type WeddingMusic = {
 };
 
 const MusicContext = createContext<WeddingMusic | null>(null);
-const invitationPath = "/jemputan-walimatulurus-harissa-faiz";
+const invitationPaths = [brideInvitationPath, groomInvitationPath];
 const registryPaths = [
   "/wedding-registry",
   "/wedding-registry-en",
@@ -45,7 +49,12 @@ export default function WeddingMusicProvider({
 }: {
   children: ReactNode;
 }) {
-  const { pathname } = useRouter();
+  const { pathname, query } = useRouter();
+  const invitationKey =
+    pathname === groomInvitationPath ||
+    (registryPaths.includes(pathname) && query.invitation === "groom")
+      ? "groom"
+      : "bride";
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const soundRef = useRef<HTMLAudioElement | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
@@ -56,7 +65,12 @@ export default function WeddingMusicProvider({
   const autoplayPending = useRef(false);
   const [musicPlaying, setMusicPlaying] = useState(false);
   const [openingSoundPlaying, setOpeningSoundPlaying] = useState(false);
-  const [invitationOpened, setInvitationOpened] = useState(false);
+  const [openedInvitations, setOpenedInvitations] = useState({
+    bride: false,
+    groom: false,
+  });
+  const invitationOpened = openedInvitations[invitationKey];
+  const activeInvitation = useRef(invitationKey);
 
   const getAudio = useCallback(() => {
     if (!audioRef.current) {
@@ -91,7 +105,9 @@ export default function WeddingMusicProvider({
     void audio.play().catch(() => undefined);
   }, [getAudio]);
 
-  const revealInvitation = useCallback(() => setInvitationOpened(true), []);
+  const revealInvitation = useCallback(() => {
+    setOpenedInvitations((opened) => ({ ...opened, [invitationKey]: true }));
+  }, [invitationKey]);
 
   const startOpening = useCallback(
     (callbacks: OpeningCallbacks) => {
@@ -128,7 +144,10 @@ export default function WeddingMusicProvider({
           if (attached) callbacks.onReveal();
         },
         onOpen: () => {
-          setInvitationOpened(true);
+          setOpenedInvitations((opened) => ({
+            ...opened,
+            [invitationKey]: true,
+          }));
           if (attached) callbacks.onOpen();
         },
         onSoundFinished: () => {
@@ -142,7 +161,7 @@ export default function WeddingMusicProvider({
         attached = false;
       };
     },
-    [getAudio]
+    [getAudio, invitationKey]
   );
 
   const toggleMusic = useCallback(() => {
@@ -159,9 +178,17 @@ export default function WeddingMusicProvider({
   }, [getAudio, play]);
 
   useEffect(() => {
+    if (activeInvitation.current !== invitationKey) {
+      openingCleanup.current?.();
+      openingCleanup.current = null;
+      openingActive.current = false;
+      setOpeningSoundPlaying(false);
+      audioRef.current?.pause();
+      activeInvitation.current = invitationKey;
+    }
     const registry = registryPaths.includes(pathname);
     if (registry) play();
-    else if (pathname === invitationPath) {
+    else if (invitationPaths.includes(pathname)) {
       if (!soundRef.current) {
         soundRef.current = new Audio("/audio/mohor-wind-chimes.m4a");
         soundRef.current.preload = "auto";
@@ -188,7 +215,7 @@ export default function WeddingMusicProvider({
       document.removeEventListener("pointerdown", retry);
       document.removeEventListener("keydown", keyRetry);
     };
-  }, [pathname, play]);
+  }, [pathname, play, invitationKey]);
 
   useEffect(
     () => () => {
