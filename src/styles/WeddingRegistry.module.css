@@ -193,9 +193,13 @@
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  background: radial-gradient(ellipse at 30% 20%, #fffefa, transparent 75%),
+  background: radial-gradient(
+      ellipse at 30% 20%,
+      var(--registry-paper, #fffefa),
+      transparent 75%
+    ),
     linear-gradient(145deg, #f3efe4, #e8e6da);
-  color: #8e7956;
+  color: var(--registry-accent, #8e7956);
 }
 
 .image-fallback svg {
@@ -401,8 +405,13 @@
 }
 
 .primary {
-  background: linear-gradient(125deg, #60785e, #3e5949 70%, #334d40);
-  color: #fffdf8;
+  background: linear-gradient(
+    125deg,
+    var(--registry-primary-light, #60785e),
+    var(--registry-ink, #3e5949) 70%,
+    var(--registry-primary-dark, #334d40)
+  );
+  color: var(--registry-paper, #fffdf8);
 }
 
 .secondary {
@@ -447,7 +456,11 @@
   overflow: hidden;
   border: 1px solid rgb(164 139 96 / 24%);
   border-radius: 4px;
-  background: linear-gradient(145deg, #fffefa, #f3ecdf);
+  background: linear-gradient(
+    145deg,
+    var(--registry-paper, #fffefa),
+    var(--registry-inset, #f3ecdf)
+  );
   text-align: center;
 }
 
@@ -465,7 +478,7 @@
 
 .preview-action p {
   margin-top: 0.75rem;
-  color: #6f786f;
+  color: var(--registry-muted, #6f786f);
   font-size: 0.75rem;
   line-height: 1.6;
 }

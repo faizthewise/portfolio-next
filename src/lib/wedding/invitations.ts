@@ -17,6 +17,7 @@ export type WeddingInvitationDetails = {
   heroDate: string;
   calendarDates: string;
   timeLabel: string;
+  rsvpDeadline?: string;
   venue: string;
   dresscode: string;
   mapQuery: string;
@@ -26,6 +27,7 @@ export type WeddingInvitationDetails = {
 
 export const brideInvitation: WeddingInvitationDetails = {
   side: "bride",
+  rsvpDeadline: "15 November 2026",
   theme: "garden",
   eventId: "faiz-harissa",
   bride: "Harissa",
@@ -54,6 +56,7 @@ export const brideInvitation: WeddingInvitationDetails = {
 export const groomInvitation: WeddingInvitationDetails = {
   ...brideInvitation,
   side: "groom",
+  rsvpDeadline: undefined,
   theme: "songket",
   eventId: "faiz-harissa-groom",
   date: new Date("2026-12-27T11:30:00+08:00"),
@@ -61,8 +64,8 @@ export const groomInvitation: WeddingInvitationDetails = {
   coverDate: "27 . 12 . 2026",
   heroDate: "27 DISEMBER 2026",
   calendarDates: "20261227T113000/20261227T160000",
-  venue: "Urban Park, Alam Impian",
-  mapQuery: "Urban Park, Alam Impian",
+  venue: "Urban Park Hall, Alam Impian",
+  mapQuery: "Urban Park Hall, Alam Impian",
   hosts: "Hasnul bin Abu Shahir & Normah binti Samsuri",
   contacts: [
     { name: "Hasnul", phone: "0192258819" },

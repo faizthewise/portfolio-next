@@ -6,17 +6,24 @@ import { registryPath, registryProducts } from "@/lib/wedding/registry";
 import { getInvitationMode } from "@/lib/wedding/invitationMode";
 import registryStyles from "@/styles/WeddingRegistry.module.css";
 import WeddingWishes from "@/components/wedding/WeddingWishes";
+import { SongketWishesMotif } from "@/components/wedding/SongketThreadwork";
 import GardenReveal from "@/components/wedding/GardenReveal";
 import GardenButterflyFlight from "@/components/wedding/GardenButterflyFlight";
 import MohorMagic from "@/components/wedding/MohorMagic";
+import ClassicalSealRelease from "@/components/wedding/ClassicalSealRelease";
 import BotanicalArtwork from "@/components/wedding/BotanicalArtwork";
 import { useWeddingMusic } from "@/components/wedding/WeddingMusicProvider";
 import styles from "@/styles/WeddingGarden.module.css";
 import songketStyles from "@/styles/WeddingSongket.module.css";
-import SongketArtwork, {
+import {
   SongketOrnament,
+  SongketClosingFlourish,
+  SongketCrest,
+  SongketPaperBody,
 } from "@/components/wedding/SongketArtwork";
 import { WeddingInvitationDetails } from "@/lib/wedding/invitations";
+import { createGateRenderer } from "@/lib/wedding/gateRenderer";
+import { openingProfiles } from "@/lib/wedding/mohorOpening";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
 import {
   WeddingWish,
@@ -31,6 +38,7 @@ import {
   Parisienne,
 } from "next/font/google";
 import {
+  CSSProperties,
   FormEvent,
   ReactNode,
   useEffect,
@@ -85,10 +93,13 @@ const hashtagFont = Lora({
 function CoupleName({ fullName }: { fullName: string }) {
   const parts = fullName.match(/^(.+?)\s+((?:bin|binti)\s+.+)$/);
   return (
-    <span className={styles["couple-name"]}>
+    <span data-part="couple-name" className={styles["couple-name"]}>
       {parts ? parts[1] : fullName}
       {parts && (
-        <span className={`${styles["couple-lineage"]} ${titleFont.className}`}>
+        <span
+          data-part="couple-lineage"
+          className={`${styles["couple-lineage"]} ${titleFont.className}`}
+        >
           {" "}
           {parts[2]}
         </span>
@@ -251,43 +262,113 @@ function InvitationCoverArtwork({
   revealing: boolean;
   songket: boolean;
 }) {
+  const coverRef = useRef<HTMLButtonElement>(null);
+  const renderer = useRef(createGateRenderer());
+  const openingRenderer = useRef<boolean | null>(null);
+  const [alphaGates, setAlphaGates] = useState(false);
+  useEffect(() => {
+    if (!songket) return;
+    const session = createGateRenderer();
+    renderer.current = session;
+    const images = Array.from(
+      coverRef.current?.querySelectorAll<HTMLImageElement>(
+        "[data-part='cover-leaf'] img"
+      ) ?? []
+    );
+    const listeners = images.map((image) => {
+      const loaded = () => {
+        void session.prepare(image);
+      };
+      const failed = () => {
+        session.unavailable(image);
+      };
+      image.addEventListener("load", loaded);
+      image.addEventListener("error", failed);
+      if (image.complete && image.naturalWidth > 0) loaded();
+      return () => {
+        image.removeEventListener("load", loaded);
+        image.removeEventListener("error", failed);
+      };
+    });
+    return () => {
+      session.dispose();
+      listeners.forEach((remove) => remove());
+    };
+  }, [songket]);
+  const activate = () => {
+    if (openingRenderer.current !== null || opening) return;
+    const images = Array.from(
+      coverRef.current?.querySelectorAll<HTMLImageElement>(
+        "[data-part='cover-leaf'] img"
+      ) ?? []
+    );
+    const ready = songket && renderer.current.choose(images);
+    // The renderer is chosen once, without waiting for the network or decoding.
+    openingRenderer.current = ready;
+    setAlphaGates(ready);
+    onOpen();
+  };
   return (
     <div
+      data-part="cover-book"
       className={`${styles["cover-book"]} ${opening ? styles.enchanting : ""} ${
         revealing ? styles.opening : ""
       } mx-auto w-full`}
     >
       <button
+        ref={coverRef}
         type="button"
-        onClick={onOpen}
+        onClick={activate}
         disabled={opening}
         aria-busy={opening}
+        data-opening={opening}
+        data-revealing={revealing}
         className={`${styles.envelope} sealed-invitation group relative block w-full text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--wedding-rgb-607a60))] focus-visible:ring-offset-4 focus-visible:ring-offset-[rgb(var(--wedding-rgb-e4e9df))]`}
         data-part="envelope"
-        aria-label="Buka undangan perkahwinan Harissa Amani dan Muhammad Faiz"
+        data-gates-ready={alphaGates}
+        aria-label={
+          songket
+            ? "Buka undangan perkahwinan Muhammad Faiz dan Harissa Amani"
+            : "Buka undangan perkahwinan Harissa Amani dan Muhammad Faiz"
+        }
       >
+        {songket && (
+          <span className={songketStyles["cover-lining"]} aria-hidden="true" />
+        )}
         <span
           data-part="cover-leaf"
+          data-side="left"
           className={`${styles["cover-leaf"]} ${styles["leaf-left"]}`}
           aria-hidden="true"
-        />
+        >
+          {songket && (
+            <img
+              src="/images/songket-gate-left-v1.webp"
+              width={1038}
+              height={1516}
+              alt=""
+              {...{ fetchpriority: "low" }}
+            />
+          )}
+        </span>
         <span
           data-part="cover-leaf"
+          data-side="right"
           className={`${styles["cover-leaf"]} ${styles["leaf-right"]}`}
           aria-hidden="true"
-        />
+        >
+          {songket && (
+            <img
+              src="/images/songket-gate-right-v1.webp"
+              width={1038}
+              height={1516}
+              alt=""
+              {...{ fetchpriority: "low" }}
+            />
+          )}
+        </span>
 
-        {songket ? (
-          <span
-            className={songketStyles["cover-inscription"]}
-            aria-hidden="true"
-          >
-            <span>Walimatulurus</span>
-            <span>
-              Faiz <i>&amp;</i> Harissa
-            </span>
-          </span>
-        ) : (
+        {!songket && (
           <Butterfly className="absolute right-[6%] top-[39%] w-20 -rotate-[22deg] sm:w-24" />
         )}
         <span
@@ -295,21 +376,26 @@ function InvitationCoverArtwork({
           className={`${styles.seal} wax-seal absolute left-1/2 top-1/2 z-20 grid -translate-x-1/2 -translate-y-1/2 place-items-center transition duration-300 group-hover:scale-105`}
           aria-hidden="true"
         >
-          {songket ? (
-            <span className={songketStyles.monogram}>FH</span>
-          ) : (
-            <img
-              src="/images/wax-seal-fh-v1.png"
-              alt=""
-              className="wax-seal-image h-full w-full object-cover"
-            />
-          )}
+          <img
+            src={
+              songket
+                ? "/images/wax-seal-fh-burgundy-v2.webp"
+                : "/images/wax-seal-fh-v1.png"
+            }
+            width={256}
+            height={256}
+            alt=""
+            className="wax-seal-image h-full w-full object-cover"
+          />
         </span>
-        {opening && <MohorMagic fading={revealing} />}
+        {opening && songket && <ClassicalSealRelease />}
+        {opening && !songket && <MohorMagic fading={revealing} />}
       </button>
       <p
         data-part="cover-hint"
-        className={`${styles["cover-hint"]} ${namesFont.className} mt-6 text-[rgb(var(--wedding-rgb-536858))]`}
+        className={`${styles["cover-hint"]} ${
+          songket ? "" : namesFont.className
+        } mt-6 text-[rgb(var(--wedding-rgb-536858))]`}
       >
         Tekan mohor untuk membuka
       </p>
@@ -322,14 +408,18 @@ function SectionTitle({
   children,
   light = false,
   songket = false,
+  wishes = false,
 }: {
   eyebrow: string;
   children: ReactNode;
   light?: boolean;
   songket?: boolean;
+  wishes?: boolean;
 }) {
   return (
     <GardenReveal
+      dataPart="section-title"
+      enabled={!songket || !wishes}
       className={`${styles["section-title"]} mx-auto mb-10 max-w-xl text-center`}
     >
       <p
@@ -346,7 +436,15 @@ function SectionTitle({
       >
         {children}
       </h2>
-      {songket ? <SongketOrnament /> : <Ornament />}
+      {songket ? (
+        wishes ? (
+          <SongketWishesMotif />
+        ) : (
+          <SongketOrnament />
+        )
+      ) : (
+        <Ornament />
+      )}
     </GardenReveal>
   );
 }
@@ -378,7 +476,9 @@ export default function WeddingInvitation({
   const regularGifts = registryProducts.filter(
     (product) => !product.contribution
   );
-  const [showSalam, setShowSalam] = useState(false);
+  const [showSalam, setShowSalam] = useState(
+    router.isReady && router.query.salam === "1"
+  );
   const {
     invitationOpened,
     revealInvitation: setInvitationOpened,
@@ -395,6 +495,9 @@ export default function WeddingInvitation({
   const [rsvpSent, setRsvpSent] = useState(false);
   const [wishes, setWishes] = useState<WeddingWish[]>([]);
   const [backendReady, setBackendReady] = useState(false);
+  const [wishesStatus, setWishesStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
   const [backendError, setBackendError] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
@@ -402,6 +505,19 @@ export default function WeddingInvitation({
   const progressRef = useRef<HTMLDivElement>(null);
   const countdownRef = useRef<HTMLDivElement>(null);
   const invitationRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!songket || !opening || invitationOpened) return;
+    // The invitation is already rendered beneath the opening cover.
+    const invitation = invitationRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    invitation?.setAttribute("inert", "");
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      invitation?.removeAttribute("inert");
+    };
+  }, [songket, opening, invitationOpened]);
 
   useEffect(
     () => () => {
@@ -477,6 +593,7 @@ export default function WeddingInvitation({
           },
           (items) => {
             setWishes(items);
+            setWishesStatus("ready");
             wishesLoaded = true;
             setBackendReady(!failed && giftsLoaded && wishesLoaded);
           },
@@ -487,6 +604,7 @@ export default function WeddingInvitation({
               error.code,
               error.message
             );
+            if (source === "wishes") setWishesStatus("error");
             failed = true;
             setBackendReady(false);
             setBackendError(
@@ -498,6 +616,7 @@ export default function WeddingInvitation({
       })
       .catch((error) => {
         if (disposed) return;
+        setWishesStatus("error");
         console.error("[Wedding Firebase] Connection failed", error);
         setBackendError(
           "Tidak dapat menyambung. Sila muat semula halaman dan cuba lagi."
@@ -575,6 +694,43 @@ export default function WeddingInvitation({
     });
   };
 
+  const countdownPanel = (
+    <div
+      ref={countdownRef}
+      data-part="countdown"
+      className={`${styles.countdown} mx-auto grid grid-cols-3`}
+    >
+      {songket && now !== null && now >= wedding.date.getTime() ? (
+        <p role="status" className="col-span-3 text-center">
+          {now < wedding.date.getTime() + 86400000
+            ? "Hari yang dinanti telah tiba."
+            : "Terima kasih atas doa dan ingatan buat kami."}
+        </p>
+      ) : (
+        [
+          ["Hari", countdown.hari],
+          ["Jam", countdown.jam],
+          ["Minit", countdown.minit],
+        ].map(([label, value], index) => (
+          <GardenReveal
+            key={label}
+            delay={index * 100}
+            className="p-5 text-center"
+          >
+            <strong
+              className={`${titleFont.className} block text-6xl font-medium text-[rgb(var(--wedding-rgb-496851))]`}
+            >
+              {value}
+            </strong>
+            <span className="mt-2 block text-xs uppercase tracking-[0.25em] text-[rgb(var(--wedding-rgb-6e7b70))]">
+              {label}
+            </span>
+          </GardenReveal>
+        ))
+      )}
+    </div>
+  );
+
   return (
     <>
       <Head>
@@ -589,15 +745,25 @@ export default function WeddingInvitation({
           as="image"
           href={
             songket
-              ? "/images/songket-weave.svg"
+              ? "/images/songket-closed-composite-v4.webp"
               : "/images/gatefold-cover-garden-v1.webp"
           }
         />
       </Head>
 
-      {!invitationOpened ? (
+      {!invitationOpened && (
         <main
           data-invitation-stage="cover"
+          data-opening={opening}
+          data-revealing={revealing}
+          style={
+            songket
+              ? ({
+                  "--seal-release-duration": `${openingProfiles.classical.revealDelay}ms`,
+                  "--gate-opening-duration": `${openingProfiles.classical.openingDuration}ms`,
+                } as CSSProperties)
+              : undefined
+          }
           className={`${styles.cover} ${
             songket ? songketStyles.theme : ""
           } relative grid min-h-screen place-items-center overflow-hidden px-5 py-10 text-center text-[rgb(var(--wedding-rgb-3e5949))] sm:px-8 sm:py-14`}
@@ -607,7 +773,9 @@ export default function WeddingInvitation({
           >
             <p
               data-part="cover-label"
-              className={`${styles["cover-label"]} ${namesFont.className} mb-7 text-[rgb(var(--wedding-rgb-536858))]`}
+              className={`${styles["cover-label"]} ${
+                songket ? titleFont.className : namesFont.className
+              } mb-7 text-[rgb(var(--wedding-rgb-536858))]`}
             >
               Jemputan ke Walimatulurus
             </p>
@@ -625,12 +793,15 @@ export default function WeddingInvitation({
             </p>
           </div>
         </main>
-      ) : (
+      )}
+      {(invitationOpened || (songket && opening)) && (
         <main
           ref={invitationRef}
           tabIndex={-1}
-          aria-label="Undangan perkahwinan Harissa dan Faiz"
+          aria-label={`Undangan perkahwinan ${couple}`}
+          aria-hidden={!invitationOpened || undefined}
           data-invitation-stage="content"
+          data-opened={invitationOpened}
           className={`${styles.page} ${
             songket ? songketStyles.theme : ""
           } english-invitation-enter english-wedding-paper garden-english-wedding-paper min-h-screen bg-[rgb(var(--wedding-rgb-fffdf8))] text-[rgb(var(--wedding-rgb-3e5949))] antialiased selection:bg-[rgb(var(--wedding-rgb-eacfdc))] focus:outline-none`}
@@ -649,133 +820,222 @@ export default function WeddingInvitation({
               className={`${styles["hero-card"]} english-invitation-card garden-english-invitation-card relative z-10 mx-auto w-full px-7 pb-28 pt-32 sm:px-16 sm:pb-36 sm:pt-44`}
             >
               {songket ? (
-                <SongketArtwork />
+                <SongketCrest edge="top" opened={invitationOpened} />
               ) : (
                 <>
                   <BotanicalArtwork />
                   <Butterfly className="garden-butterfly-accent right-[18%] top-[5%] w-20 rotate-[18deg] sm:w-24" />
                 </>
               )}
-              <GardenReveal>
-                <p
-                  className={`${styles["hero-label"]} font-semibold uppercase text-[rgb(var(--wedding-rgb-8e7956))]`}
+              {songket && invitationOpened && !showDock && (
+                <button
+                  type="button"
+                  data-part="early-music"
+                  onClick={toggleMusic}
+                  aria-pressed={musicPlaying}
+                  aria-label={musicPlaying ? "Jeda muzik" : "Mainkan muzik"}
+                  title={musicPlaying ? "Jeda muzik" : "Mainkan muzik"}
+                  className={songketStyles["early-music"]}
                 >
-                  Walimatulurus
-                </p>
-              </GardenReveal>
-              <GardenReveal delay={120} className={styles["hero-copy"]}>
-                <p
-                  className={`${styles["hero-blessing"]} font-serif italic text-[rgb(var(--wedding-rgb-68776d))]`}
-                  lang="ar"
-                  dir="rtl"
-                >
-                  بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيم
-                </p>
-                <p
-                  className={`${styles["hero-invitation"]} mx-auto mt-6 max-w-lg text-[rgb(var(--wedding-rgb-68776d))]`}
-                >
-                  Dengan penuh kesyukuran ke hadrat Allah SWT, kami
-                </p>
-                <p
-                  className={`${styles["hero-hosts"]} ${titleFont.className} mt-2 font-medium text-[rgb(var(--wedding-rgb-496851))]`}
-                >
-                  {wedding.hosts.split(" & ").map((host, index) => (
-                    <span key={host} className={styles["host-name"]}>
-                      {index > 0 && (
-                        <span className={styles["host-separator"]}>&amp;</span>
-                      )}
-                      {host}
-                    </span>
-                  ))}
-                </p>
-                <p
-                  className={`${styles["hero-invitation"]} mx-auto mt-5 max-w-lg text-[rgb(var(--wedding-rgb-68776d))]`}
-                >
-                  dengan segala hormatnya menjemput Dato&apos; / Datin / Tuan /
-                  Puan / Encik / Cik bersama{" "}
-                  {mode === "sekeluarga" ? "keluarga" : "pasangan"} ke majlis
-                  perkahwinan {child} kami
-                </p>
-              </GardenReveal>
-              <GardenReveal delay={240}>
-                <h1
-                  className={`${coupleNamesFont.className} font-normal focus:outline-none`}
-                >
-                  <CoupleName fullName={firstName} />
-                  <span
-                    className={`${styles["couple-connector"]} ${namesFont.className} mx-auto block font-normal italic text-[rgb(var(--wedding-rgb-9b8b65))]`}
+                  {musicPlaying ? (
+                    <Music2 aria-hidden="true" />
+                  ) : (
+                    <VolumeX aria-hidden="true" />
+                  )}
+                </button>
+              )}
+              <SongketPaperBody enabled={songket}>
+                <GardenReveal enabled={!songket || invitationOpened}>
+                  <p
+                    className={`${styles["hero-label"]} font-semibold uppercase text-[rgb(var(--wedding-rgb-8e7956))]`}
                   >
-                    dan pilihan hatinya
-                  </span>
-                  <CoupleName fullName={secondName} />
-                </h1>
-                {songket ? <SongketOrnament /> : <Ornament />}
-                <p className={`${styles["hero-date"]} ${titleFont.className}`}>
-                  {wedding.heroDate}
-                </p>
-                <p className={styles["hero-venue"]}>{wedding.venue}</p>
-              </GardenReveal>
-              <div>
-                <GardenReveal delay={360}>
-                  <div
-                    className={`${styles["hero-links"]} mt-7 flex flex-wrap justify-center gap-3`}
-                  >
-                    <a
-                      href="#lokasi"
-                      className="inline-flex items-center gap-2 rounded-full border border-[rgb(var(--wedding-rgb-71866d))]/25 bg-[rgb(var(--wedding-rgb-fffdf8))]/80 px-5 py-3 text-sm font-semibold text-[rgb(var(--wedding-rgb-3e5949))] shadow-sm transition hover:-translate-y-0.5 hover:border-[rgb(var(--wedding-rgb-607a60))]"
-                    >
-                      <MapPin className="h-4 w-4" /> Lokasi
-                    </a>
-                    <a
-                      href="#rsvp"
-                      className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--wedding-rgb-4c6b55))] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[rgb(var(--wedding-rgb-3e5949))]"
-                    >
-                      <Heart className="h-4 w-4" /> RSVP
-                    </a>
-                    {showGifts && (
-                      <a
-                        href="#hadiah"
-                        className="inline-flex items-center gap-2 rounded-full border border-[rgb(var(--wedding-rgb-3e5949))]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[rgb(var(--wedding-rgb-3e5949))] shadow-sm transition hover:-translate-y-0.5 hover:border-[rgb(var(--wedding-rgb-607a60))]"
-                      >
-                        <Gift className="h-4 w-4" /> Hadiah
-                      </a>
-                    )}
-                    {showSalam && (
-                      <a
-                        href="#salam-kaut"
-                        className="inline-flex items-center gap-2 rounded-full border border-[rgb(var(--wedding-rgb-607a60))]/30 bg-[rgb(var(--wedding-rgb-607a60))] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[rgb(var(--wedding-rgb-4f7058))]"
-                      >
-                        <QrCode className="h-4 w-4" /> Salam Kaut
-                      </a>
-                    )}
-                  </div>
+                    Walimatulurus
+                  </p>
                 </GardenReveal>
-                <div
-                  className={`${styles["hero-schedule"]} ${titleFont.className} mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[rgb(var(--wedding-rgb-3e5949))]`}
+                <GardenReveal
+                  delay={0}
+                  enabled={!songket || invitationOpened}
+                  className={styles["hero-copy"]}
                 >
-                  <span>{wedding.dateLabel}</span>
-                  <span className="hidden h-1 w-1 rounded-full bg-[rgb(var(--wedding-rgb-607a60))] sm:block" />
-                  <span>{wedding.timeLabel}</span>
-                </div>
-                <div>
-                  <a
-                    href="#butiran"
-                    className={`${styles["scroll-cue"]} mx-auto mt-9 grid h-12 w-12 place-items-center rounded-full border border-[rgb(var(--wedding-rgb-a48b60))]/40 text-[rgb(var(--wedding-rgb-8e7956))] transition hover:-translate-y-1 hover:bg-white/60`}
-                    aria-label="Lihat butiran majlis"
+                  <p
+                    className={`${styles["hero-blessing"]} font-serif italic text-[rgb(var(--wedding-rgb-68776d))]`}
+                    lang="ar"
+                    dir="rtl"
                   >
-                    <ChevronDown className="h-5 w-5" />
-                  </a>
+                    بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيم
+                  </p>
+                  <p
+                    data-part="invitation-prose"
+                    className={`${songket ? titleFont.className : ""} ${
+                      styles["hero-invitation"]
+                    } mx-auto mt-6 max-w-lg text-[rgb(var(--wedding-rgb-68776d))]`}
+                  >
+                    Dengan penuh kesyukuran ke hadrat Allah SWT, kami
+                  </p>
+                  <p
+                    data-part="hosts"
+                    className={`${styles["hero-hosts"]} ${titleFont.className} mt-2 font-medium text-[rgb(var(--wedding-rgb-496851))]`}
+                  >
+                    {wedding.hosts.split(" & ").map((host, index) => (
+                      <span key={host} className={styles["host-name"]}>
+                        {index > 0 && (
+                          <span className={styles["host-separator"]}>
+                            &amp;
+                          </span>
+                        )}
+                        {host}
+                      </span>
+                    ))}
+                  </p>
+                  <p
+                    data-part="invitation-prose"
+                    className={`${songket ? titleFont.className : ""} ${
+                      styles["hero-invitation"]
+                    } mx-auto mt-5 max-w-lg text-[rgb(var(--wedding-rgb-68776d))]`}
+                  >
+                    dengan segala hormatnya menjemput Dato&apos; / Datin / Tuan
+                    / Puan / Encik / Cik bersama{" "}
+                    {mode === "sekeluarga" ? "keluarga" : "pasangan"} ke majlis
+                    perkahwinan {child} kami
+                  </p>
+                </GardenReveal>
+                <GardenReveal
+                  delay={100}
+                  enabled={!songket || invitationOpened}
+                >
+                  {songket ? (
+                    <h1
+                      data-part="couple-names"
+                      className={coupleNamesFont.className}
+                    >
+                      <CoupleName fullName={firstName} />
+                      <span
+                        className={`${songketStyles.connector} ${titleFont.className}`}
+                      >
+                        {" dan "}
+                      </span>
+                      <CoupleName fullName={secondName} />
+                    </h1>
+                  ) : (
+                    <h1
+                      className={`${coupleNamesFont.className} font-normal focus:outline-none`}
+                    >
+                      <CoupleName fullName={firstName} />
+                      <span
+                        className={`${styles["couple-connector"]} ${namesFont.className} mx-auto block font-normal italic text-[rgb(var(--wedding-rgb-9b8b65))]`}
+                      >
+                        dan pilihan hatinya
+                      </span>
+                      <CoupleName fullName={secondName} />
+                    </h1>
+                  )}
+                  {songket ? <SongketOrnament /> : <Ornament />}
+                  <p
+                    data-part="hero-date"
+                    className={`${styles["hero-date"]} ${titleFont.className}`}
+                  >
+                    {wedding.heroDate}
+                  </p>
+                  <p
+                    data-part="hero-venue"
+                    className={`${styles["hero-venue"]} ${
+                      songket ? titleFont.className : ""
+                    }`}
+                  >
+                    {wedding.venue}
+                  </p>
+                  {songket && (
+                    <p data-part="hero-time" className={titleFont.className}>
+                      {wedding.timeLabel}
+                    </p>
+                  )}
+                </GardenReveal>
+                <div>
+                  <GardenReveal
+                    delay={200}
+                    enabled={!songket || invitationOpened}
+                  >
+                    <div
+                      data-part="hero-links"
+                      className={`${styles["hero-links"]} mt-7 flex flex-wrap justify-center gap-3`}
+                    >
+                      <a
+                        href="#lokasi"
+                        className="inline-flex items-center gap-2 rounded-full border border-[rgb(var(--wedding-rgb-71866d))]/25 bg-[rgb(var(--wedding-rgb-fffdf8))]/80 px-5 py-3 text-sm font-semibold text-[rgb(var(--wedding-rgb-3e5949))] shadow-sm transition hover:-translate-y-0.5 hover:border-[rgb(var(--wedding-rgb-607a60))]"
+                      >
+                        <MapPin className="h-4 w-4" /> Lokasi
+                      </a>
+                      <a
+                        href="#rsvp"
+                        className="inline-flex items-center gap-2 rounded-full bg-[rgb(var(--wedding-rgb-4c6b55))] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[rgb(var(--wedding-rgb-3e5949))]"
+                      >
+                        <Heart className="h-4 w-4" /> RSVP
+                      </a>
+                      {showGifts && (
+                        <a
+                          href="#hadiah"
+                          className="inline-flex items-center gap-2 rounded-full border border-[rgb(var(--wedding-rgb-3e5949))]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[rgb(var(--wedding-rgb-3e5949))] shadow-sm transition hover:-translate-y-0.5 hover:border-[rgb(var(--wedding-rgb-607a60))]"
+                        >
+                          <Gift className="h-4 w-4" /> Hadiah
+                        </a>
+                      )}
+                      {showSalam && (
+                        <a
+                          href="#salam-kaut"
+                          className="inline-flex items-center gap-2 rounded-full border border-[rgb(var(--wedding-rgb-607a60))]/30 bg-[rgb(var(--wedding-rgb-607a60))] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[rgb(var(--wedding-rgb-4f7058))]"
+                        >
+                          <QrCode className="h-4 w-4" /> Salam Kaut
+                        </a>
+                      )}
+                    </div>
+                  </GardenReveal>
+                  {!songket && (
+                    <div
+                      data-part="hero-schedule"
+                      className={`${styles["hero-schedule"]} ${titleFont.className} mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[rgb(var(--wedding-rgb-3e5949))]`}
+                    >
+                      {!songket && <span>{wedding.dateLabel}</span>}
+                      {!songket && (
+                        <span className="hidden h-1 w-1 rounded-full bg-[rgb(var(--wedding-rgb-607a60))] sm:block" />
+                      )}
+                      <span>{wedding.timeLabel}</span>
+                    </div>
+                  )}
+                  <div>
+                    <a
+                      href="#butiran"
+                      data-part="scroll-cue"
+                      className={`${styles["scroll-cue"]} mx-auto mt-9 grid h-12 w-12 place-items-center rounded-full border border-[rgb(var(--wedding-rgb-a48b60))]/40 text-[rgb(var(--wedding-rgb-8e7956))] transition hover:-translate-y-1 hover:bg-white/60`}
+                      aria-label="Lihat butiran majlis"
+                    >
+                      <ChevronDown className="h-5 w-5" />
+                    </a>
+                  </div>
                 </div>
-              </div>
+              </SongketPaperBody>
+              {songket && (
+                <SongketCrest edge="bottom" opened={invitationOpened} />
+              )}
             </div>
           </section>
 
-          <GardenReveal className={styles.interlude}>
-            <blockquote className={titleFont.className}>
-              &ldquo;Dan Kami menciptakan kamu berpasang-pasangan.&rdquo;
-              <cite>Surah An-Naba · 78:8</cite>
-            </blockquote>
-          </GardenReveal>
+          {songket ? (
+            <section data-part="quotation">
+              <GardenReveal className={songketStyles["quotation-inner"]}>
+                <blockquote className={titleFont.className}>
+                  &ldquo;Dan Kami menciptakan kamu berpasang-pasangan.&rdquo;
+                  <cite>Surah An-Naba · 78:8</cite>
+                </blockquote>
+              </GardenReveal>
+            </section>
+          ) : (
+            <GardenReveal className={styles.interlude} dataPart="quotation">
+              <blockquote className={titleFont.className}>
+                &ldquo;Dan Kami menciptakan kamu berpasang-pasangan.&rdquo;
+                <cite>Surah An-Naba · 78:8</cite>
+              </blockquote>
+            </GardenReveal>
+          )}
 
           <section
             id="butiran"
@@ -789,32 +1049,9 @@ export default function WeddingInvitation({
               >
                 Majlis perkahwinan {child} kami
               </SectionTitle>
+              {!songket && countdownPanel}
               <div
-                ref={countdownRef}
-                className={`${styles.countdown} mx-auto grid grid-cols-3`}
-              >
-                {[
-                  ["Hari", countdown.hari],
-                  ["Jam", countdown.jam],
-                  ["Minit", countdown.minit],
-                ].map(([label, value], index) => (
-                  <GardenReveal
-                    key={label}
-                    delay={index * 100}
-                    className="p-5 text-center"
-                  >
-                    <strong
-                      className={`${titleFont.className} block text-6xl font-medium text-[rgb(var(--wedding-rgb-496851))]`}
-                    >
-                      {value}
-                    </strong>
-                    <span className="mt-2 block text-xs uppercase tracking-[0.25em] text-[rgb(var(--wedding-rgb-6e7b70))]">
-                      {label}
-                    </span>
-                  </GardenReveal>
-                ))}
-              </div>
-              <div
+                data-part="event-grid"
                 className={`${styles["detail-list"]} mx-auto mt-12 grid max-w-4xl gap-5 sm:grid-cols-2 lg:grid-cols-4`}
               >
                 {[
@@ -825,6 +1062,7 @@ export default function WeddingInvitation({
                 ].map(({ icon: Icon, label }, index) => (
                   <GardenReveal key={label} delay={index * 100}>
                     <div
+                      data-part="event-detail"
                       className={`${styles["detail-card"]} stationery-panel flex items-center gap-4 text-[rgb(var(--wedding-rgb-3e5949))]`}
                     >
                       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[rgb(var(--wedding-rgb-e3e9de))]">
@@ -835,6 +1073,7 @@ export default function WeddingInvitation({
                   </GardenReveal>
                 ))}
               </div>
+              {songket && countdownPanel}
               <div
                 data-part="calendar-action"
                 className={`${styles["calendar-action"]} mt-8 text-center`}
@@ -918,10 +1157,12 @@ export default function WeddingInvitation({
                 Khabarkan kehadiran tuan dan puan
               </SectionTitle>
               <p
+                data-part="section-intro"
                 className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[rgb(var(--wedding-rgb-6f786f))]`}
               >
-                Bagi membantu kami membuat persiapan, mohon sahkan kehadiran
-                anda sebelum 15 November 2026.
+                {wedding.rsvpDeadline
+                  ? `Bagi membantu kami membuat persiapan, mohon sahkan kehadiran anda sebelum ${wedding.rsvpDeadline}.`
+                  : "Mohon sahkan kehadiran anda bagi membantu persiapan majlis."}
               </p>
               <GardenReveal className="mx-auto max-w-2xl">
                 <form
@@ -1018,7 +1259,10 @@ export default function WeddingInvitation({
                     {saving ? "Sedang menyimpan..." : "Hantar RSVP"}
                   </button>
                   {rsvpSent && (
-                    <p className="text-center text-sm font-medium text-[rgb(var(--wedding-rgb-637d6d))]">
+                    <p
+                      role="status"
+                      className="text-center text-sm font-medium text-[rgb(var(--wedding-rgb-637d6d))]"
+                    >
                       Terima kasih. Maklum balas tuan/puan telah kami terima.
                     </p>
                   )}
@@ -1039,10 +1283,15 @@ export default function WeddingInvitation({
             <div
               className={`${styles["wishes-content"]} relative mx-auto max-w-5xl`}
             >
-              <SectionTitle songket={songket} eyebrow="Titipan buat pengantin">
+              <SectionTitle
+                songket={songket}
+                wishes
+                eyebrow="Titipan buat pengantin"
+              >
                 Ucapan dan doa
               </SectionTitle>
               <p
+                data-part="section-intro"
                 className={`${styles["section-intro"]} mx-auto -mt-6 mb-10 max-w-xl text-center leading-7 text-[rgb(var(--wedding-rgb-6f786f))]`}
               >
                 Setiap ucapan dan doa yang dititipkan buat Harissa dan Faiz amat
@@ -1065,10 +1314,16 @@ export default function WeddingInvitation({
                   <p
                     className={`${titleFont.className} mt-4 text-2xl text-[rgb(var(--wedding-rgb-3e5949))]`}
                   >
-                    Belum ada ucapan dititipkan.
+                    {wishesStatus === "loading"
+                      ? "Sedang memuatkan ucapan…"
+                      : wishesStatus === "error"
+                      ? "Ucapan belum dapat dimuatkan."
+                      : "Belum ada ucapan dititipkan."}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[rgb(var(--wedding-rgb-6f786f))]">
-                    Ucapan daripada borang RSVP akan dipaparkan di sini.
+                    {wishesStatus === "error"
+                      ? "Sila muat semula halaman untuk mencuba lagi."
+                      : "Ucapan daripada borang RSVP akan dipaparkan di sini."}
                   </p>
                 </GardenReveal>
               )}
@@ -1088,6 +1343,7 @@ export default function WeddingInvitation({
                   Tanda Kasih
                 </SectionTitle>
                 <p
+                  data-part="section-intro"
                   className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[rgb(var(--wedding-rgb-6f786f))]`}
                 >
                   Kehadiran dan doa restu anda sudah cukup bermakna. Senarai
@@ -1183,6 +1439,7 @@ export default function WeddingInvitation({
                   Hubungi kami
                 </SectionTitle>
                 <p
+                  data-part="section-intro"
                   className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[rgb(var(--wedding-rgb-6f786f))]`}
                 >
                   Sebarang pertanyaan, sila hubungi kami melalui telefon atau
@@ -1195,6 +1452,7 @@ export default function WeddingInvitation({
                       <li key={phone}>
                         <GardenReveal delay={index * 60}>
                           <div
+                            data-part="contact-card"
                             className={`${styles["contact-card"]} stationery-panel`}
                           >
                             <div className="min-w-0">
@@ -1233,11 +1491,14 @@ export default function WeddingInvitation({
           )}
 
           <footer
+            data-part="closing"
             className={`${styles.closing} stationery-section garden-stationery-section relative border-t border-[rgb(var(--wedding-rgb-a79a78))]/20 bg-[rgb(var(--wedding-rgb-eef0e8))] px-6 py-20 text-center`}
           >
             <GardenReveal>
-              {songket ? <SongketOrnament /> : <Ornament />}
-              <Heart className="mx-auto mt-2 h-5 w-5 fill-[rgb(var(--wedding-rgb-607a60))] text-[rgb(var(--wedding-rgb-607a60))]" />
+              {songket ? <SongketClosingFlourish /> : <Ornament />}
+              {!songket && (
+                <Heart className="mx-auto mt-2 h-5 w-5 fill-[rgb(var(--wedding-rgb-607a60))] text-[rgb(var(--wedding-rgb-607a60))]" />
+              )}
               <p
                 className={`${titleFont.className} mx-auto mt-5 max-w-3xl text-4xl font-medium text-[rgb(var(--wedding-rgb-3e5949))]`}
               >
@@ -1246,14 +1507,14 @@ export default function WeddingInvitation({
               </p>
               {showHashtag ? (
                 <p
-                  className={`${styles["closing-hashtag"]} ${hashtagFont.className} mt-7 font-normal italic text-[rgb(var(--wedding-rgb-496851))]`}
+                  className={`${styles["closing-hashtag"]} ${
+                    songket ? titleFont.className : hashtagFont.className
+                  } mt-7 font-normal italic text-[rgb(var(--wedding-rgb-496851))]`}
                 >
                   #FaIzTheOneForHarissa
                 </p>
               ) : (
-                <div className="mt-7">
-                  {songket ? <SongketOrnament /> : <Ornament />}
-                </div>
+                <div className="mt-7">{!songket && <Ornament />}</div>
               )}
             </GardenReveal>
           </footer>

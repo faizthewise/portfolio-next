@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/router";
-import { playMohorOpening } from "@/lib/wedding/mohorOpening";
+import { openingProfiles, playMohorOpening } from "@/lib/wedding/mohorOpening";
 import {
   brideInvitationPath,
   groomInvitationPath,
@@ -55,6 +55,8 @@ export default function WeddingMusicProvider({
     (registryPaths.includes(pathname) && query.invitation === "groom")
       ? "groom"
       : "bride";
+  const openingStyle = invitationKey === "groom" ? "classical" : "garden";
+  const openingProfile = openingProfiles[openingStyle];
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const soundRef = useRef<HTMLAudioElement | null>(null);
   const contextRef = useRef<AudioContext | null>(null);
@@ -72,9 +74,14 @@ export default function WeddingMusicProvider({
   const invitationOpened = openedInvitations[invitationKey];
   const activeInvitation = useRef(invitationKey);
 
+  const musicPath =
+    invitationKey === "groom"
+      ? "/audio/malam-bulan.mp3"
+      : "/audio/terukir-di-bintang-v2.mp3";
+
   const getAudio = useCallback(() => {
     if (!audioRef.current) {
-      const audio = new Audio("/audio/terukir-di-bintang-v2.mp3");
+      const audio = new Audio(musicPath);
       audio.loop = true;
       audio.volume = 0.55;
       audio.preload = "auto";
@@ -90,8 +97,13 @@ export default function WeddingMusicProvider({
       };
       audioRef.current = audio;
     }
+    if (audioRef.current.getAttribute("src") !== musicPath) {
+      audioRef.current.pause();
+      audioRef.current.src = musicPath;
+      audioRef.current.load();
+    }
     return audioRef.current;
-  }, []);
+  }, [musicPath]);
 
   const play = useCallback(() => {
     if (openingActive.current || userPaused.current) return;
@@ -105,6 +117,18 @@ export default function WeddingMusicProvider({
     void audio.play().catch(() => undefined);
   }, [getAudio]);
 
+  const getOpeningSound = useCallback(() => {
+    if (
+      !soundRef.current ||
+      soundRef.current.getAttribute("src") !== openingProfile.soundPath
+    ) {
+      soundRef.current?.pause();
+      soundRef.current = new Audio(openingProfile.soundPath);
+      soundRef.current.preload = "auto";
+    }
+    return soundRef.current;
+  }, [openingProfile]);
+
   const revealInvitation = useCallback(() => {
     setOpenedInvitations((opened) => ({ ...opened, [invitationKey]: true }));
   }, [invitationKey]);
@@ -112,11 +136,8 @@ export default function WeddingMusicProvider({
   const startOpening = useCallback(
     (callbacks: OpeningCallbacks) => {
       const music = getAudio();
-      if (!soundRef.current) {
-        soundRef.current = new Audio("/audio/mohor-wind-chimes.m4a");
-        soundRef.current.preload = "auto";
-      }
       openingCleanup.current?.();
+      const sound = getOpeningSound();
       userPaused.current = false;
       openingActive.current = true;
       setOpeningSoundPlaying(true);
@@ -136,7 +157,8 @@ export default function WeddingMusicProvider({
       }
       let attached = true;
       openingCleanup.current = playMohorOpening({
-        sound: soundRef.current,
+        style: openingStyle,
+        sound,
         music,
         musicGate: gateRef.current,
         reducedMotion: callbacks.reducedMotion,
@@ -161,7 +183,7 @@ export default function WeddingMusicProvider({
         attached = false;
       };
     },
-    [getAudio, invitationKey]
+    [getAudio, getOpeningSound, invitationKey, openingStyle]
   );
 
   const toggleMusic = useCallback(() => {
@@ -189,10 +211,7 @@ export default function WeddingMusicProvider({
     const registry = registryPaths.includes(pathname);
     if (registry) play();
     else if (invitationPaths.includes(pathname)) {
-      if (!soundRef.current) {
-        soundRef.current = new Audio("/audio/mohor-wind-chimes.m4a");
-        soundRef.current.preload = "auto";
-      }
+      getOpeningSound();
     } else {
       openingCleanup.current?.();
       openingCleanup.current = null;
@@ -215,7 +234,7 @@ export default function WeddingMusicProvider({
       document.removeEventListener("pointerdown", retry);
       document.removeEventListener("keydown", keyRetry);
     };
-  }, [pathname, play, invitationKey]);
+  }, [pathname, play, invitationKey, getOpeningSound]);
 
   useEffect(
     () => () => {

@@ -12,6 +12,7 @@ const require = createRequire(import.meta.url);
 const root = fileURLToPath(new URL("../src/", import.meta.url));
 const cache = new Map();
 let mode = "friend";
+let salam = false;
 let opened = true;
 
 // Exercise the real page tree without browser effects or Firebase writes.
@@ -39,7 +40,10 @@ function load(filename) {
         );
       if (path === "next/router")
         return {
-          useRouter: () => ({ isReady: true, query: { mode } }),
+          useRouter: () => ({
+            isReady: true,
+            query: { mode, salam: salam ? "1" : undefined },
+          }),
         };
       if (path === "@/components/wedding/WeddingMusicProvider")
         return {
@@ -76,7 +80,7 @@ test("the groom invitation renders the right hosts, couple order, directions, ca
   assert.match(html, /perkahwinan putera kami/);
   assert.ok(html.indexOf("Muhammad Faiz") < html.indexOf("Harissa Amani"));
   assert.match(html, /27 DISEMBER 2026/);
-  assert.match(html, /Urban Park, Alam Impian/);
+  assert.match(html, /Urban Park Hall, Alam Impian/);
   assert.match(html, /dates=20261227T113000\/20261227T160000/);
   for (const phone of [
     "60192258819",
@@ -108,9 +112,104 @@ test("the existing garden invitation retains its details and guest-mode gift vis
 
 test("the two unopened covers show their respective dates and artwork", () => {
   opened = false;
-  assert.match(render(groomInvitation), /27 \. 12 \. 2026/);
-  assert.match(render(groomInvitation), /Faiz <i>&amp;<\/i> Harissa/);
+  const groomCover = render(groomInvitation);
+  assert.match(groomCover, /27 \. 12 \. 2026/);
+  const cardContent = groomCover.match(/<button\b[^>]*>(.*?)<\/button>/s)?.[1];
+  assert.ok(cardContent);
+  assert.doesNotMatch(cardContent, /Faiz|Harissa|Walimatulurus/);
+  assert.match(cardContent, /wax-seal-fh-burgundy-v2\.webp/);
   assert.match(render(brideInvitation), /28 \. 11 \. 2026/);
   assert.match(render(brideInvitation), /wax-seal-fh-v1\.png/);
   opened = true;
+});
+
+test("songket has one host-led welcome card before the quotation", () => {
+  opened = true;
+  const groom = render(groomInvitation);
+  const hero = groom.slice(
+    groom.indexOf('data-part="hero"'),
+    groom.indexOf('data-part="quotation"')
+  );
+  const visible = hero.replace(/<[^>]*>/g, "").replace(/\s+/g, " ");
+  assert.doesNotMatch(groom, /id="undangan"|Undangan dengan penuh kesyukuran/);
+  assert.equal((hero.match(/<h1\b/g) || []).length, 1);
+  assert.ok(
+    hero.indexOf('data-part="hosts"') < hero.indexOf('data-part="couple-names"')
+  );
+  for (const name of [
+    "Muhammad Faiz bin Hasnul",
+    "Harissa Amani binti Abd Razak",
+  ]) {
+    assert.equal(visible.split(name).length - 1, 1);
+  }
+  assert.match(visible, /Hasnul bin Abu Shahir/);
+  assert.match(visible, /Normah binti Samsuri/);
+  assert.match(visible, /perkahwinan putera kami/);
+  assert.doesNotMatch(groom, /15 November 2026/);
+  assert.match(render(brideInvitation), /15 November 2026/);
+  assert.match(groom, /Sedang memuatkan ucapan/);
+});
+
+test("both suites preserve gifts, hashtag, registry scope, and language in every mode", () => {
+  for (const wedding of [groomInvitation, brideInvitation]) {
+    for (const guestMode of [
+      "family",
+      "friend",
+      "parentFriend",
+      "sekeluarga",
+    ]) {
+      mode = guestMode;
+      const html = render(wedding);
+      const gifts = guestMode === "friend" || guestMode === "parentFriend";
+      assert.equal(html.includes('id="hadiah"'), gifts);
+      assert.equal(
+        html.includes("#FaIzTheOneForHarissa"),
+        guestMode === "friend"
+      );
+      assert.equal(
+        html.includes("invitation=groom"),
+        gifts && wedding.side === "groom"
+      );
+      assert.match(
+        html,
+        guestMode === "sekeluarga" ? /bersama keluarga/ : /bersama pasangan/
+      );
+      assert.doesNotMatch(html, /id="salam-kaut"/);
+    }
+  }
+  mode = "friend";
+});
+
+test("songket hero includes the event time before its actions", () => {
+  const html = render(groomInvitation);
+  const hero = html.slice(
+    html.indexOf('data-part="hero"'),
+    html.indexOf('data-part="quotation"')
+  );
+  assert.match(
+    hero,
+    /data-part="hero-time"[^>]*>11\.30 pagi - 4\.00 petang<\/p>/
+  );
+  assert.ok(
+    hero.indexOf('data-part="hero-time"') <
+      hero.indexOf('data-part="hero-links"')
+  );
+  assert.equal((hero.match(/27 DISEMBER 2026/g) || []).length, 1);
+  assert.match(html, /<section data-part="quotation">/);
+});
+
+test("Salam Kaut links to the existing QR section only when enabled", () => {
+  try {
+    for (const invitation of [groomInvitation, brideInvitation]) {
+      salam = false;
+      assert.doesNotMatch(render(invitation), /href="#salam-kaut"/);
+      salam = true;
+      const html = render(invitation);
+      assert.match(html, /href="#salam-kaut"/);
+      assert.match(html, /id="salam-kaut"/);
+      assert.match(html, /src="\/images\/harissa-qr.jpeg"/);
+    }
+  } finally {
+    salam = false;
+  }
 });

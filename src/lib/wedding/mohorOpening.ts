@@ -1,4 +1,5 @@
 type OpeningOptions = {
+  style?: "garden" | "classical";
   sound: HTMLAudioElement;
   music: HTMLAudioElement;
   musicGate?: GainNode;
@@ -11,11 +12,28 @@ type OpeningOptions = {
 
 // Measured against these recordings: the chime is below -65 dB after 4.4s,
 // and the song's first half-second is silent.
-const CHIME_END_SECONDS = 4.4;
 const MUSIC_START_SECONDS = 0.5;
 
-/** Reveal after the fairy flourish; start the song only once the chime ends. */
+export const openingProfiles = {
+  garden: {
+    soundPath: "/audio/mohor-wind-chimes.m4a",
+    soundEndSeconds: 4.4,
+    revealDelay: 1800,
+    openingDuration: 1000,
+    soundVolume: 0.65,
+  },
+  classical: {
+    soundPath: "/audio/songket-classical-opening.wav",
+    soundEndSeconds: 2.8,
+    revealDelay: 800,
+    openingDuration: 1800,
+    soundVolume: 0.5,
+  },
+} as const;
+
+/** Release the seal, unfold the gates, then hand off from the effect to music. */
 export function playMohorOpening({
+  style = "garden",
   sound,
   music,
   musicGate,
@@ -25,6 +43,7 @@ export function playMohorOpening({
   onMusicChange,
   onSoundFinished,
 }: OpeningOptions) {
+  const profile = openingProfiles[style];
   let disposed = false;
   let opened = false;
   let soundFinished = false;
@@ -71,14 +90,14 @@ export function playMohorOpening({
   };
 
   const finishQuietTail = () => {
-    if (sound.currentTime >= CHIME_END_SECONDS) finishSound();
+    if (sound.currentTime >= profile.soundEndSeconds) finishSound();
   };
 
-  const flourishTimer = setTimeout(
+  const sealTimer = setTimeout(
     () => {
       if (disposed) return;
       onReveal();
-      // Fade the fairy dust and open the doors while the chime rings out.
+      // Keep the cover mounted until the doors finish opening.
       revealTimer = setTimeout(
         () => {
           if (disposed) return;
@@ -86,10 +105,10 @@ export function playMohorOpening({
           onOpen();
           startMusicWhenReady();
         },
-        reducedMotion ? 0 : 1000
+        reducedMotion ? 0 : profile.openingDuration
       );
     },
-    reducedMotion ? 0 : 1800
+    reducedMotion ? 0 : profile.revealDelay
   );
 
   // A failed or stalled sound must not leave the background song waiting forever.
@@ -98,12 +117,12 @@ export function playMohorOpening({
   sound.addEventListener("ended", finishSound);
   sound.addEventListener("error", finishSound);
   sound.addEventListener("timeupdate", finishQuietTail);
-  sound.volume = 0.65;
+  sound.volume = profile.soundVolume;
   void sound.play().catch(finishSound);
 
   return () => {
     disposed = true;
-    clearTimeout(flourishTimer);
+    clearTimeout(sealTimer);
     clearTimeout(soundDeadline);
     clearTimeout(revealTimer);
     sound.removeEventListener("ended", finishSound);
