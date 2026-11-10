@@ -844,6 +844,107 @@ export default function JemputanWalimatulurusHarissaFaiz() {
             </div>
           </section>
 
+{showGifts && (
+            <section
+              id="hadiah"
+              className="relative scroll-mt-6 overflow-hidden px-6 py-24"
+            >
+              <div className="relative mx-auto max-w-3xl">
+                <SectionTitle eyebrow="Dari hati, buat yang dirai">
+                  Tanda Kasih
+                </SectionTitle>
+                <p
+                  className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]`}
+                >
+                  Kehadiran dan doa restu anda sudah cukup bermakna. Senarai
+                  hadiah ini disediakan untuk membantu tetamu mengelakkan
+                  pembelian hadiah yang sama. Jika ingin menitipkan hadiah,
+                  semak senarai dan tandakan pilihan anda sebelum membeli.
+                </p>
+                <GardenReveal>
+                  <div className={registryStyles.preview}>
+                    {regularGifts.slice(0, 3).map((product) => (
+                      <Link
+                        key={product.slug}
+                        href={{
+                          pathname: registryPath,
+                          query: { mode, gift: product.slug },
+                        }}
+                        className={registryStyles["preview-card"]}
+                        aria-label={product.name}
+                      >
+                        <div className={registryStyles["image-wrap"]}>
+                          <RegistryProductImage product={product} />
+                        </div>
+                        <span className={titleFont.className}>
+                          {product.name}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                  <div className={registryStyles["preview-action"]}>
+                    <Link
+                      href={{ pathname: registryPath, query: { mode } }}
+                      className={registryStyles.primary}
+                    >
+                      Lihat semua hadiah <ArrowRight aria-hidden="true" />
+                    </Link>
+                    <p>
+                      {regularGifts.length} pilihan · Semak dan pilih hadiah di
+                      senarai penuh
+                    </p>
+                  </div>
+                </GardenReveal>
+              </div>
+            </section>
+          )}
+     
+          <section
+            id="ucapan"
+            className={`${styles["wishes-section"]} relative scroll-mt-6 overflow-hidden border-b border-[#a79a78]/25 bg-[#fffdf8]/70 px-6`}
+          >
+            <GardenButterflyFlight>
+              <Butterfly />
+            </GardenButterflyFlight>
+            <div
+              className={`${styles["wishes-content"]} relative mx-auto max-w-5xl`}
+            >
+              <SectionTitle eyebrow="Titipan buat pengantin">
+                Ucapan dan doa
+              </SectionTitle>
+              <p
+                className={`${styles["section-intro"]} mx-auto -mt-6 mb-10 max-w-xl text-center leading-7 text-[#6f786f]`}
+              >
+                Setiap ucapan dan doa yang dititipkan buat Harissa dan Faiz amat
+                bermakna buat kami sekeluarga.
+              </p>
+
+              {wishes.length > 0 ? (
+                <GardenReveal className={styles["wishes-list"]}>
+                  <WeddingWishes
+                    wishes={wishes}
+                    fontClassName={titleFont.className}
+                  />
+                </GardenReveal>
+              ) : (
+                <GardenReveal className="stationery-panel mx-auto max-w-xl px-5 py-6 text-center">
+                  <Quote
+                    className="mx-auto h-8 w-8 text-[#607a60]"
+                    aria-hidden="true"
+                  />
+                  <p
+                    className={`${titleFont.className} mt-4 text-2xl text-[#3e5949]`}
+                  >
+                    Belum ada ucapan dititipkan.
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[#6f786f]">
+                    Ucapan daripada borang RSVP akan dipaparkan di sini.
+                  </p>
+                </GardenReveal>
+              )}
+            </div>
+          </section>
+
           <section
             id="rsvp"
             className={`${styles["rsvp-section"]} english-wedding-blush garden-english-wedding-blush stationery-section garden-stationery-section relative scroll-mt-6 overflow-hidden border-y border-[#a79a78]/20 bg-[#eef0e8] px-6 py-24`}
@@ -960,106 +1061,7 @@ export default function JemputanWalimatulurusHarissaFaiz() {
             </div>
           </section>
 
-          <section
-            id="ucapan"
-            className={`${styles["wishes-section"]} relative scroll-mt-6 overflow-hidden border-b border-[#a79a78]/25 bg-[#fffdf8]/70 px-6`}
-          >
-            <GardenButterflyFlight>
-              <Butterfly />
-            </GardenButterflyFlight>
-            <div
-              className={`${styles["wishes-content"]} relative mx-auto max-w-5xl`}
-            >
-              <SectionTitle eyebrow="Titipan buat pengantin">
-                Ucapan dan doa
-              </SectionTitle>
-              <p
-                className={`${styles["section-intro"]} mx-auto -mt-6 mb-10 max-w-xl text-center leading-7 text-[#6f786f]`}
-              >
-                Setiap ucapan dan doa yang dititipkan buat Harissa dan Faiz amat
-                bermakna buat kami sekeluarga.
-              </p>
-
-              {wishes.length > 0 ? (
-                <GardenReveal className={styles["wishes-list"]}>
-                  <WeddingWishes
-                    wishes={wishes}
-                    fontClassName={titleFont.className}
-                  />
-                </GardenReveal>
-              ) : (
-                <GardenReveal className="stationery-panel mx-auto max-w-xl px-5 py-6 text-center">
-                  <Quote
-                    className="mx-auto h-8 w-8 text-[#607a60]"
-                    aria-hidden="true"
-                  />
-                  <p
-                    className={`${titleFont.className} mt-4 text-2xl text-[#3e5949]`}
-                  >
-                    Belum ada ucapan dititipkan.
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[#6f786f]">
-                    Ucapan daripada borang RSVP akan dipaparkan di sini.
-                  </p>
-                </GardenReveal>
-              )}
-            </div>
-          </section>
-
-          {showGifts && (
-            <section
-              id="hadiah"
-              className="relative scroll-mt-6 overflow-hidden px-6 py-24"
-            >
-              <div className="relative mx-auto max-w-3xl">
-                <SectionTitle eyebrow="Dari hati, buat yang dirai">
-                  Tanda Kasih
-                </SectionTitle>
-                <p
-                  className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[#6f786f]`}
-                >
-                  Kehadiran dan doa restu anda sudah cukup bermakna. Senarai
-                  hadiah ini disediakan untuk membantu tetamu mengelakkan
-                  pembelian hadiah yang sama. Jika ingin menitipkan hadiah,
-                  semak senarai dan tandakan pilihan anda sebelum membeli.
-                </p>
-                <GardenReveal>
-                  <div className={registryStyles.preview}>
-                    {regularGifts.slice(0, 3).map((product) => (
-                      <Link
-                        key={product.slug}
-                        href={{
-                          pathname: registryPath,
-                          query: { mode, gift: product.slug },
-                        }}
-                        className={registryStyles["preview-card"]}
-                        aria-label={product.name}
-                      >
-                        <div className={registryStyles["image-wrap"]}>
-                          <RegistryProductImage product={product} />
-                        </div>
-                        <span className={titleFont.className}>
-                          {product.name}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                  <div className={registryStyles["preview-action"]}>
-                    <Link
-                      href={{ pathname: registryPath, query: { mode } }}
-                      className={registryStyles.primary}
-                    >
-                      Lihat semua hadiah <ArrowRight aria-hidden="true" />
-                    </Link>
-                    <p>
-                      {regularGifts.length} pilihan · Semak dan pilih hadiah di
-                      senarai penuh
-                    </p>
-                  </div>
-                </GardenReveal>
-              </div>
-            </section>
-          )}
+          
 
           {showSalam && (
             <section
@@ -1188,14 +1190,14 @@ export default function JemputanWalimatulurusHarissaFaiz() {
               <a href="#lokasi">
                 <MapPin aria-hidden="true" /> Lokasi
               </a>
-              <a href="#rsvp">
-                <Heart aria-hidden="true" /> RSVP
-              </a>
               {showGifts && (
                 <a href="#hadiah">
                   <Gift aria-hidden="true" /> Hadiah
                 </a>
               )}
+              <a href="#rsvp">
+                <Heart aria-hidden="true" /> RSVP
+              </a>
               <a href="#hubungi">
                 <Phone aria-hidden="true" /> Hubungi
               </a>
