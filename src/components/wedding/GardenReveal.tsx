@@ -8,8 +8,12 @@ export default function GardenReveal({
   className = "",
   delay = 0,
   direction = "up",
+  enabled = true,
+  dataPart,
 }: {
   children: ReactNode;
+  enabled?: boolean;
+  dataPart?: string;
   className?: string;
   delay?: number;
   direction?: "up" | "left" | "right";
@@ -19,7 +23,12 @@ export default function GardenReveal({
   useEffect(() => {
     const element = ref.current;
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (!element || motion.matches || !("IntersectionObserver" in window))
+    if (
+      !enabled ||
+      !element ||
+      motion.matches ||
+      !("IntersectionObserver" in window)
+    )
       return;
 
     let observer: IntersectionObserver | undefined;
@@ -71,11 +80,13 @@ export default function GardenReveal({
       window.removeEventListener("resize", observe);
       delete element.dataset.revealed;
     };
-  }, []);
+  }, [enabled]);
 
   return (
     <div
       ref={ref}
+      data-part={dataPart}
+      data-reveal=""
       className={`${styles.reveal} ${className}`}
       data-direction={direction}
       style={{ "--reveal-delay": `${delay}ms` } as CSSProperties}

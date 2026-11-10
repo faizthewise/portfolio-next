@@ -13,6 +13,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { getWeddingFirestore, getWeddingGuest } from "./firebase";
+import { WeddingEventId } from "./invitations";
 
 export type GiftItem = {
   id: string;
@@ -43,13 +44,14 @@ export const initialGifts: GiftItem[] = [
   },
 ];
 
-const records = (name: string) =>
-  collection(getWeddingFirestore(), "weddings", "faiz-harissa", name);
+const records = (name: string, eventId: WeddingEventId = "faiz-harissa") =>
+  collection(getWeddingFirestore(), "weddings", eventId, name);
 
 export function subscribeWedding(
   onGifts: (gifts: GiftItem[]) => void,
   onWishes: (wishes: WeddingWish[]) => void,
-  onError: (error: FirestoreError, source: "gifts" | "wishes") => void
+  onError: (error: FirestoreError, source: "gifts" | "wishes") => void,
+  eventId: WeddingEventId = "faiz-harissa"
 ) {
   const stopGifts = onSnapshot(
     records("gifts"),
@@ -87,7 +89,7 @@ export function subscribeWedding(
     (error) => onError(error, "gifts")
   );
   const stopWishes = onSnapshot(
-    query(records("wishes"), orderBy("updatedAt", "desc"), limit(100)),
+    query(records("wishes", eventId), orderBy("updatedAt", "desc"), limit(100)),
     (snapshot) =>
       onWishes(
         snapshot.docs
@@ -105,7 +107,10 @@ export function subscribeWedding(
   };
 }
 
-export async function saveRsvp(form: FormData) {
+export async function saveRsvp(
+  form: FormData,
+  eventId: WeddingEventId = "faiz-harissa"
+) {
   const name = String(form.get("nama") ?? "").trim();
   const attendance = String(form.get("kehadiran") ?? "");
   const guests =
@@ -124,13 +129,13 @@ export async function saveRsvp(form: FormData) {
   }
   const uid = await getWeddingGuest();
   const batch = writeBatch(getWeddingFirestore());
-  batch.set(doc(records("rsvps"), uid), {
+  batch.set(doc(records("rsvps", eventId), uid), {
     name,
     attendance,
     guests,
     updatedAt: serverTimestamp(),
   });
-  const wish = doc(records("wishes"), uid);
+  const wish = doc(records("wishes", eventId), uid);
   if (message) batch.set(wish, { name, message, updatedAt: serverTimestamp() });
   else batch.delete(wish);
   await batch.commit();

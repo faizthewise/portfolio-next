@@ -74,7 +74,10 @@ export function RegistryContent({
   const copy = registryCopy[locale];
   const fundCopy = contributionCopy[locale];
   const pagePath = router.pathname;
-  const returnPath = invitationReturnPath(getInvitationMode(router.query.mode));
+  const returnPath = invitationReturnPath(
+    getInvitationMode(router.query.mode),
+    router.query.invitation
+  );
   const {
     products,
     reservations,

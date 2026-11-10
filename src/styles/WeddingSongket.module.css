@@ -1,0 +1,1187 @@
+/* stylelint-disable selector-pseudo-class-no-unknown -- :global is CSS Modules syntax. */
+/* stylelint-disable no-descending-specificity -- Scoped theme overrides intentionally follow inherited shared selectors; this rule also cannot parse CSS Modules :global. */
+.theme[data-invitation-stage] {
+  --songket-merlot-950: #241019;
+  --songket-merlot-800: #411924;
+  --songket-merlot-700: #572330;
+  --songket-ivory: #fff9ed;
+  --songket-paper: #f4ebdd;
+  --songket-ink: #45252c;
+  --songket-muted: #746158;
+  --songket-gold-dark: #8b6836;
+  --songket-gold: #b49155;
+  --songket-gold-light: #e8d4a1;
+  --wedding-rgb-637d6d: 87 35 48;
+  --wedding-rgb-e3e9de: 244 235 221;
+  --wedding-rgb-fffefa: 255 249 237;
+  --wedding-rgb-faf6ed: 255 249 237;
+  --wedding-rgb-f3ecdf: 244 235 221;
+  --registry-ink: #45252c;
+  --registry-muted: #746158;
+  --registry-primary-light: #572330;
+  --registry-primary-dark: #411924;
+  --registry-accent: #8b6836;
+  --registry-paper: #fff9ed;
+  --registry-inset: #f4ebdd;
+  --wishes-flex: initial;
+  --wishes-rows: auto;
+  --wedding-rgb-3e5949: 87 35 48;
+  --wedding-rgb-496851: 108 46 60;
+  --wedding-rgb-4c6b55: 108 46 60;
+  --wedding-rgb-607a60: 139 91 51;
+  --wedding-rgb-4f7058: 87 35 48;
+  --wedding-rgb-536858: 240 219 174;
+  --wedding-rgb-68776d: 119 93 77;
+  --wedding-rgb-6f786f: 121 101 83;
+  --wedding-rgb-6e7b70: 121 101 83;
+  --wedding-rgb-71866d: 119 85 47;
+  --wedding-rgb-8e7956: 139 104 54;
+  --wedding-rgb-9b8b65: 168 128 65;
+  --wedding-rgb-a05e73: 122 45 65;
+  --wedding-rgb-a48b60: 183 145 76;
+  --wedding-rgb-a79a78: 183 145 76;
+  --wedding-rgb-eacfdc: 233 213 179;
+  --wedding-rgb-e4e9df: 65 25 36;
+  --wedding-rgb-fffdf8: 255 250 237;
+  --wedding-rgb-eef0e8: 241 229 207;
+  --wedding-rgb-e8ece3: 65 25 36;
+  --wedding-rgb-e6e8dc: 65 25 36;
+  --wedding-rgb-f0e8e4: 85 32 45;
+  --wedding-rgb-e2e8e0: 48 18 27;
+  --wedding-rgb-eee8e2: 91 39 49;
+  --wedding-rgb-edf0e8: 242 228 201;
+  --wedding-rgb-687565: 119 93 77;
+  --wedding-rgb-788078: 143 120 99;
+  --wedding-rgb-60785e: 126 59 72;
+  --wedding-rgb-334d40: 65 25 36;
+
+  background-color: #fff9ed;
+  background-image: none;
+
+  --songket-surface-ivory: #fff9ed;
+  --songket-surface-champagne: #ead6b6;
+  --songket-surface-merlot: #572330;
+}
+
+.theme[data-invitation-stage="cover"] {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  background: radial-gradient(ellipse at 25% 15%, #321b23, transparent 75%),
+    linear-gradient(145deg, #211018, #160b10);
+  box-shadow: inset 0 0 150px #220d17;
+  min-height: 100svh;
+  overflow-y: auto;
+  padding-block: max(1.25rem, env(safe-area-inset-top));
+}
+
+.theme[data-invitation-stage="cover"][data-revealing="true"] {
+  animation: cover-unveil var(--gate-opening-duration) ease-in-out both;
+}
+
+.theme[data-invitation-stage="cover"][data-opening="true"]
+  :is([data-part="cover-label"], [data-part="cover-date"]) {
+  opacity: 0;
+  transition: opacity 350ms ease;
+}
+
+.theme[data-invitation-stage="content"] {
+  --songket-page-art-width: clamp(1rem, 5vw, 4.5rem);
+
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  color: var(--songket-ink);
+  background-image: url("/images/songket-paper-grain.svg");
+  background-position: center;
+  background-repeat: repeat;
+  background-size: 128px 128px;
+}
+
+.theme[data-invitation-stage] [data-part="cover-label"] {
+  color: #efdbad;
+  margin-bottom: 1rem;
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+}
+
+.theme[data-invitation-stage] [data-part="cover-hint"],
+.theme[data-invitation-stage] [data-part="cover-date"] {
+  color: #e1c48a;
+}
+
+.theme[data-invitation-stage] [data-part="envelope"] {
+  filter: drop-shadow(0 28px 30px rgb(16 4 9 / 45%));
+}
+
+.theme[data-invitation-stage] [data-part="cover-leaf"] {
+  z-index: 2;
+  background: url("/images/songket-closed-composite-v4.webp") center / cover;
+  transition: transform var(--gate-opening-duration)
+      cubic-bezier(0.32, 0, 0.18, 1),
+    opacity var(--gate-opening-duration) ease-in;
+}
+
+.cover-lining {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 250ms ease;
+  background: url("/images/songket-cover-insert-v2.svg") center / 100% 100%;
+  overflow: hidden;
+}
+
+.theme[data-invitation-stage] [data-opening="true"] .cover-lining {
+  opacity: 1;
+}
+
+.theme[data-invitation-stage] [data-part="seal"] {
+  top: 56%;
+  width: 21%;
+  height: auto;
+  aspect-ratio: 1;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+}
+
+.theme[data-invitation-stage] [data-opening="true"] [data-part="seal"] {
+  animation: seal-release var(--seal-release-duration) ease-in-out both;
+}
+
+.theme[data-invitation-stage] [data-part="envelope"][data-opening="true"] {
+  transform: none;
+}
+
+.theme[data-invitation-stage] [data-revealing="true"] [data-side="left"] {
+  transform: rotateY(-100deg) translateX(-3%);
+  opacity: 0;
+}
+
+.theme[data-invitation-stage] [data-revealing="true"] [data-side="right"] {
+  transform: rotateY(100deg) translateX(3%);
+  opacity: 0;
+}
+
+@keyframes seal-release {
+  0% {
+    opacity: 1;
+    translate: 0 0;
+    rotate: 0deg;
+    scale: 1;
+  }
+
+  22% {
+    opacity: 1;
+    translate: 0 0.15rem;
+    rotate: 0deg;
+    scale: 0.97;
+  }
+
+  55% {
+    opacity: 1;
+    translate: 0 -0.4rem;
+    rotate: -3deg;
+    scale: 1.02;
+  }
+
+  100% {
+    opacity: 0;
+    translate: 0 -1rem;
+    rotate: -6deg;
+    scale: 1.04;
+  }
+}
+
+.seal-flourish {
+  position: absolute;
+  z-index: 25;
+  top: 56%;
+  left: 50%;
+  width: 9rem;
+  height: 9rem;
+  color: #a27a36;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: foil-release 1200ms ease-out both;
+}
+
+.seal-flourish :is(path, circle) {
+  stroke: currentcolor;
+  stroke-width: 0.85px;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: foil-trace 650ms cubic-bezier(0.25, 0.1, 0.2, 1) 100ms both;
+}
+
+.seal-flourish path:last-child {
+  stroke-width: 1.4px;
+  animation-delay: 200ms;
+}
+
+@keyframes foil-trace {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes foil-release {
+  0% {
+    opacity: 0;
+    scale: 0.88;
+  }
+
+  25%,
+  65% {
+    opacity: 0.9;
+    scale: 1;
+  }
+
+  100% {
+    opacity: 0;
+    scale: 1.08;
+  }
+}
+
+@keyframes cover-unveil {
+  0%,
+  55% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.theme[data-invitation-stage] [data-part="hero"] {
+  background: linear-gradient(rgb(50 17 28 / 25%), rgb(50 17 28 / 55%)),
+    url("/images/songket-weave-muted.svg"), #572330;
+  background-size: auto, 240px 320px, auto;
+  min-height: 0;
+  align-items: start;
+  padding-block: max(1.5rem, env(safe-area-inset-top)) 1.5rem;
+}
+
+.crest {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  height: var(--songket-cap-depth);
+  width: 100%;
+}
+
+.crest-top {
+  margin-bottom: calc(-1 * var(--songket-cap-overlap));
+}
+
+.crest-bottom {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: calc(-1 * var(--songket-cap-overlap));
+}
+
+.crest img,
+.crest-fallback {
+  display: block;
+  object-position: left top;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.crest-fallback svg {
+  width: 100%;
+  height: 100%;
+  color: var(--songket-gold);
+}
+
+/* The mask exposes only foil: the travelling light never crosses the writing. */
+
+.ornament {
+  display: block;
+  width: 12rem;
+  height: 3rem;
+  margin: 0.75rem auto 0;
+  color: #b08a47;
+}
+
+.theme[data-invitation-stage] [class~="stationery-panel"] {
+  border-color: rgb(183 145 76 / 30%);
+  background: url("/images/songket-paper-grain.svg"),
+    linear-gradient(130deg, #fffcf4, #f4ebdd);
+  box-shadow: 0 1px 0 #fff inset, 0 14px 35px -22px rgb(87 35 48 / 25%);
+}
+
+.theme[data-invitation-stage] [class~="garden-stationery-section"],
+.theme[data-invitation-stage] [class~="garden-english-wedding-blush"] {
+  background: radial-gradient(ellipse at 0 0, #efe0c5, transparent 60%), #f5ecdc;
+}
+
+.theme[data-invitation-stage] [data-part="rsvp-form"],
+.theme[data-invitation-stage] [data-part="venue-card"] {
+  background: linear-gradient(135deg, #fffcf4, #f4e9d4);
+}
+
+.theme[data-invitation-stage] [data-part="calendar-action"] a,
+.theme[data-invitation-stage] [data-part="rsvp-form"] > button {
+  background: linear-gradient(125deg, #7e3b48, #572330 70%, #411924);
+  box-shadow: 0 1px 0 rgb(239 219 173 / 25%) inset,
+    0 5px 14px -7px rgb(65 25 36 / 45%);
+}
+
+.theme[data-invitation-stage] [data-part="dock"] {
+  border-color: rgb(183 145 76 / 45%);
+  background: rgb(255 250 237 / 97%);
+  box-shadow: 0 8px 32px rgb(65 25 36 / 20%);
+  max-width: calc(100vw - 1.5rem);
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-flourish {
+    display: none;
+  }
+}
+
+/* Songket owns its stationery rhythm while the garden keeps its defaults. */
+
+.theme[data-invitation-stage] [data-part="cover-hint"] {
+  margin-top: 1rem;
+  font-family: sans-serif;
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+}
+
+.theme[data-invitation-stage] [data-part="cover-date"] {
+  margin-top: 1rem;
+}
+
+.theme[data-invitation-stage] [data-part="cover-book"] {
+  max-width: min(25rem, calc((100svh - 12rem) * 0.684));
+  min-width: 10rem;
+  container-type: inline-size;
+}
+
+.connector {
+  display: block;
+  margin: 0.25rem 0;
+  color: var(--songket-muted);
+  font-size: 1rem;
+  font-style: italic;
+}
+
+.theme[data-invitation-stage] [data-part="hero-card"] [data-part="hero-links"] {
+  gap: 0.375rem 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.theme[data-invitation-stage] [data-part="hero-links"] a {
+  display: inline-flex;
+  min-height: 44px;
+  padding: 0.65rem 1.1rem;
+  border-radius: 5px;
+}
+
+.theme[data-invitation-stage] [data-part="hero-links"] a[href="#hadiah"] {
+  display: none;
+}
+
+.theme[data-invitation-stage] [data-part="hero-date"] {
+  margin-top: 0.5rem;
+  font-size: clamp(1.125rem, 5cqw, 1.5rem);
+  letter-spacing: 0.045em;
+  white-space: normal;
+}
+
+.theme[data-invitation-stage] [data-part="hero-venue"] {
+  max-width: 25rem;
+  margin: 0.1875rem auto 0;
+  color: var(--songket-ink);
+  font-size: clamp(1.2rem, 2.2vw, 1.4rem);
+  font-weight: 500;
+  letter-spacing: normal;
+  line-height: 1.4;
+  text-transform: none;
+  text-wrap: balance;
+  overflow-wrap: normal;
+}
+
+.theme[data-invitation-stage] [data-part="hero-schedule"] {
+  margin-top: 0.75rem;
+  font-size: 1.2rem;
+}
+
+.theme[data-invitation-stage] section[id] {
+  display: block;
+  min-height: 0;
+  padding-block: clamp(3rem, 7vw, 5rem);
+}
+
+.theme[data-invitation-stage] section[id] > div {
+  flex: initial;
+}
+
+.theme[data-invitation-stage] [data-part="closing"] {
+  position: relative;
+  isolation: isolate;
+  padding-block: clamp(3.5rem, 7vw, 6rem);
+  background: radial-gradient(
+      ellipse at 12% 8%,
+      rgb(111 57 66 / 38%),
+      transparent 78%
+    ),
+    linear-gradient(120deg, #4b202e, var(--songket-merlot-800) 65%, #34141f);
+  color: var(--songket-ivory);
+}
+
+/* Independent texture/relief strength keeps the reading field calm. */
+.theme[data-invitation-stage] [data-part="closing"]::before,
+.theme[data-invitation-stage] [data-part="closing"]::after {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+}
+
+.theme[data-invitation-stage] [data-part="closing"]::before {
+  background: url("/images/songket-closing-weave-v1.svg") repeat;
+  background-size: 18px 18px;
+  mask-image: linear-gradient(90deg, #000, rgb(0 0 0 / 60%) 29% 71%, #000);
+  opacity: 0.32;
+}
+
+.theme[data-invitation-stage] [data-part="closing"]::after {
+  background-image: url("/images/songket-closing-relief-v1.svg"),
+    url("/images/songket-closing-relief-v1.svg");
+  background-position: left 35%, right 65%;
+  background-size: 160px 220px;
+  background-repeat: repeat-y;
+  mask-image: linear-gradient(90deg, #000, transparent 29% 71%, #000);
+  opacity: 0.45;
+}
+
+.theme[data-invitation-stage] [data-part="closing"] > div {
+  position: relative;
+  z-index: 1;
+}
+
+.theme[data-invitation-stage] [data-part="closing"] p {
+  color: var(--songket-ivory);
+}
+
+.theme[data-invitation-stage] [data-part="quotation"] {
+  padding-block: clamp(2.5rem, 6vw, 4rem);
+  background: url("/images/songket-paper-grain.svg"),
+    var(--songket-surface-champagne);
+  color: var(--songket-merlot-700);
+  position: relative;
+  isolation: isolate;
+  background-image: linear-gradient(
+      90deg,
+      rgb(234 214 182 / 10%),
+      #ead6b6 24% 76%,
+      rgb(234 214 182 / 10%)
+    ),
+    url("/images/songket-weave-muted.svg"),
+    url("/images/songket-paper-grain.svg");
+  background-size: auto, 100px 134px, 128px 128px;
+}
+
+.theme[data-invitation-stage] [data-part="quotation"] blockquote {
+  color: var(--songket-merlot-700);
+}
+
+.theme[data-invitation-stage] [data-part="quotation"] cite {
+  color: #77552f;
+}
+
+.theme[data-invitation-stage] [data-part="quotation"]::before,
+.theme[data-invitation-stage] [data-part="quotation"]::after {
+  position: absolute;
+  z-index: 0;
+  inset-inline: 0;
+  height: 22px;
+  background: url("/images/songket-quotation-thread-edge-v1.svg") repeat-x left
+    center;
+  filter: drop-shadow(0 2px 2px rgb(102 69 33 / 16%));
+  content: "";
+  pointer-events: none;
+}
+
+.theme[data-invitation-stage] [data-part="event-grid"] {
+  gap: 0;
+  border-block: 1px solid var(--songket-gold);
+  background: var(--songket-ivory);
+  box-shadow: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.theme[data-invitation-stage] [data-part="event-grid"] > div {
+  padding: 1.5rem;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid rgb(180 145 85 / 25%);
+  background: none;
+  box-shadow: none;
+}
+
+.theme[data-invitation-stage] [data-part="rsvp-form"] {
+  gap: 1.25rem;
+  border-top: 3px double var(--songket-gold);
+  background: url("/images/songket-paper-grain.svg"), var(--songket-ivory);
+  color: var(--songket-ink);
+  box-shadow: 0 16px 36px rgb(36 16 25 / 20%);
+}
+
+.theme[data-invitation-stage]
+  [data-part="rsvp-form"]
+  :is(input, select, textarea, button) {
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.theme[data-invitation-stage]
+  [data-part="rsvp-form"]
+  label:has(input[type="radio"]:checked) {
+  border-color: var(--songket-merlot-700);
+  background: var(--songket-paper);
+}
+
+.theme[data-invitation-stage] [data-part="rsvp-form"] button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.theme[data-invitation-stage] [data-part="venue-card"] {
+  border: 3px double var(--songket-gold);
+  box-shadow: 0 12px 35px -25px var(--songket-merlot-800);
+  background: var(--songket-ivory);
+}
+
+.theme[data-invitation-stage] [data-part="venue-card"] a:first-child {
+  background: var(--songket-merlot-800);
+  color: var(--songket-ivory);
+}
+
+.early-music {
+  min-height: 44px;
+  border: 1px solid var(--songket-gold);
+  font-size: 0.75rem;
+  position: absolute;
+  z-index: 2;
+  top: clamp(2rem, 10cqw, 4.5rem);
+  right: clamp(0.75rem, 4cqw, 2rem);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: var(--songket-merlot-700);
+}
+
+.early-music svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme[data-invitation-stage] *,
+  .theme[data-invitation-stage] *::before,
+  .theme[data-invitation-stage] *::after {
+    animation: none;
+    transition: none;
+    scroll-behavior: auto;
+  }
+}
+
+.theme[data-invitation-stage] [data-part="event-detail"] {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.theme[data-invitation-stage] [data-part="event-detail"] > span:first-child {
+  width: 2rem;
+  height: 2rem;
+  background: none;
+}
+
+.theme[data-invitation-stage] [data-part="countdown"] {
+  max-width: 30rem;
+  margin-top: 2rem;
+}
+
+.theme[data-invitation-stage] [data-part="countdown"] strong {
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.theme[data-invitation-stage] [data-part="calendar-action"] a {
+  border: 1px solid var(--songket-gold);
+  border-radius: 5px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--songket-ink);
+}
+
+@media (max-width: 420px) {
+  .theme[data-invitation-stage] [data-part="event-grid"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.theme[data-invitation-stage]
+  [data-gates-ready="true"]
+  [data-part="cover-leaf"] {
+  clip-path: none;
+  background: none;
+}
+
+.theme[data-invitation-stage] [data-part="cover-leaf"] img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+
+.theme[data-invitation-stage]
+  [data-gates-ready="true"]
+  [data-part="cover-leaf"]
+  img {
+  opacity: 1;
+  filter: drop-shadow(0.35cqw 0.5cqw 0.45cqw rgb(69 37 44 / 24%));
+  transition: filter calc(var(--gate-opening-duration) * 0.45) ease;
+}
+
+.theme[data-invitation-stage] [data-gates-ready="true"] .cover-lining {
+  opacity: 1;
+}
+
+.theme[data-invitation-stage] [data-part="seal"]::before,
+.theme[data-invitation-stage] [data-part="seal"]::after {
+  display: none;
+}
+
+.theme[data-invitation-stage] [data-part="contact-card"] {
+  border: 0;
+  border-bottom: 1px solid rgb(180 145 85 / 30%);
+  background: none;
+  box-shadow: none;
+}
+
+.theme[data-invitation-stage] [data-part="scroll-cue"] svg {
+  animation-iteration-count: 2;
+}
+
+.theme[data-invitation-stage]
+  :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--songket-merlot-700);
+  outline-offset: 4px;
+}
+
+@media (max-height: 480px) {
+  .theme[data-invitation-stage="cover"] {
+    place-items: start center;
+  }
+}
+
+.theme[data-invitation-stage] [data-part="seal"] img {
+  transform: none;
+  filter: drop-shadow(2px 5px 4px rgb(36 16 25 / 30%));
+}
+
+.theme[data-invitation-stage] [data-reveal] {
+  transition-duration: 550ms;
+}
+
+.theme[data-invitation-stage] [data-reveal][data-revealed="false"] {
+  transform: translateY(10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme[data-invitation-stage] [data-reveal][data-revealed] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+.theme[data-invitation-stage] [data-part="hero-time"] {
+  margin-top: 0.1875rem;
+  color: var(--songket-muted);
+  line-height: 1.4;
+  font-size: 1.0625rem;
+  font-weight: 500;
+}
+
+.theme[data-invitation-stage="cover"] [data-part="envelope"]:focus-visible {
+  outline: 3px solid var(--songket-gold-light);
+  outline-offset: 7px;
+  box-shadow: 0 0 0 4px var(--songket-merlot-950);
+}
+
+.quotation-inner {
+  max-width: 40rem;
+  padding-inline: 1.5rem;
+  margin-inline: auto;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.quotation-inner blockquote {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-style: italic;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.quotation-inner cite {
+  display: block;
+  margin-top: 1.25rem;
+  font-family: sans-serif;
+  font-size: 0.6875rem;
+  font-style: normal;
+  letter-spacing: 0.17em;
+}
+
+@media (max-width: 639px) {
+  .theme[data-invitation-stage] [data-part="hero-links"] a:is([href="#lokasi"], [href="#rsvp"]) {
+    display: none;
+  }
+
+  .theme[data-invitation-stage] [data-part="hero"] {
+    padding-inline: 1rem;
+  }
+
+  .theme[data-invitation-stage] [data-part="rsvp-form"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .theme[data-invitation-stage] [data-part="rsvp-form"] > * {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .theme[data-invitation-stage] [data-part="rsvp-form"] fieldset > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.theme[data-invitation-stage] [data-part="hero-links"] a[href="#salam-kaut"] {
+  flex-basis: 100%;
+  justify-content: center;
+  padding-block: 0.5rem;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--songket-muted);
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  text-decoration-color: var(--songket-gold);
+  text-underline-offset: 4px;
+}
+
+.theme[data-invitation-stage]
+  [data-revealing="true"][data-gates-ready="true"]
+  [data-part="cover-leaf"]
+  img {
+  filter: drop-shadow(0 0 0 rgb(69 37 44 / 0%));
+}
+
+@media (max-width: 340px) {
+  .theme[data-invitation-stage="content"] {
+    --songket-page-art-width: 0.625rem;
+
+    background-image: url("/images/songket-paper-grain.svg");
+    background-position: center;
+    background-repeat: repeat;
+    background-size: 128px 128px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme[data-invitation-stage]
+    [data-revealing="true"]
+    [data-part="cover-leaf"] {
+    transform: none;
+  }
+
+  .theme[data-invitation-stage]
+    [data-revealing="true"][data-gates-ready="true"]
+    [data-part="cover-leaf"]
+    img {
+    filter: drop-shadow(0.35cqw 0.5cqw 0.45cqw rgb(69 37 44 / 24%));
+    transition: none;
+  }
+}
+
+/* One shaped stationery shell: only the decorative edges define its silhouette. */
+
+.theme[data-invitation-stage] [data-part="hero-card"] {
+  --songket-cap-depth: 33.3333cqw;
+  --songket-paper-cap-depth: 40cqw;
+  --songket-cap-overlap: clamp(2rem, 12cqw, 4rem);
+
+  max-width: 44rem;
+  container-type: inline-size;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 16px 24px rgb(24 7 13 / 30%));
+}
+
+/* One grain field spans all three flow slots. Mask only this decorative layer;
+   text and focus rings never enter the silhouette mask. A 1px overlap at each
+   join avoids subpixel raster seams without changing the outer contour. */
+.theme[data-invitation-stage] [data-part="hero-card"]::before {
+  display: block;
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  background: url("/images/songket-paper-grain.svg"), var(--songket-ivory);
+  mask-image: url("/images/songket-card-edge-top-v3.svg"),
+    linear-gradient(#000, #000), url("/images/songket-card-edge-bottom-v3.svg");
+  mask-size: 100% auto,
+    100%
+      calc(
+        100% - var(--songket-paper-cap-depth) - var(--songket-paper-cap-depth) +
+          2px
+      ),
+    100% auto;
+  mask-position: center top, center, center bottom;
+  mask-repeat: no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.theme[data-invitation-stage] [data-part="hero-card"]::after {
+  display: none;
+}
+
+.hero-writing {
+  position: relative;
+  z-index: 1;
+  padding: 0.375rem clamp(1.125rem, 5cqw, 2.5rem) 0.5rem;
+  background: transparent;
+}
+
+.theme[data-invitation-stage]
+  [data-part="hero-writing"]
+  [data-part="invitation-prose"] {
+  margin-top: 0.5rem;
+  color: var(--songket-ink);
+  font-size: clamp(1rem, 4.75cqw, 1.125rem);
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: normal;
+}
+
+.theme[data-invitation-stage] [data-part="hero-writing"] [data-part="hosts"] {
+  margin-block: 0.375rem;
+  color: var(--songket-merlot-700);
+  font-size: clamp(1.3125rem, 5.8cqw, 1.625rem);
+  line-height: 1.3;
+}
+
+.theme[data-invitation-stage] [data-part="couple-names"] {
+  margin-block: 0.75rem 0.25rem;
+  color: var(--songket-merlot-700);
+  font-size: clamp(2rem, 10.6cqw, 4.5rem);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.theme[data-invitation-stage] [data-part="couple-name"] {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.theme[data-invitation-stage] [data-part="couple-lineage"] {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: clamp(1rem, 4.5cqw, 1.25rem);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+/* Tonal chapters are separate from their quiet reading surfaces. */
+
+.theme[data-invitation-stage="content"] > section[id] {
+  --songket-section-surface: var(--songket-surface-ivory);
+
+  background-color: var(--songket-section-surface);
+  background-image: url("/images/songket-page-edge-v1.svg"),
+    url("/images/songket-page-edge-v1.svg"),
+    url("/images/songket-paper-grain.svg");
+  background-position: left top, right top, center;
+  background-repeat: repeat-y, repeat-y, repeat;
+  background-size: var(--songket-page-art-width) auto,
+    var(--songket-page-art-width) auto, 128px 128px;
+}
+
+.theme[data-invitation-stage="content"]
+  > section:is([id="lokasi"], [id="salam-kaut"]) {
+  --songket-section-surface: var(--songket-surface-champagne);
+  --songket-muted: #665348;
+  --registry-muted: #665348;
+  --songket-gold-dark: #77552f;
+}
+
+.theme[data-invitation-stage="content"] > section[id="hubungi"] {
+  --songket-section-surface: var(--songket-paper);
+}
+
+.theme[data-invitation-stage="content"] > section[id="rsvp"] {
+  --songket-section-surface: var(--songket-surface-merlot);
+
+  background-image: linear-gradient(rgb(87 35 48 / 65%), rgb(87 35 48 / 65%)),
+    url("/images/songket-weave-muted.svg"),
+    url("/images/songket-paper-grain.svg");
+  background-size: auto, 240px 320px, 128px 128px;
+  background-repeat: repeat;
+  color: var(--songket-ivory);
+}
+
+.theme[data-invitation-stage]
+  section[id="rsvp"]
+  [data-part="section-title"]
+  :is(p, h2),
+.theme[data-invitation-stage] section[id="rsvp"] [data-part="section-intro"] {
+  color: var(--songket-ivory);
+}
+
+.theme[data-invitation-stage]
+  section[id="rsvp"]
+  [data-part="section-title"]
+  svg {
+  color: var(--songket-gold-light);
+}
+
+.theme[data-invitation-stage]
+  [data-part="rsvp-form"]
+  :is(input, select, textarea) {
+  color: var(--songket-ink);
+}
+
+.theme[data-invitation-stage] [data-part="rsvp-form"] ::placeholder {
+  color: var(--songket-muted);
+  opacity: 1;
+}
+
+@media (max-width: 340px) {
+  .hero-writing {
+    padding-inline: 1.125rem;
+  }
+}
+
+/* Compact supporting groups keep the names prominent without a fixed height. */
+.theme[data-invitation-stage] [data-part="hero-card"] .ornament {
+  height: 2rem;
+  margin-top: 0.25rem;
+}
+
+.theme[data-invitation-stage] [data-part="hero-card"] [lang="ar"] {
+  margin-top: 0.5rem;
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+.theme[data-invitation-stage] [data-part="hero-date"]::before,
+.theme[data-invitation-stage] [data-part="hero-date"]::after {
+  width: clamp(0rem, 3cqw, 1.5rem);
+  flex-shrink: 1;
+}
+
+.theme[data-invitation-stage] [data-part="scroll-cue"] {
+  width: 44px;
+  height: 44px;
+  margin-top: 0.75rem;
+}
+
+.early-music:focus-visible {
+  outline: 2px solid var(--songket-merlot-700);
+  outline-offset: 3px;
+}
+
+/* Quiet textile perimeter; the central verse remains on plain champagne. */
+
+.theme[data-invitation-stage] [data-part="quotation"]::before {
+  top: 0;
+}
+
+.theme[data-invitation-stage] [data-part="quotation"]::after {
+  bottom: 0;
+}
+
+.closing-flourish {
+  width: min(15rem, 80%);
+  aspect-ratio: 1000 / 142;
+  margin-inline: auto;
+  pointer-events: none;
+}
+
+.closing-flourish img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.closing-flourish .ornament {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.thread-light {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.thread-light svg {
+  width: 100%;
+  height: 100%;
+}
+
+.thread-light path {
+  stroke: #fff0bd;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 0.12 0.88;
+  filter: drop-shadow(0 0 2px #e3b965);
+}
+
+.thread-light[data-motion="ambient"] {
+  opacity: 1;
+}
+
+.thread-light[data-motion="ambient"] path {
+  animation: thread-catch 12s linear infinite;
+  animation-play-state: paused;
+}
+
+.thread-light[data-active="true"] path {
+  animation-play-state: running;
+}
+
+.thread-light path:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+@keyframes thread-catch {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 0.15;
+  }
+
+  2% {
+    opacity: 0.85;
+  }
+
+  11% {
+    opacity: 0;
+    stroke-dashoffset: -0.9;
+  }
+
+  100% {
+    opacity: 0;
+    stroke-dashoffset: -0.9;
+  }
+}
+
+.woven-motif {
+  width: 64px;
+  height: 64px;
+  margin: 0.5rem auto 0;
+  pointer-events: none;
+}
+
+.woven-motif svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 1px rgb(102 69 33 / 22%));
+}
+
+.woven-motif[data-motion="waiting"]
+  :is([data-stitch], [data-finish], [data-lead]) {
+  opacity: 0;
+}
+
+.woven-motif[data-motion="stitch"] [data-lead] {
+  stroke-dasharray: 1;
+  animation: stitch-lead 0.6s both;
+}
+
+.woven-motif[data-motion="stitch"] [data-stitch] {
+  animation: stitch-petal 0.45s var(--stitch-delay) both;
+}
+
+.woven-motif[data-motion="stitch"] [data-stitch] > path:first-child {
+  stroke-dasharray: 1;
+  animation: stitch-lead 0.45s var(--stitch-delay) both;
+}
+
+.woven-motif[data-motion="stitch"] [data-finish] {
+  animation: stitch-finish 0.5s 2s both;
+}
+
+@keyframes stitch-lead {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes stitch-petal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes stitch-finish {
+  0% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+    filter: brightness(1.35);
+  }
+
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thread-light {
+    display: none;
+  }
+
+  .woven-motif :is([data-stitch], [data-finish], [data-lead]) {
+    opacity: 1 !important;
+    animation: none !important;
+  }
+}

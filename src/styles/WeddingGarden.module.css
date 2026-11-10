@@ -1,12 +1,38 @@
 /* stylelint-disable selector-pseudo-class-no-unknown -- :global is CSS Modules syntax. */
+
+/* RGB channels keep theme colors compatible with opacity utilities. */
+.page,
+.cover {
+  --wedding-rgb-3e5949: 62 89 73;
+  --wedding-rgb-496851: 73 104 81;
+  --wedding-rgb-4c6b55: 76 107 85;
+  --wedding-rgb-4f7058: 79 112 88;
+  --wedding-rgb-536858: 83 104 88;
+  --wedding-rgb-607a60: 96 122 96;
+  --wedding-rgb-637d6d: 99 125 109;
+  --wedding-rgb-68776d: 104 119 109;
+  --wedding-rgb-6e7b70: 110 123 112;
+  --wedding-rgb-6f786f: 111 120 111;
+  --wedding-rgb-71866d: 113 134 109;
+  --wedding-rgb-8e7956: 142 121 86;
+  --wedding-rgb-9b8b65: 155 139 101;
+  --wedding-rgb-a48b60: 164 139 96;
+  --wedding-rgb-a79a78: 167 154 120;
+  --wedding-rgb-e3e9de: 227 233 222;
+  --wedding-rgb-e4e9df: 228 233 223;
+  --wedding-rgb-eacfdc: 234 207 220;
+  --wedding-rgb-eef0e8: 238 240 232;
+  --wedding-rgb-fffdf8: 255 253 248;
+}
+
 .page:global(.garden-english-wedding-paper) {
-  --garden-ink: #3e5949;
-  --garden-gold: #a48b60;
-  --garden-rose: #a05e73;
+  --garden-ink: rgb(var(--wedding-rgb-3e5949, 62 89 73));
+  --garden-gold: rgb(var(--wedding-rgb-a48b60, 164 139 96));
+  --garden-rose: rgb(var(--wedding-rgb-a05e73, 160 94 115));
   --garden-grain: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23605745' opacity='.035' filter='url(%23grain)' d='M0 0h160v160H0z'/%3E%3C/svg%3E");
 
   overflow: clip;
-  background-color: #fffdf8;
+  background-color: rgb(var(--wedding-rgb-fffdf8, 255 253 248));
   background-size: 100% auto;
 
   /* Keep fixed navigation and dialogs attached to the viewport. */
@@ -15,13 +41,18 @@
 
 .cover {
   min-height: 100svh;
-  background-color: #e8ece3;
+  background-color: rgb(var(--wedding-rgb-e8ece3, 232 236 227));
   background-image: radial-gradient(
       ellipse at 50% 35%,
-      #fffdf8 0%,
+      rgb(var(--wedding-rgb-fffdf8, 255 253 248)) 0%,
       transparent 65%
     ),
-    linear-gradient(125deg, #e6e8dc, #f0e8e4 70%, #e2e8e0);
+    linear-gradient(
+      125deg,
+      rgb(var(--wedding-rgb-e6e8dc, 230 232 220)),
+      rgb(var(--wedding-rgb-f0e8e4, 240 232 228)) 70%,
+      rgb(var(--wedding-rgb-e2e8e0, 226 232 224))
+    );
 }
 
 .cover-content {
@@ -155,8 +186,17 @@
 
 .hero {
   padding-block: clamp(3rem, 8vw, 7rem);
-  background: radial-gradient(ellipse at 50% 35%, #fffdf8 0%, transparent 70%),
-    linear-gradient(145deg, #e4e9df, #eee8e2 65%, #e4e9df);
+  background: radial-gradient(
+      ellipse at 50% 35%,
+      rgb(var(--wedding-rgb-fffdf8, 255 253 248)) 0%,
+      transparent 70%
+    ),
+    linear-gradient(
+      145deg,
+      rgb(var(--wedding-rgb-e4e9df, 228 233 223)),
+      rgb(var(--wedding-rgb-eee8e2, 238 232 226)) 65%,
+      rgb(var(--wedding-rgb-e4e9df, 228 233 223))
+    );
 }
 
 .hero-card {
@@ -332,13 +372,22 @@
   border-color: rgb(164 139 96 / 25%);
   border-radius: 3px;
   background: var(--garden-grain),
-    radial-gradient(ellipse at 8% 0%, #fffefa 5%, transparent 65%),
-    linear-gradient(135deg, #faf6ed, #f3ecdf);
+    radial-gradient(
+      ellipse at 8% 0%,
+      rgb(var(--wedding-rgb-fffefa, 255 254 250)) 5%,
+      transparent 65%
+    ),
+    linear-gradient(
+      135deg,
+      rgb(var(--wedding-rgb-faf6ed, 250 246 237)),
+      rgb(var(--wedding-rgb-f3ecdf, 243 236 223))
+    );
   background-size: 160px 160px, auto, auto;
   box-shadow: 0 1px 0 rgb(255 255 255 / 90%) inset,
     0 -1px 0 rgb(164 139 96 / 8%) inset, 0 14px 35px -22px rgb(62 89 73 / 28%);
 }
 
+.page .gift-section,
 .page :global(.garden-stationery-section) {
   background-color: rgb(236 240 230 / 72%);
   background-image: radial-gradient(
@@ -366,7 +415,7 @@
 }
 
 .section-title > p {
-  color: #8e7956;
+  color: rgb(var(--wedding-rgb-8e7956, 142 121 86));
   font-size: 0.6rem;
   letter-spacing: 0.3em;
 }
@@ -395,7 +444,10 @@
   width: 1px;
   height: 3rem;
   margin: 0 auto 2rem;
-  background: linear-gradient(transparent, #b7a483);
+  background: linear-gradient(
+    transparent,
+    rgb(var(--wedding-rgb-b7a483, 183 164 131))
+  );
   content: "";
 }
 
@@ -405,7 +457,7 @@
 }
 
 .interlude blockquote {
-  color: #687565;
+  color: rgb(var(--wedding-rgb-687565, 104 117 101));
   font-size: clamp(2rem, 4vw, 3rem);
   font-style: italic;
   line-height: 1.25;
@@ -415,7 +467,7 @@
 .interlude cite {
   display: block;
   margin-top: 1.25rem;
-  color: #8e7956;
+  color: rgb(var(--wedding-rgb-8e7956, 142 121 86));
   font-family: sans-serif;
   font-size: 0.6rem;
   font-style: normal;
@@ -451,34 +503,55 @@
 
 .detail-card > span:first-child {
   border: 1px solid rgb(164 139 96 / 24%);
-  background: linear-gradient(145deg, #fffdf5, #e9e0cb);
+  background: linear-gradient(
+    145deg,
+    rgb(var(--wedding-rgb-fffdf5, 255 253 245)),
+    rgb(var(--wedding-rgb-e9e0cb, 233 224 203))
+  );
   box-shadow: 0 1px 0 rgb(255 255 255 / 85%) inset, 0 3px 8px rgb(83 72 43 / 6%);
-  color: #86714d;
+  color: rgb(var(--wedding-rgb-86714d, 134 113 77));
 }
 
 .page .rsvp-form {
   background: var(--garden-grain),
-    radial-gradient(ellipse at 100% 0%, #f4e9e3, transparent 55%),
-    linear-gradient(150deg, #fffdf9, #f6f0e7);
+    radial-gradient(
+      ellipse at 100% 0%,
+      rgb(var(--wedding-rgb-f4e9e3, 244 233 227)),
+      transparent 55%
+    ),
+    linear-gradient(
+      150deg,
+      rgb(var(--wedding-rgb-fffdf9, 255 253 249)),
+      rgb(var(--wedding-rgb-f6f0e7, 246 240 231))
+    );
   background-size: 160px 160px, auto, auto;
 }
 
 .calendar-action a,
 .rsvp-form > button {
-  background-image: linear-gradient(125deg, #60785e, #3e5949 70%, #334d40);
+  background-image: linear-gradient(
+    125deg,
+    rgb(var(--wedding-rgb-60785e, 96 120 94)),
+    rgb(var(--wedding-rgb-3e5949, 62 89 73)) 70%,
+    rgb(var(--wedding-rgb-334d40, 51 77 64))
+  );
   box-shadow: 0 1px 0 rgb(229 237 206 / 25%) inset,
     0 5px 14px -7px rgb(38 65 44 / 45%);
 }
 
 .map-links a {
-  background-image: linear-gradient(145deg, #fffefa, #efe9db);
+  background-image: linear-gradient(
+    145deg,
+    rgb(var(--wedding-rgb-fffefa, 255 254 250)),
+    rgb(var(--wedding-rgb-efe9db, 239 233 219))
+  );
   box-shadow: 0 1px 0 #fff inset;
 }
 
 .venue-card {
   position: relative;
   padding: clamp(1.6rem, 5vw, 4rem);
-  border-top: 3px solid #ad9571 !important;
+  border-top: 3px solid rgb(var(--wedding-rgb-ad9571, 173 149 113)) !important;
 }
 
 .venue-card::before {
@@ -489,17 +562,25 @@
   width: 2.2rem;
   height: 2.2rem;
   place-items: center;
-  border: 1px solid #b6a080;
+  border: 1px solid rgb(var(--wedding-rgb-b6a080, 182 160 128));
   border-radius: 50%;
-  background: #fffdf8;
-  color: #a48b60;
+  background: rgb(var(--wedding-rgb-fffdf8, 255 253 248));
+  color: rgb(var(--wedding-rgb-a48b60, 164 139 96));
   content: "✧";
 }
 
 .page .venue-card {
   background: var(--garden-grain),
-    radial-gradient(ellipse at 100% 100%, #dfe5d7, transparent 65%),
-    linear-gradient(125deg, #fffdf6, #f3eddf);
+    radial-gradient(
+      ellipse at 100% 100%,
+      rgb(var(--wedding-rgb-dfe5d7, 223 229 215)),
+      transparent 65%
+    ),
+    linear-gradient(
+      125deg,
+      rgb(var(--wedding-rgb-fffdf6, 255 253 246)),
+      rgb(var(--wedding-rgb-f3eddf, 243 237 223))
+    );
   background-size: 160px 160px, auto, auto;
 }
 
@@ -525,7 +606,7 @@
 
 .rsvp-form input::placeholder,
 .rsvp-form textarea::placeholder {
-  color: #788078;
+  color: rgb(var(--wedding-rgb-788078, 120 128 120));
   font-size: 0.875rem;
   font-weight: 400;
   opacity: 1;
@@ -587,7 +668,11 @@
   z-index: 40;
   inset: 0 0 auto;
   height: 2px;
-  background: linear-gradient(90deg, #b9a781, #a05e73);
+  background: linear-gradient(
+    90deg,
+    rgb(var(--wedding-rgb-b9a781, 185 167 129)),
+    rgb(var(--wedding-rgb-a05e73, 160 94 115))
+  );
   transform: scaleX(0);
   transform-origin: left;
   pointer-events: none;
@@ -632,12 +717,12 @@
 
 .dock a:hover,
 .dock button:hover {
-  background: #edf0e8;
+  background: rgb(var(--wedding-rgb-edf0e8, 237 240 232));
 }
 
-.dock a:nth-child(3) {
-  background: #3e5949;
-  color: #fffdf8;
+.dock a[href="#rsvp"] {
+  background: rgb(var(--wedding-rgb-3e5949, 62 89 73));
+  color: rgb(var(--wedding-rgb-fffdf8, 255 253 248));
 }
 
 .dock svg {
@@ -652,7 +737,7 @@
 
 .page :is(a, button):focus-visible,
 .cover button:focus-visible {
-  outline: 2px solid #a05e73;
+  outline: 2px solid rgb(var(--wedding-rgb-a05e73, 160 94 115));
   outline-offset: 5px;
 }
 
@@ -699,7 +784,11 @@
   place-items: center;
   border: 1px solid rgb(164 139 96 / 28%);
   border-radius: 50%;
-  background: linear-gradient(145deg, #fffefa, #efe9db);
+  background: linear-gradient(
+    145deg,
+    rgb(var(--wedding-rgb-fffefa, 255 254 250)),
+    rgb(var(--wedding-rgb-efe9db, 239 233 219))
+  );
   color: var(--garden-ink);
   transition: background-color 200ms ease, box-shadow 200ms ease;
 }

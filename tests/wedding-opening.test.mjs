@@ -29,7 +29,12 @@ class Media extends EventTarget {
   }
 }
 
-function setup({ reducedMotion = false, rejectSound = false, musicGate } = {}) {
+function setup({
+  reducedMotion = false,
+  rejectSound = false,
+  musicGate,
+  style = "garden",
+} = {}) {
   let now = 0;
   let nextId = 0;
   const timers = new Map();
@@ -50,6 +55,7 @@ function setup({ reducedMotion = false, rejectSound = false, musicGate } = {}) {
   const music = new Media();
   const events = [];
   const cleanup = exports.playMohorOpening({
+    style,
     sound,
     music,
     musicGate,
@@ -176,4 +182,102 @@ test("skip the quiet chime tail and silent song lead-in without overlapping play
   assert.equal(music.currentTime, 0.5);
   assert.deepEqual(events, ["reveal", "open", "music"]);
   cleanup();
+});
+
+test("the classical opening releases the seal, unfolds slowly, and waits for its own sound to finish", async () => {
+  const { sound, events, advance, cleanup } = setup({ style: "classical" });
+  await advance(799);
+  assert.deepEqual(events, []);
+  await advance(1);
+  assert.deepEqual(events, ["reveal"]);
+  await advance(1799);
+  assert.deepEqual(events, ["reveal"]);
+  await advance(1);
+  assert.deepEqual(events, ["reveal", "open"]);
+  sound.currentTime = 2.79;
+  sound.dispatchEvent(new Event("timeupdate"));
+  assert.equal(sound.paused, false);
+  sound.currentTime = 2.8;
+  sound.dispatchEvent(new Event("timeupdate"));
+  await advance(0);
+  assert.deepEqual(events, ["reveal", "open", "music"]);
+  assert.equal(sound.paused, true);
+  cleanup();
+});
+
+test("a blocked classical sound still opens the invitation, and reduced motion skips its animation", async () => {
+  const opening = setup({ style: "classical", rejectSound: true });
+  await opening.advance(2600);
+  assert.deepEqual(opening.events, ["reveal", "open", "music"]);
+  opening.cleanup();
+  const reduced = setup({ style: "classical", reducedMotion: true });
+  await reduced.advance(0);
+  assert.deepEqual(reduced.events, ["reveal", "open"]);
+  reduced.sound.dispatchEvent(new Event("ended"));
+  await reduced.advance(0);
+  assert.deepEqual(reduced.events, ["reveal", "open", "music"]);
+  reduced.cleanup();
+});
+
+const gateModule = { exports: {} };
+vm.runInNewContext(
+  ts.transpileModule(
+    readFileSync(
+      new URL("../src/lib/wedding/gateRenderer.ts", import.meta.url),
+      "utf8"
+    ),
+    {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2020,
+      },
+    }
+  ).outputText,
+  { exports: gateModule.exports, Set }
+);
+const { createGateRenderer } = gateModule.exports;
+const gate = (decode = () => Promise.resolve()) => ({
+  complete: true,
+  naturalWidth: 1038,
+  decode,
+});
+
+test("gate renderer latches fallback for immediate and one-gate activations", async () => {
+  for (const count of [0, 1]) {
+    const renderer = createGateRenderer(),
+      images = [gate(), gate()];
+    for (let i = 0; i < count; i++) await renderer.prepare(images[i]);
+    assert.equal(renderer.choose(images), false);
+    await Promise.all(images.map((image) => renderer.prepare(image)));
+    assert.equal(renderer.choose(images), false);
+  }
+});
+
+test("decoded cached gates latch alpha even if a later error arrives", async () => {
+  const renderer = createGateRenderer(),
+    images = [gate(), gate()];
+  await Promise.all(images.map((image) => renderer.prepare(image)));
+  assert.equal(renderer.choose(images), true);
+  renderer.unavailable(images[0]);
+  assert.equal(renderer.choose(images), true);
+});
+
+test("decode rejection and disposal safely keep fallback", async () => {
+  const rejected = createGateRenderer(),
+    images = [gate(), gate(() => Promise.reject(new Error("decode failed")))];
+  await Promise.all(images.map((image) => rejected.prepare(image)));
+  assert.equal(rejected.choose(images), false);
+  let complete;
+  const disposed = createGateRenderer(),
+    late = gate(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        })
+    );
+  const pending = disposed.prepare(late);
+  disposed.dispose();
+  complete();
+  await pending;
+  assert.equal(disposed.choose([late, late]), false);
 });

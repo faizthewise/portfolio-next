@@ -171,6 +171,62 @@ test("RSVPs are private, validated, and wishes are shared", async () => {
   await deleteDoc(ref(alice, "wishes", "alice"));
 });
 
+test("both celebrations keep independent private RSVPs and only allow configured event IDs", async () => {
+  for (const eventId of ["faiz-harissa", "faiz-harissa-groom"]) {
+    const rsvp = doc(alice, "weddings", eventId, "rsvps", "alice");
+    const wish = doc(alice, "weddings", eventId, "wishes", "alice");
+    const batch = writeBatch(alice);
+    batch.set(rsvp, {
+      name: "Alice",
+      attendance: "Hadir, insya-Allah",
+      guests: eventId === "faiz-harissa" ? 2 : 4,
+      updatedAt: serverTimestamp(),
+    });
+    batch.set(wish, {
+      name: "Alice",
+      message: eventId,
+      updatedAt: serverTimestamp(),
+    });
+    await batch.commit();
+    await denied(getDoc(doc(bob, "weddings", eventId, "rsvps", "alice")));
+    await denied(getDocs(collection(alice, "weddings", eventId, "rsvps")));
+    await denied(
+      getDoc(doc(anonymous, "weddings", eventId, "wishes", "alice"))
+    );
+    assert.equal(
+      (await getDoc(doc(bob, "weddings", eventId, "wishes", "alice"))).data()
+        .message,
+      eventId
+    );
+    await denied(
+      setDoc(doc(bob, "weddings", eventId, "rsvps", "alice"), {
+        name: "Bob",
+        attendance: "Maaf, tidak dapat hadir",
+        guests: 0,
+        updatedAt: serverTimestamp(),
+      })
+    );
+    await deleteDoc(wish);
+  }
+  assert.equal((await getDoc(ref(alice, "rsvps", "alice"))).data().guests, 2);
+  assert.equal(
+    (
+      await getDoc(
+        doc(alice, "weddings", "faiz-harissa-groom", "rsvps", "alice")
+      )
+    ).data().guests,
+    4
+  );
+  await denied(
+    setDoc(doc(alice, "weddings", "unrelated-event", "rsvps", "alice"), {
+      name: "Alice",
+      attendance: "Hadir, insya-Allah",
+      guests: 1,
+      updatedAt: serverTimestamp(),
+    })
+  );
+});
+
 test("only one guest wins a concurrent reservation, and only its owner can cancel", async () => {
   const claim = (db, uid) =>
     runTransaction(db, async (transaction) => {

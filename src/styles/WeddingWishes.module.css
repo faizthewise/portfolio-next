@@ -2,15 +2,15 @@
   display: flex;
   width: 100%;
   max-width: 48rem;
-  flex: 1;
+  flex: var(--wishes-flex, 1);
   flex-direction: column;
   margin-inline: auto;
 }
 
 .grid {
   display: grid;
-  flex: 1;
-  grid-auto-rows: 1fr;
+  flex: var(--wishes-flex, 1);
+  grid-auto-rows: var(--wishes-rows, 1fr);
   gap: 1rem;
 }
 
@@ -28,7 +28,7 @@
   right: 1rem;
   width: 20px;
   height: 20px;
-  color: #9ca88c;
+  color: rgb(var(--wedding-rgb-71866d, 156 168 140));
   opacity: 0.5;
 }
 
@@ -57,7 +57,7 @@
   display: -webkit-box;
   min-width: 0;
   overflow: hidden;
-  color: #607a60;
+  color: rgb(var(--wedding-rgb-607a60, 96 122 96));
   font-size: 0.75rem;
   font-weight: 500;
   overflow-wrap: anywhere;
@@ -90,7 +90,7 @@
 }
 
 .pagination p {
-  color: #6f786f;
+  color: rgb(var(--wedding-rgb-6f786f, 111 120 111));
   font-size: 0.75rem;
   text-align: center;
 }
