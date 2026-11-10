@@ -753,6 +753,10 @@
 }
 
 @media (max-width: 639px) {
+  .theme[data-invitation-stage] [data-part="hero-links"] a:is([href="#lokasi"], [href="#rsvp"]) {
+    display: none;
+  }
+
   .theme[data-invitation-stage] [data-part="hero"] {
     padding-inline: 1rem;
   }
@@ -928,7 +932,7 @@
 }
 
 .theme[data-invitation-stage="content"]
-  > section:is([id="lokasi"], [id="hadiah"], [id="salam-kaut"]) {
+  > section:is([id="lokasi"], [id="salam-kaut"]) {
   --songket-section-surface: var(--songket-surface-champagne);
   --songket-muted: #665348;
   --registry-muted: #665348;

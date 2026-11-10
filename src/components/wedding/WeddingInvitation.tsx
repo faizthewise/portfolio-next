@@ -504,6 +504,7 @@ export default function WeddingInvitation({
   const openingCleanup = useRef<(() => void) | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const countdownRef = useRef<HTMLDivElement>(null);
+  const quotationRef = useRef<HTMLElement>(null);
   const invitationRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -544,12 +545,13 @@ export default function WeddingInvitation({
     let frame = 0;
     const update = () => {
       frame = 0;
-      // Introduce shortcuts only once the countdown is comfortably in view.
+      // Groom shortcuts appear as soon as the welcome section has scrolled past.
       const countdownTop = countdownRef.current?.getBoundingClientRect().top;
-      if (
-        countdownTop !== undefined &&
-        countdownTop <= window.innerHeight * 0.8
-      )
+      const quotationTop = quotationRef.current?.getBoundingClientRect().top;
+      const dockReady = wedding.side === "groom"
+        ? quotationTop !== undefined && quotationTop <= 0
+        : countdownTop !== undefined && countdownTop <= window.innerHeight * 0.8;
+      if (dockReady)
         setShowDock(true);
       const distance =
         document.documentElement.scrollHeight - window.innerHeight;
@@ -571,7 +573,7 @@ export default function WeddingInvitation({
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
-  }, [invitationOpened, showGifts]);
+  }, [invitationOpened, showGifts, wedding.side]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -912,7 +914,7 @@ export default function WeddingInvitation({
                       <span
                         className={`${songketStyles.connector} ${titleFont.className}`}
                       >
-                        {" dan "}
+                        {" dan pilihan hatinya "}
                       </span>
                       <CoupleName fullName={secondName} />
                     </h1>
@@ -1020,7 +1022,7 @@ export default function WeddingInvitation({
           </section>
 
           {songket ? (
-            <section data-part="quotation">
+            <section ref={quotationRef} data-part="quotation">
               <GardenReveal className={songketStyles["quotation-inner"]}>
                 <blockquote className={titleFont.className}>
                   &ldquo;Dan Kami menciptakan kamu berpasang-pasangan.&rdquo;
@@ -1058,7 +1060,9 @@ export default function WeddingInvitation({
                   { icon: CalendarDays, label: wedding.dateLabel },
                   { icon: Sparkles, label: wedding.timeLabel },
                   { icon: MapPin, label: wedding.venue },
-                  { icon: Shirt, label: `Kod Pakaian: ${wedding.dresscode}` },
+                  ...(wedding.side === "groom"
+                    ? []
+                    : [{ icon: Shirt, label: `Kod Pakaian: ${wedding.dresscode}` }]),
                 ].map(({ icon: Icon, label }, index) => (
                   <GardenReveal key={label} delay={index * 100}>
                     <div
@@ -1145,6 +1149,164 @@ export default function WeddingInvitation({
                   </div>
                 </div>
               </GardenReveal>
+            </div>
+          </section>
+
+
+          {showGifts && (
+            <section
+              id="hadiah"
+              className="relative scroll-mt-6 overflow-hidden px-6 py-24"
+            >
+              <div className="relative mx-auto max-w-3xl">
+                <SectionTitle
+                  songket={songket}
+                  eyebrow="Dari hati, buat yang dirai"
+                >
+                  Tanda Kasih
+                </SectionTitle>
+                <p
+                  data-part="section-intro"
+                  className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[rgb(var(--wedding-rgb-6f786f))]`}
+                >
+                  Kehadiran dan doa restu anda sudah cukup bermakna. Senarai
+                  hadiah ini disediakan untuk membantu tetamu mengelakkan
+                  pembelian hadiah yang sama. Jika ingin menitipkan hadiah,
+                  semak senarai dan tandakan pilihan anda sebelum membeli.
+                </p>
+                <GardenReveal>
+                  <div className={registryStyles.preview}>
+                    {regularGifts.slice(0, 3).map((product) => (
+                      <Link
+                        key={product.slug}
+                        href={{
+                          pathname: registryPath,
+                          query: { ...registryQuery, gift: product.slug },
+                        }}
+                        className={registryStyles["preview-card"]}
+                        aria-label={product.name}
+                      >
+                        <div className={registryStyles["image-wrap"]}>
+                          <RegistryProductImage product={product} />
+                        </div>
+                        <span className={titleFont.className}>
+                          {product.name}
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                  <div className={registryStyles["preview-action"]}>
+                    <Link
+                      href={{ pathname: registryPath, query: registryQuery }}
+                      className={registryStyles.primary}
+                    >
+                      Lihat semua hadiah <ArrowRight aria-hidden="true" />
+                    </Link>
+                    <p>
+                      {regularGifts.length} pilihan · Semak dan pilih hadiah di
+                      senarai penuh
+                    </p>
+                  </div>
+                </GardenReveal>
+              </div>
+            </section>
+          )}
+
+          {showGifts && (
+            <section
+              id="salam-kaut"
+              className="stationery-section garden-stationery-section relative scroll-mt-6 overflow-hidden border-y border-[rgb(var(--wedding-rgb-a79a78))]/20 bg-[rgb(var(--wedding-rgb-eef0e8))] px-6 py-24 text-[rgb(var(--wedding-rgb-3e5949))]"
+            >
+              <div className="relative">
+                <SectionTitle
+                  songket={songket}
+                  eyebrow="Tanda ingatan buat pengantin"
+                  light
+                >
+                  Salam Kaut
+                </SectionTitle>
+                <GardenReveal className="stationery-panel mx-auto max-w-xl p-7 text-center sm:p-10">
+                  <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-[rgb(var(--wedding-rgb-fffdf8))] text-[rgb(var(--wedding-rgb-3e5949))]">
+                    <QrCode className="h-10 w-10" />
+                  </span>
+                  <h3
+                    className={`${titleFont.className} mt-6 text-4xl font-medium text-[rgb(var(--wedding-rgb-496851))]`}
+                  >
+                    Sedikit tanda ingatan
+                  </h3>
+                  <p className="mt-4 leading-7 text-[rgb(var(--wedding-rgb-6f786f))]">
+                    Sekiranya tuan/puan berhasrat berkongsi rezeki buat pasangan
+                    pengantin, silakan imbas kod DuitNow ini. Kehadiran dan doa
+                    restu tuan/puan tetap menjadi hadiah yang paling bermakna.
+                  </p>
+                  <div className="mx-auto mt-7 w-full max-w-[260px] overflow-hidden rounded-sm border border-[rgb(var(--wedding-rgb-71866d))]/15 bg-white p-3 shadow-lg shadow-[rgb(var(--wedding-rgb-3e5949))]/10">
+                    <img
+                      src="/images/harissa-qr.jpeg"
+                      alt="Kod QR DuitNow untuk Salam Kaut"
+                      className="h-auto w-full"
+                    />
+                  </div>
+                </GardenReveal>
+              </div>
+            </section>
+          )}
+
+          <section
+            id="ucapan"
+            className={`${styles["wishes-section"]} relative scroll-mt-6 overflow-hidden border-b border-[rgb(var(--wedding-rgb-a79a78))]/25 bg-[rgb(var(--wedding-rgb-fffdf8))]/70 px-6`}
+          >
+            {!songket && (
+              <GardenButterflyFlight>
+                <Butterfly />
+              </GardenButterflyFlight>
+            )}
+            <div
+              className={`${styles["wishes-content"]} relative mx-auto max-w-5xl`}
+            >
+              <SectionTitle
+                songket={songket}
+                wishes
+                eyebrow="Titipan buat pengantin"
+              >
+                Ucapan dan doa
+              </SectionTitle>
+              <p
+                data-part="section-intro"
+                className={`${styles["section-intro"]} mx-auto -mt-6 mb-10 max-w-xl text-center leading-7 text-[rgb(var(--wedding-rgb-6f786f))]`}
+              >
+                Setiap ucapan dan doa yang dititipkan buat Harissa dan Faiz amat
+                bermakna buat kami sekeluarga.
+              </p>
+
+              {wishes.length > 0 ? (
+                <GardenReveal className={styles["wishes-list"]}>
+                  <WeddingWishes
+                    wishes={wishes}
+                    fontClassName={titleFont.className}
+                  />
+                </GardenReveal>
+              ) : (
+                <GardenReveal className="stationery-panel mx-auto max-w-xl px-5 py-6 text-center">
+                  <Quote
+                    className="mx-auto h-8 w-8 text-[rgb(var(--wedding-rgb-607a60))]"
+                    aria-hidden="true"
+                  />
+                  <p
+                    className={`${titleFont.className} mt-4 text-2xl text-[rgb(var(--wedding-rgb-3e5949))]`}
+                  >
+                    {wishesStatus === "loading"
+                      ? "Sedang memuatkan ucapan…"
+                      : wishesStatus === "error"
+                      ? "Ucapan belum dapat dimuatkan."
+                      : "Belum ada ucapan dititipkan."}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[rgb(var(--wedding-rgb-6f786f))]">
+                    {wishesStatus === "error"
+                      ? "Sila muat semula halaman untuk mencuba lagi."
+                      : "Ucapan daripada borang RSVP akan dipaparkan di sini."}
+                  </p>
+                </GardenReveal>
+              )}
             </div>
           </section>
 
@@ -1271,162 +1433,7 @@ export default function WeddingInvitation({
             </div>
           </section>
 
-          <section
-            id="ucapan"
-            className={`${styles["wishes-section"]} relative scroll-mt-6 overflow-hidden border-b border-[rgb(var(--wedding-rgb-a79a78))]/25 bg-[rgb(var(--wedding-rgb-fffdf8))]/70 px-6`}
-          >
-            {!songket && (
-              <GardenButterflyFlight>
-                <Butterfly />
-              </GardenButterflyFlight>
-            )}
-            <div
-              className={`${styles["wishes-content"]} relative mx-auto max-w-5xl`}
-            >
-              <SectionTitle
-                songket={songket}
-                wishes
-                eyebrow="Titipan buat pengantin"
-              >
-                Ucapan dan doa
-              </SectionTitle>
-              <p
-                data-part="section-intro"
-                className={`${styles["section-intro"]} mx-auto -mt-6 mb-10 max-w-xl text-center leading-7 text-[rgb(var(--wedding-rgb-6f786f))]`}
-              >
-                Setiap ucapan dan doa yang dititipkan buat Harissa dan Faiz amat
-                bermakna buat kami sekeluarga.
-              </p>
-
-              {wishes.length > 0 ? (
-                <GardenReveal className={styles["wishes-list"]}>
-                  <WeddingWishes
-                    wishes={wishes}
-                    fontClassName={titleFont.className}
-                  />
-                </GardenReveal>
-              ) : (
-                <GardenReveal className="stationery-panel mx-auto max-w-xl px-5 py-6 text-center">
-                  <Quote
-                    className="mx-auto h-8 w-8 text-[rgb(var(--wedding-rgb-607a60))]"
-                    aria-hidden="true"
-                  />
-                  <p
-                    className={`${titleFont.className} mt-4 text-2xl text-[rgb(var(--wedding-rgb-3e5949))]`}
-                  >
-                    {wishesStatus === "loading"
-                      ? "Sedang memuatkan ucapan…"
-                      : wishesStatus === "error"
-                      ? "Ucapan belum dapat dimuatkan."
-                      : "Belum ada ucapan dititipkan."}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[rgb(var(--wedding-rgb-6f786f))]">
-                    {wishesStatus === "error"
-                      ? "Sila muat semula halaman untuk mencuba lagi."
-                      : "Ucapan daripada borang RSVP akan dipaparkan di sini."}
-                  </p>
-                </GardenReveal>
-              )}
-            </div>
-          </section>
-
-          {showGifts && (
-            <section
-              id="hadiah"
-              className="relative scroll-mt-6 overflow-hidden px-6 py-24"
-            >
-              <div className="relative mx-auto max-w-3xl">
-                <SectionTitle
-                  songket={songket}
-                  eyebrow="Dari hati, buat yang dirai"
-                >
-                  Tanda Kasih
-                </SectionTitle>
-                <p
-                  data-part="section-intro"
-                  className={`${styles["section-intro"]} mx-auto -mt-6 mb-8 max-w-lg text-center leading-7 text-[rgb(var(--wedding-rgb-6f786f))]`}
-                >
-                  Kehadiran dan doa restu anda sudah cukup bermakna. Senarai
-                  hadiah ini disediakan untuk membantu tetamu mengelakkan
-                  pembelian hadiah yang sama. Jika ingin menitipkan hadiah,
-                  semak senarai dan tandakan pilihan anda sebelum membeli.
-                </p>
-                <GardenReveal>
-                  <div className={registryStyles.preview}>
-                    {regularGifts.slice(0, 3).map((product) => (
-                      <Link
-                        key={product.slug}
-                        href={{
-                          pathname: registryPath,
-                          query: { ...registryQuery, gift: product.slug },
-                        }}
-                        className={registryStyles["preview-card"]}
-                        aria-label={product.name}
-                      >
-                        <div className={registryStyles["image-wrap"]}>
-                          <RegistryProductImage product={product} />
-                        </div>
-                        <span className={titleFont.className}>
-                          {product.name}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                  <div className={registryStyles["preview-action"]}>
-                    <Link
-                      href={{ pathname: registryPath, query: registryQuery }}
-                      className={registryStyles.primary}
-                    >
-                      Lihat semua hadiah <ArrowRight aria-hidden="true" />
-                    </Link>
-                    <p>
-                      {regularGifts.length} pilihan · Semak dan pilih hadiah di
-                      senarai penuh
-                    </p>
-                  </div>
-                </GardenReveal>
-              </div>
-            </section>
-          )}
-
-          {showSalam && (
-            <section
-              id="salam-kaut"
-              className="stationery-section garden-stationery-section relative scroll-mt-6 overflow-hidden border-y border-[rgb(var(--wedding-rgb-a79a78))]/20 bg-[rgb(var(--wedding-rgb-eef0e8))] px-6 py-24 text-[rgb(var(--wedding-rgb-3e5949))]"
-            >
-              <div className="relative">
-                <SectionTitle
-                  songket={songket}
-                  eyebrow="Tanda ingatan buat pengantin"
-                  light
-                >
-                  Salam Kaut
-                </SectionTitle>
-                <GardenReveal className="stationery-panel mx-auto max-w-xl p-7 text-center sm:p-10">
-                  <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-[rgb(var(--wedding-rgb-fffdf8))] text-[rgb(var(--wedding-rgb-3e5949))]">
-                    <QrCode className="h-10 w-10" />
-                  </span>
-                  <h3
-                    className={`${titleFont.className} mt-6 text-4xl font-medium text-[rgb(var(--wedding-rgb-496851))]`}
-                  >
-                    Sedikit tanda ingatan
-                  </h3>
-                  <p className="mt-4 leading-7 text-[rgb(var(--wedding-rgb-6f786f))]">
-                    Sekiranya tuan/puan berhasrat berkongsi rezeki buat pasangan
-                    pengantin, silakan imbas kod DuitNow ini. Kehadiran dan doa
-                    restu tuan/puan tetap menjadi hadiah yang paling bermakna.
-                  </p>
-                  <div className="mx-auto mt-7 w-full max-w-[260px] overflow-hidden rounded-sm border border-[rgb(var(--wedding-rgb-71866d))]/15 bg-white p-3 shadow-lg shadow-[rgb(var(--wedding-rgb-3e5949))]/10">
-                    <img
-                      src="/images/harissa-qr.jpeg"
-                      alt="Kod QR DuitNow untuk Salam Kaut"
-                      className="h-auto w-full"
-                    />
-                  </div>
-                </GardenReveal>
-              </div>
-            </section>
-          )}
+          
 
           {wedding.contacts.length > 0 && (
             <section
