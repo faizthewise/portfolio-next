@@ -336,11 +336,11 @@ export default function JemputanPerkahwinan() {
               <a href="#lokasi" className="inline-flex items-center gap-2 rounded-full border border-[#7c8467]/25 bg-[#fffdf8]/80 px-5 py-3 text-sm font-semibold text-[#4f5843] shadow-sm transition hover:-translate-y-0.5 hover:border-[#747d59]">
                 <MapPin className="h-4 w-4" /> Lokasi
               </a>
+                <a href="#hadiah" className="inline-flex items-center gap-2 rounded-full border border-[#4f5843]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#4f5843] shadow-sm transition hover:-translate-y-0.5 hover:border-[#747d59]">
+                <Gift className="h-4 w-4" /> Hadiah
+              </a>
               <a href="#rsvp" className="inline-flex items-center gap-2 rounded-full bg-[#5f684d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#4f5843]">
                 <Heart className="h-4 w-4" /> RSVP
-              </a>
-              <a href="#hadiah" className="inline-flex items-center gap-2 rounded-full border border-[#4f5843]/15 bg-white/65 px-5 py-3 text-sm font-semibold text-[#4f5843] shadow-sm transition hover:-translate-y-0.5 hover:border-[#747d59]">
-                <Gift className="h-4 w-4" /> Hadiah
               </a>
               {showSalam && (
                 <a href="#salam-kaut" className="inline-flex items-center gap-2 rounded-full border border-[#747d59]/30 bg-[#747d59] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#5d664b]">

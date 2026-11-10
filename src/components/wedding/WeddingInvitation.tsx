@@ -981,7 +981,7 @@ export default function WeddingInvitation({
                           <Gift className="h-4 w-4" /> Hadiah
                         </a>
                       )}
-                      {showSalam && (
+                      {wedding.side === "groom" && showSalam && (
                         <a
                           href="#salam-kaut"
                           className="inline-flex items-center gap-2 rounded-full border border-[rgb(var(--wedding-rgb-607a60))]/30 bg-[rgb(var(--wedding-rgb-607a60))] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[rgb(var(--wedding-rgb-4f7058))]"
@@ -1156,7 +1156,7 @@ export default function WeddingInvitation({
           {showGifts && (
             <section
               id="hadiah"
-              className="relative scroll-mt-6 overflow-hidden px-6 py-24"
+              className={`${!songket ? styles["gift-section"] : ""} relative scroll-mt-6 overflow-hidden px-6 py-24`}
             >
               <div className="relative mx-auto max-w-3xl">
                 <SectionTitle
@@ -1212,7 +1212,7 @@ export default function WeddingInvitation({
             </section>
           )}
 
-          {showGifts && (
+          {wedding.side === "groom" && showGifts && (
             <section
               id="salam-kaut"
               className="stationery-section garden-stationery-section relative scroll-mt-6 overflow-hidden border-y border-[rgb(var(--wedding-rgb-a79a78))]/20 bg-[rgb(var(--wedding-rgb-eef0e8))] px-6 py-24 text-[rgb(var(--wedding-rgb-3e5949))]"
@@ -1536,14 +1536,14 @@ export default function WeddingInvitation({
               <a href="#lokasi">
                 <MapPin aria-hidden="true" /> Lokasi
               </a>
-              <a href="#rsvp">
-                <Heart aria-hidden="true" /> RSVP
-              </a>
               {showGifts && (
                 <a href="#hadiah">
                   <Gift aria-hidden="true" /> Hadiah
                 </a>
               )}
+              <a href="#rsvp">
+                <Heart aria-hidden="true" /> RSVP
+              </a>
               {wedding.contacts.length > 0 && (
                 <a href="#hubungi">
                   <Phone aria-hidden="true" /> Hubungi
