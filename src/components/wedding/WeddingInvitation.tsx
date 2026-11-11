@@ -1028,6 +1028,26 @@ export default function WeddingInvitation({
                   &ldquo;Dan Kami menciptakan kamu berpasang-pasangan.&rdquo;
                   <cite>Surah An-Naba · 78:8</cite>
                 </blockquote>
+                {wedding.side === "groom" && (
+                  <div className={`${songketStyles.doa} ${titleFont.className}`}>
+                    <div className={songketStyles["doa-divider"]} aria-hidden="true">
+                      <SongketOrnament />
+                    </div>
+                    <p>
+                      Ya Allah Ya Rahman Ya Rahim,
+                      <br />
+                      berkatilah majlis perkahwinan ini.
+                    </p>
+                    <p>
+                      Jadikanlah mereka suami soleh yang sentiasa memimpin dan
+                      isteri solehah yang sentiasa membantu. Luaskanlah rezeki
+                      mereka dan kuniakanlah kepada mereka zuriat yang beriman
+                      dan beramal soleh. Semoga kehidupan mereka dipenuhi Sakinah,
+                      Mawaddah dan Al-Rahmah di dunia dan di akhirat.
+                    </p>
+                    <p className={`${songketStyles["doa-amen"]} ${namesFont.className}`}>Aamiin</p>
+                  </div>
+                )}
               </GardenReveal>
             </section>
           ) : (
@@ -1101,6 +1121,32 @@ export default function WeddingInvitation({
               </div>
             </div>
           </section>
+
+          {wedding.side === "groom" && (
+            <section id="atur-cara" className="relative overflow-hidden px-6 py-24">
+              <div className="relative mx-auto max-w-xl">
+                <SectionTitle songket={songket} eyebrow="Perjalanan hari bahagia">
+                  Atur Cara Majlis
+                </SectionTitle>
+                <GardenReveal>
+                  <ol className={songketStyles["programme-list"]}>
+                    {[
+                      { label: "Kehadiran Tetamu", time: "11.30am" },
+                      { label: "Ketibaan Pengantin", time: "12.30pm" },
+                      { label: "Makan Beradab", time: "1.00pm" },
+                      { label: "Sesi Bergambar", time: "1.30pm" },
+                      { label: "Majlis Berakhir", time: "4.00pm" },
+                    ].map(({ label, time }) => (
+                      <li key={label}>
+                        <span>{time}</span>
+                        <p className={titleFont.className}>{label}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </GardenReveal>
+              </div>
+            </section>
+          )}
 
           <section
             id="lokasi"
