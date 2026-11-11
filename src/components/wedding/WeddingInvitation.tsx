@@ -1241,7 +1241,7 @@ export default function WeddingInvitation({
                   </p>
                   <div className="mx-auto mt-7 w-full max-w-[260px] overflow-hidden rounded-sm border border-[rgb(var(--wedding-rgb-71866d))]/15 bg-white p-3 shadow-lg shadow-[rgb(var(--wedding-rgb-3e5949))]/10">
                     <img
-                      src="/images/harissa-qr.jpeg"
+                      src="/images/Faiz-QR.jpeg"
                       alt="Kod QR DuitNow untuk Salam Kaut"
                       className="h-auto w-full"
                     />

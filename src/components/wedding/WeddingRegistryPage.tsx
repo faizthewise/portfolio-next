@@ -511,7 +511,7 @@ export function RegistryContent({
               </button>
             </div>
           )}
-          {variant === "qr" && (
+          {variant === "qr" && router.isReady && router.query.invitation !== "groom" && (
             <section
               className={styles["giving-section"]}
               aria-labelledby="giving-title"

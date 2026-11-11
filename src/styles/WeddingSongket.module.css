@@ -631,7 +631,7 @@
   color: var(--songket-ink);
 }
 
-@media (max-width: 420px) {
+@media (max-width: 639px) {
   .theme[data-invitation-stage] [data-part="event-grid"] {
     grid-template-columns: minmax(0, 1fr);
   }
