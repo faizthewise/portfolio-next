@@ -122,5 +122,123 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && getAfter(/databases/$(database)/documents/weddings/faiz-harissa/gift-funds/$(request.resource.data.giftId)).data.lastContributionId == id;
     }
+
+    // Wedding memories live separately from invitation RSVPs and gifts.
+    function memoryEvent(eventId) { return eventId in ['faiz-harissa', 'faiz-harissa-groom']; }
+    function coupleOwner() { return signedIn() && request.auth.token.owner == true; }
+    function validSlot(slot) { return slot is int && slot >= 1 && slot <= 20; }
+    function validUploadKey(key) { return key is string && key.matches('[a-zA-Z0-9-]{36}'); }
+    function boundedMemoryName(value) { return value is string && value.size() > 0 && value.size() <= 100; }
+    match /weddings/{eventId}/memoryAlbums/main/public/{settingId} {
+      allow read: if memoryEvent(eventId) && settingId == 'settings';
+      allow create, update: if memoryEvent(eventId) && settingId == 'settings' && coupleOwner()
+        && request.resource.data.keys().hasOnly(['welcome', 'cover', 'film', 'stamp', 'bankRecipient', 'bankDetails', 'qrUrl', 'updatedAt'])
+        && request.resource.data.welcome is string && request.resource.data.welcome.size() <= 1000
+        && request.resource.data.cover is string && request.resource.data.cover.size() <= 2048
+        && request.resource.data.film in ['none', 'warm', 'soft']
+        && request.resource.data.stamp is string && request.resource.data.stamp.size() <= 100
+        && request.resource.data.bankRecipient is string && request.resource.data.bankRecipient.size() <= 100
+        && request.resource.data.bankDetails is string && request.resource.data.bankDetails.size() <= 300
+        && request.resource.data.qrUrl is string && request.resource.data.qrUrl.size() <= 2048
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+    match /weddings/{eventId}/memoryAlbums/main/reservations/{reservationId} {
+      allow get: if memoryEvent(eventId) && signedIn()
+        && reservationId.matches(request.auth.uid + '_([1-9]|1[0-9]|20)')
+        && (!exists(/databases/$(database)/documents/weddings/$(eventId)/memoryAlbums/main/reservations/$(reservationId))
+          || resource.data.uid == request.auth.uid);
+      allow list: if memoryEvent(eventId) && signedIn() && resource.data.uid == request.auth.uid;
+      allow create: if memoryEvent(eventId) && signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'slot', 'guestName', 'uploadKey', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid && validSlot(request.resource.data.slot)
+        && reservationId == request.auth.uid + '_' + string(request.resource.data.slot)
+        && validUploadKey(request.resource.data.uploadKey)
+        && boundedMemoryName(request.resource.data.guestName) && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+    match /weddings/{eventId}/memoryAlbums/main/photos/{photoId} {
+      function reservedPhoto() {
+        let slot = request.resource.data.slot;
+        let reservation = get(/databases/$(database)/documents/weddings/$(eventId)/memoryAlbums/main/reservations/$(request.auth.uid + '_' + string(slot))).data;
+        return validSlot(slot) && validUploadKey(request.resource.data.uploadKey)
+          && photoId == request.auth.uid + '_' + string(slot)
+          && reservation.uid == request.auth.uid && reservation.slot == slot
+          && reservation.guestName == request.resource.data.guestName
+          && reservation.uploadKey == request.resource.data.uploadKey;
+      }
+      allow get: if memoryEvent(eventId) && ((signedIn() && photoId.matches(request.auth.uid + '_([1-9]|1[0-9]|20)')
+          && !exists(/databases/$(database)/documents/weddings/$(eventId)/memoryAlbums/main/photos/$(photoId)))
+        || resource.data.status == 'complete' || coupleOwner());
+      allow list: if memoryEvent(eventId) && (resource.data.status == 'complete' || coupleOwner());
+      allow create: if memoryEvent(eventId) && signedIn() && reservedPhoto()
+        && request.resource.data.keys().hasOnly(['uid', 'slot', 'guestName', 'uploadKey', 'originalPath', 'contentType', 'size', 'createdAt', 'status'])
+        && request.resource.data.uid == request.auth.uid && boundedMemoryName(request.resource.data.guestName)
+        && request.resource.data.originalPath == 'weddings/' + eventId + '/memoryAlbums/main/photos/' + request.auth.uid + '/' + string(request.resource.data.slot) + '/original'
+        && request.resource.data.contentType in ['image/jpeg', 'image/png', 'image/webp']
+        && request.resource.data.size is int && request.resource.data.size > 0 && request.resource.data.size <= 12582912
+        && request.resource.data.createdAt == request.time && request.resource.data.status == 'complete';
+      allow update, delete: if false;
+    }
+    match /weddings/{eventId}/memoryAlbums/main/photos/{photoId}/favorites/{uid} {
+      allow get, list: if memoryEvent(eventId) && (owner(uid) || coupleOwner());
+      allow create: if memoryEvent(eventId) && owner(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid && request.resource.data.createdAt == request.time;
+      allow delete: if memoryEvent(eventId) && owner(uid);
+      allow update: if false;
+    }
+    match /weddings/{eventId}/memoryAlbums/main/wishes/{wishId} {
+      allow read: if memoryEvent(eventId);
+      allow create: if memoryEvent(eventId) && signedIn()
+        && wishId.matches(request.auth.uid + '_[0-9]{13}')
+        && request.resource.data.keys().hasOnly(['uid', 'guestName', 'message', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid && boundedMemoryName(request.resource.data.guestName)
+        && request.resource.data.message is string && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 2000 && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+    match /weddings/{eventId}/memoryAlbums/main/voicePublic/{voiceId} {
+      allow get: if memoryEvent(eventId) && (resource.data.status == 'complete' || coupleOwner()
+        || (signedIn() && voiceId.matches(request.auth.uid + '_[a-zA-Z0-9-]{36}')
+          && (!exists(/databases/$(database)/documents/weddings/$(eventId)/memoryAlbums/main/voicePublic/$(voiceId))
+            || resource.data.uid == request.auth.uid)));
+      allow list: if memoryEvent(eventId) && (resource.data.status == 'complete' || coupleOwner());
+      allow create: if memoryEvent(eventId) && signedIn()
+        && voiceId.matches(request.auth.uid + '_[a-zA-Z0-9-]{36}')
+        && request.resource.data.keys().hasOnly(['uid', 'guestName', 'uploadKey', 'path', 'contentType', 'createdAt', 'status'])
+        && request.resource.data.uid == request.auth.uid && boundedMemoryName(request.resource.data.guestName)
+        && request.resource.data.path == 'weddings/' + eventId + '/memoryAlbums/main/publicAudio/' + voiceId
+        && validUploadKey(request.resource.data.uploadKey)
+        && voiceId == request.auth.uid + '_' + request.resource.data.uploadKey
+        && request.resource.data.contentType.matches('audio/(webm|mp4|ogg|3gpp).*')
+        && request.resource.data.createdAt == request.time && request.resource.data.status == 'pending';
+      allow update: if memoryEvent(eventId) && signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'downloadUrl'])
+        && request.resource.data.status == 'complete'
+        && request.resource.data.path == resource.data.path && request.resource.data.uid == resource.data.uid;
+      allow delete: if false;
+    }
+    match /weddings/{eventId}/memoryAlbums/main/voicePrivate/{voiceId} {
+      allow get: if memoryEvent(eventId) && (coupleOwner()
+        || (signedIn() && voiceId.matches(request.auth.uid + '_[a-zA-Z0-9-]{36}')
+          && (!exists(/databases/$(database)/documents/weddings/$(eventId)/memoryAlbums/main/voicePrivate/$(voiceId))
+            || resource.data.uid == request.auth.uid)));
+      allow list: if memoryEvent(eventId) && coupleOwner();
+      allow create: if memoryEvent(eventId) && signedIn()
+        && voiceId.matches(request.auth.uid + '_[a-zA-Z0-9-]{36}')
+        && request.resource.data.keys().hasOnly(['uid', 'guestName', 'uploadKey', 'path', 'contentType', 'createdAt', 'status'])
+        && request.resource.data.uid == request.auth.uid && boundedMemoryName(request.resource.data.guestName)
+        && request.resource.data.path == 'weddings/' + eventId + '/memoryAlbums/main/privateAudio/' + voiceId
+        && validUploadKey(request.resource.data.uploadKey)
+        && voiceId == request.auth.uid + '_' + request.resource.data.uploadKey
+        && request.resource.data.contentType.matches('audio/(webm|mp4|ogg|3gpp).*')
+        && request.resource.data.createdAt == request.time && request.resource.data.status == 'pending';
+      allow update: if memoryEvent(eventId) && signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status == 'complete' && request.resource.data.path == resource.data.path
+        && request.resource.data.uid == resource.data.uid;
+      allow delete: if false;
+    }
   }
 }

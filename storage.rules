@@ -1,0 +1,55 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function owner() { return signedIn() && request.auth.token.owner == true; }
+    function validEvent(eventId) { return eventId in ['faiz-harissa', 'faiz-harissa-groom']; }
+    function reservation(eventId, uid, slot) {
+      return firestore.get(/databases/(default)/documents/weddings/$(eventId)/memoryAlbums/main/reservations/$(uid + '_' + slot));
+    }
+    match /weddings/{eventId}/memoryAlbums/main/photos/{uid}/{slot}/original {
+      allow read: if validEvent(eventId);
+      allow create: if resource == null && validEvent(eventId) && signedIn() && request.auth.uid == uid
+        && slot.matches('([1-9]|1[0-9]|20)')
+        && reservation(eventId, uid, slot).data.uid == uid
+        && string(reservation(eventId, uid, slot).data.slot) == slot
+        && request.resource.metadata.uploadKey == reservation(eventId, uid, slot).data.uploadKey
+        && request.resource.size > 0 && request.resource.size <= 12 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)')
+        && request.resource.metadata.uid == uid
+        && request.resource.metadata.slot == slot
+        && request.resource.metadata.event == eventId;
+      allow update, delete: if false;
+    }
+    match /weddings/{eventId}/memoryAlbums/main/publicAudio/{voiceId} {
+      function voiceRecord() { return firestore.get(/databases/(default)/documents/weddings/$(eventId)/memoryAlbums/main/voicePublic/$(voiceId)); }
+      allow read: if validEvent(eventId)
+        && (voiceRecord().data.status == 'complete'
+          || (signedIn() && voiceId.matches(request.auth.uid + '_[a-zA-Z0-9-]{36}')
+            && voiceRecord().data.uid == request.auth.uid));
+      allow create: if resource == null && validEvent(eventId) && signedIn() && voiceId.matches(request.auth.uid + '_[a-zA-Z0-9-]{36}')
+        && voiceRecord().data.uid == request.auth.uid && voiceRecord().data.path == 'weddings/' + eventId + '/memoryAlbums/main/publicAudio/' + voiceId
+        && request.resource.metadata.uploadKey == voiceRecord().data.uploadKey
+        && request.resource.size > 0 && request.resource.size <= 4 * 1024 * 1024
+        && request.resource.contentType.matches('audio/(webm|mp4|ogg|3gpp).*')
+        && request.resource.metadata.uid == request.auth.uid && request.resource.metadata.event == eventId
+        && request.resource.metadata.private == 'false';
+      allow update, delete: if false;
+    }
+    match /weddings/{eventId}/memoryAlbums/main/privateAudio/{voiceId} {
+      function voiceRecord() { return firestore.get(/databases/(default)/documents/weddings/$(eventId)/memoryAlbums/main/voicePrivate/$(voiceId)); }
+      allow read: if validEvent(eventId)
+        && ((owner() && voiceRecord().data.status == 'complete')
+          || (signedIn() && voiceId.matches(request.auth.uid + '_[a-zA-Z0-9-]{36}')
+            && voiceRecord().data.uid == request.auth.uid));
+      allow create: if resource == null && validEvent(eventId) && signedIn() && voiceId.matches(request.auth.uid + '_[a-zA-Z0-9-]{36}')
+        && voiceRecord().data.uid == request.auth.uid && voiceRecord().data.path == 'weddings/' + eventId + '/memoryAlbums/main/privateAudio/' + voiceId
+        && request.resource.metadata.uploadKey == voiceRecord().data.uploadKey
+        && request.resource.size > 0 && request.resource.size <= 4 * 1024 * 1024
+        && request.resource.contentType.matches('audio/(webm|mp4|ogg|3gpp).*')
+        && request.resource.metadata.uid == request.auth.uid && request.resource.metadata.event == eventId
+        && request.resource.metadata.private == 'true';
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "origin": [
+      "https://faizhasnul.com",
+      "http://localhost:3000",
+      "http://localhost:3012",
+      "http://127.0.0.1:3000",
+      "http://127.0.0.1:3012"
+    ],
+    "method": ["GET"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]
