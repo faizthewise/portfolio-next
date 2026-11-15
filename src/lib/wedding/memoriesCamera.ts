@@ -62,48 +62,103 @@ export type VideoFrameSource = {
 export type FrameAnimationHost = {
   requestAnimationFrame: (callback: FrameRequestCallback) => number;
   cancelAnimationFrame: (handle: number) => void;
+  setTimeout: (callback: () => void, delay: number) => number;
+  clearTimeout: (handle: number) => void;
 };
 
-/** Uses decoded video frames when available and avoids repainting duplicate frames in the rAF fallback. */
+export const VIDEO_FRAME_WATCHDOG_MS = 200;
+export const VIDEO_FRAME_FALLBACK_INTERVAL_MS = 32;
+
+/** Prefers decoded frames, then permanently falls back to a paced animation loop if delivery stalls. */
 export function scheduleVideoFrames(
   video: VideoFrameSource,
   render: VideoFrameCallback,
   animationHost?: FrameAnimationHost
 ) {
+  const host = animationHost ?? window;
   let disposed = false;
-  let lastMediaTime = Number.NaN;
-  let handle = 0;
-  const useVideoFrames = typeof video.requestVideoFrameCallback === "function";
+  let usingAnimationFrames = typeof video.requestVideoFrameCallback !== "function";
+  let videoFrameHandle: number | null = null;
+  let animationFrameHandle: number | null = null;
+  let watchdogHandle: number | null = null;
+  let lastAnimationRender = Number.NEGATIVE_INFINITY;
 
-  const deliver = (mediaTime: number) => {
-    if (disposed || mediaTime === lastMediaTime) return;
-    lastMediaTime = mediaTime;
-    render(mediaTime);
+  const clearWatchdog = () => {
+    if (watchdogHandle === null) return;
+    host.clearTimeout(watchdogHandle);
+    watchdogHandle = null;
   };
 
-  if (useVideoFrames) {
+  const onAnimationFrame = (timestamp: number) => {
+    if (disposed || !usingAnimationFrames) return;
+    try {
+      if (timestamp - lastAnimationRender >= VIDEO_FRAME_FALLBACK_INTERVAL_MS) {
+        lastAnimationRender = timestamp;
+        render(video.currentTime);
+      }
+    } finally {
+      if (!disposed && usingAnimationFrames)
+        animationFrameHandle = host.requestAnimationFrame(onAnimationFrame);
+    }
+  };
+
+  const startAnimationFallback = () => {
+    if (disposed || usingAnimationFrames) return;
+    usingAnimationFrames = true;
+    clearWatchdog();
+    if (videoFrameHandle !== null) {
+      video.cancelVideoFrameCallback?.(videoFrameHandle);
+      videoFrameHandle = null;
+    }
+    animationFrameHandle = host.requestAnimationFrame(onAnimationFrame);
+  };
+
+  if (usingAnimationFrames) {
+    animationFrameHandle = host.requestAnimationFrame(onAnimationFrame);
+  } else {
     const request = video.requestVideoFrameCallback!.bind(video);
-    const onFrame = (_now: number, metadata: { mediaTime: number }) => {
-      if (disposed) return;
-      deliver(metadata.mediaTime);
-      if (!disposed) handle = request(onFrame);
+    const armWatchdog = () => {
+      clearWatchdog();
+      watchdogHandle = host.setTimeout(
+        startAnimationFallback,
+        VIDEO_FRAME_WATCHDOG_MS
+      );
     };
-    handle = request(onFrame);
-    return () => {
-      disposed = true;
-      video.cancelVideoFrameCallback?.(handle);
+    const onVideoFrame = (_now: number, metadata: { mediaTime: number }) => {
+      if (disposed || usingAnimationFrames) return;
+      videoFrameHandle = null;
+      clearWatchdog();
+      try {
+        // Treat callback delivery as the signal; don't require mediaTime to be unique.
+        render(metadata.mediaTime);
+      } finally {
+        if (!disposed && !usingAnimationFrames) {
+          queueVideoFrame();
+        }
+      }
     };
+    const queueVideoFrame = () => {
+      try {
+        videoFrameHandle = request(onVideoFrame);
+        armWatchdog();
+      } catch {
+        startAnimationFallback();
+      }
+    };
+    queueVideoFrame();
   }
 
-  const host = animationHost ?? window;
-  const onAnimationFrame = () => {
-    if (disposed) return;
-    deliver(video.currentTime);
-    if (!disposed) handle = host.requestAnimationFrame(onAnimationFrame);
-  };
-  handle = host.requestAnimationFrame(onAnimationFrame);
   return () => {
+    if (disposed) return;
     disposed = true;
-    host.cancelAnimationFrame(handle);
+    clearWatchdog();
+    if (videoFrameHandle !== null) {
+      video.cancelVideoFrameCallback?.(videoFrameHandle);
+      videoFrameHandle = null;
+    }
+    if (animationFrameHandle !== null) {
+      host.cancelAnimationFrame(animationFrameHandle);
+      animationFrameHandle = null;
+    }
   };
 }

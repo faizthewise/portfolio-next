@@ -86,99 +86,173 @@ test("camera asks for modest 1280x720 media at up to thirty frames per second", 
   });
 });
 
-test("video frame scheduler uses decoded frames, skips duplicates, and cancels cleanly", () => {
-  let callbackId = 0;
-  const callbacks = new Map();
-  let cancelled = 0;
-  const video = {
-    currentTime: 0,
-    requestVideoFrameCallback(callback) {
-      const id = ++callbackId;
-      callbacks.set(id, callback);
-      return id;
-    },
-    cancelVideoFrameCallback(id) {
-      cancelled = id;
-    },
-  };
-  const mediaTimes = [];
-  const dispose = scheduleVideoFrames(video, (time) => mediaTimes.push(time));
-  const first = callbacks.get(1);
-  first(0, { mediaTime: 1 / 30 });
-  callbacks.get(2)(34, { mediaTime: 1 / 30 });
-  callbacks.get(3)(67, { mediaTime: 2 / 30 });
-  assert.deepEqual(mediaTimes, [1 / 30, 2 / 30]);
-  dispose();
-  assert.equal(cancelled, 4);
-  callbacks.get(4)(100, { mediaTime: 3 / 30 });
-  assert.deepEqual(mediaTimes, [1 / 30, 2 / 30], "no render runs after cancellation");
-});
-
-test("rAF scheduler fallback draws only when currentTime advances and ignores late callbacks", () => {
-  const pending = new Map();
-  let id = 0;
-  let cancelled = 0;
-  const animationHost = {
+function makeAnimationHost() {
+  let clock = 0;
+  let nextFrame = 0;
+  let nextTimer = 0;
+  const frames = new Map();
+  const timers = new Map();
+  const cancelledFrames = [];
+  return {
+    frames,
+    timers,
+    cancelledFrames,
     requestAnimationFrame(callback) {
-      const handle = ++id;
-      pending.set(handle, callback);
+      const handle = ++nextFrame;
+      frames.set(handle, callback);
       return handle;
     },
-    cancelAnimationFrame(handle) { cancelled = handle; },
+    cancelAnimationFrame(handle) { cancelledFrames.push(handle); },
+    setTimeout(callback, delay) {
+      const handle = ++nextTimer;
+      timers.set(handle, { callback, due: clock + delay });
+      return handle;
+    },
+    clearTimeout(handle) { timers.delete(handle); },
+    now() { return clock; },
+    advance(milliseconds) {
+      const target = clock + milliseconds;
+      while (true) {
+        const next = [...timers.entries()]
+          .filter(([, timer]) => timer.due <= target)
+          .sort((a, b) => a[1].due - b[1].due)[0];
+        if (!next) break;
+        const [handle, timer] = next;
+        timers.delete(handle);
+        clock = timer.due;
+        timer.callback();
+      }
+      clock = target;
+    },
+    fireFrame(handle, timestamp) { frames.get(handle)?.(timestamp); },
   };
+}
+
+function makeDecodedVideo() {
+  let next = 0;
+  const callbacks = new Map();
+  const cancelled = [];
+  return {
+    source: {
+      currentTime: 0,
+      requestVideoFrameCallback(callback) {
+        const handle = ++next;
+        callbacks.set(handle, callback);
+        return handle;
+      },
+      cancelVideoFrameCallback(handle) { cancelled.push(handle); },
+    },
+    callbacks,
+    cancelled,
+  };
+}
+
+test("rVFC renders repeated mediaTime callbacks and stays cadence-driven while healthy", () => {
+  const host = makeAnimationHost();
+  const video = makeDecodedVideo();
+  const frames = [];
+  const dispose = scheduleVideoFrames(video.source, (time) => frames.push(time), host);
+  video.callbacks.get(1)(0, { mediaTime: 1 / 30 });
+  host.advance(150);
+  video.callbacks.get(2)(150, { mediaTime: 1 / 30 });
+  assert.deepEqual(frames, [1 / 30, 1 / 30], "rVFC delivery is the signal even if mediaTime repeats");
+  assert.equal(host.frames.size, 0, "healthy rVFC does not start a parallel animation loop");
+  host.advance(199);
+  assert.equal(host.frames.size, 0);
+  dispose();
+  assert.equal(host.timers.size, 0);
+  video.callbacks.get(3)?.(400, { mediaTime: 2 / 30 });
+  assert.equal(frames.length, 2, "late callbacks after disposal are ignored");
+});
+
+test("missing rVFC delivery triggers paced rAF and draws with a static currentTime", () => {
+  const host = makeAnimationHost();
+  const video = makeDecodedVideo();
+  const frames = [];
+  const dispose = scheduleVideoFrames(video.source, (time) => frames.push(time), host);
+  host.advance(199);
+  assert.equal(host.frames.size, 0);
+  host.advance(1);
+  assert.deepEqual(video.cancelled, [1]);
+  host.fireFrame(1, 200);
+  host.fireFrame(2, 216);
+  host.fireFrame(3, 232);
+  assert.deepEqual(frames, [0, 0], "rAF fallback does not require currentTime to advance");
+  dispose();
+  assert.deepEqual(host.cancelledFrames, [4]);
+  assert.equal(host.timers.size, 0);
+  video.callbacks.get(1)(264, { mediaTime: 0.25 });
+  assert.equal(video.callbacks.size, 1, "a late decoded-frame callback cannot restart its chain");
+  host.fireFrame(4, 264);
+  assert.deepEqual(frames, [0, 0]);
+});
+
+test("one rVFC frame followed by a stall falls back without waiting on a changed media clock", () => {
+  const host = makeAnimationHost();
+  const video = makeDecodedVideo();
+  const frames = [];
+  const dispose = scheduleVideoFrames(video.source, (time) => frames.push(time), host);
+  video.callbacks.get(1)(0, { mediaTime: 0.04 });
+  assert.deepEqual(frames, [0.04]);
+  host.advance(200);
+  assert.deepEqual(video.cancelled, [2]);
+  host.fireFrame(1, 200);
+  assert.deepEqual(frames, [0.04, 0]);
+  dispose();
+});
+
+test("no-rVFC fallback is paced near 30fps and tears down synchronously", () => {
+  const host = makeAnimationHost();
   const video = { currentTime: 0 };
   const frames = [];
-  const dispose = scheduleVideoFrames(video, (time) => frames.push(time), animationHost);
-  pending.get(1)(16);
-  pending.get(2)(32);
-  video.currentTime = 1 / 30;
-  pending.get(3)(48);
-  assert.deepEqual(frames, [0, 1 / 30]);
-  dispose();
-  assert.equal(cancelled, 4);
-  pending.get(4)(64);
-  assert.deepEqual(frames, [0, 1 / 30]);
+  let dispose;
+  dispose = scheduleVideoFrames(video, (time) => {
+    frames.push(time);
+    dispose();
+  }, host);
+  host.fireFrame(1, 0);
+  assert.deepEqual(frames, [0]);
+  assert.deepEqual(host.cancelledFrames, [1]);
+  assert.equal(host.frames.size, 1, "cleanup inside render does not schedule another RAF");
+
+  const host2 = makeAnimationHost();
+  const staticFrames = [];
+  const cleanup = scheduleVideoFrames(video, (time) => staticFrames.push(time), host2);
+  host2.fireFrame(1, 0);
+  host2.fireFrame(2, 16);
+  host2.fireFrame(3, 32);
+  host2.fireFrame(4, 48);
+  assert.deepEqual(staticFrames, [0, 0], "static currentTime still redraws at the paced cadence");
+  cleanup();
+  assert.deepEqual(host2.cancelledFrames, [5]);
 });
 
-test("scheduler does not enqueue another callback when cleanup happens inside render", () => {
-  const decodedCallbacks = new Map();
-  let decodedId = 0;
-  let decodedCancelled = 0;
-  const decodedVideo = {
-    currentTime: 0,
-    requestVideoFrameCallback(callback) {
-      const handle = ++decodedId;
-      decodedCallbacks.set(handle, callback);
-      return handle;
-    },
-    cancelVideoFrameCallback(handle) { decodedCancelled = handle; },
-  };
-  let cancelDecoded;
-  cancelDecoded = scheduleVideoFrames(decodedVideo, () => cancelDecoded());
-  decodedCallbacks.get(1)(0, { mediaTime: 1 / 30 });
-  assert.equal(decodedCallbacks.size, 1);
-  assert.equal(decodedCancelled, 1);
+test("disposing an rVFC scheduler during render cancels its watchdog and reschedules nothing", () => {
+  const host = makeAnimationHost();
+  const video = makeDecodedVideo();
+  let dispose;
+  dispose = scheduleVideoFrames(video.source, () => dispose(), host);
+  video.callbacks.get(1)(0, { mediaTime: 1 / 30 });
+  assert.equal(video.callbacks.size, 1, "render cleanup stops the next rVFC request");
+  assert.equal(host.timers.size, 0, "render cleanup clears the watchdog");
+  assert.deepEqual(video.cancelled, []);
+});
 
-  const rafCallbacks = new Map();
-  let rafId = 0;
-  let rafCancelled = 0;
-  const host = {
-    requestAnimationFrame(callback) {
-      const handle = ++rafId;
-      rafCallbacks.set(handle, callback);
-      return handle;
-    },
-    cancelAnimationFrame(handle) { rafCancelled = handle; },
-  };
-  let cancelRaf;
-  cancelRaf = scheduleVideoFrames({ currentTime: 1 }, () => cancelRaf(), host);
-  rafCallbacks.get(1)(16);
-  assert.equal(rafCallbacks.size, 1);
-  assert.equal(rafCancelled, 1);
+test("disposing before the first rVFC frame clears the watchdog and ignores its stale timer", () => {
+  const host = makeAnimationHost();
+  const video = makeDecodedVideo();
+  const dispose = scheduleVideoFrames(video.source, () => assert.fail("must not render"), host);
+  const staleWatchdog = [...host.timers.values()][0].callback;
+  dispose();
+  assert.equal(host.timers.size, 0);
+  assert.deepEqual(video.cancelled, [1]);
+  staleWatchdog();
+  assert.equal(host.frames.size, 0, "a timer already queued at cleanup cannot start fallback");
 });
 
 function makeMockWebGL({ failCompile = false } = {}) {
   const calls = [];
+  const uploads = [];
   let lost = false;
   const gl = {
     VERTEX_SHADER: 1, FRAGMENT_SHADER: 2, COMPILE_STATUS: 3, LINK_STATUS: 4,
@@ -210,7 +284,10 @@ function makeMockWebGL({ failCompile = false } = {}) {
     uniform1i(...args) { calls.push(["uniform1i", ...args]); },
     uniform4fv(...args) { calls.push(["uniform4fv", ...args]); },
     activeTexture() {}, viewport() {},
-    texImage2D(...args) { calls.push(["texImage2D", ...args]); },
+    texImage2D(...args) {
+      calls.push(["texImage2D", ...args]);
+      uploads.push(args.at(-1)?.pixelVersion);
+    },
     texSubImage2D(...args) { calls.push(["texSubImage2D", ...args]); },
     drawArrays(...args) { calls.push(["drawArrays", ...args]); },
     readPixels() { calls.push(["readPixels"]); throw new Error("GPU path must not read pixels"); },
@@ -227,25 +304,28 @@ function makeMockWebGL({ failCompile = false } = {}) {
     removeEventListener(name) { listeners.delete(name); },
     fire(name, event) { listeners.get(name)?.(event); },
   };
-  return { canvas, gl, calls, listeners };
+  return { canvas, gl, calls, listeners, uploads };
 }
 
-test("WebGL live preview reuses GPU resources, reallocates changed video dimensions, and never reads pixels", () => {
+test("WebGL live preview reuses its texture and refreshes it with each live video frame", () => {
   const mock = makeMockWebGL();
   const preview = createCameraWebGLPreview(mock.canvas);
   assert.ok(preview);
-  const video = { videoWidth: 640, videoHeight: 480 };
+  const video = { videoWidth: 640, videoHeight: 480, pixelVersion: 1 };
   const frame = getCameraFrameGeometry(390, 844);
   preview.render(video, frame, "classic-chrome");
+  video.pixelVersion = 2;
   preview.render(video, frame, "acros");
+  video.pixelVersion = 3;
   video.videoWidth = 1280;
   video.videoHeight = 720;
   preview.render(video, frame, "acros");
   assert.equal(mock.calls.filter(([name]) => name === "createProgram").length, 1);
   assert.equal(mock.calls.filter(([name]) => name === "createBuffer").length, 1);
   assert.equal(mock.calls.filter(([name]) => name === "createTexture").length, 1);
-  assert.equal(mock.calls.filter(([name]) => name === "texImage2D").length, 2);
-  assert.equal(mock.calls.filter(([name]) => name === "texSubImage2D").length, 1);
+  assert.equal(mock.calls.filter(([name]) => name === "texImage2D").length, 3);
+  assert.equal(mock.calls.filter(([name]) => name === "texSubImage2D").length, 0);
+  assert.deepEqual(mock.uploads, [1, 2, 3], "each draw uploads the current video buffer into the existing texture");
   assert.equal(mock.calls.filter(([name]) => name === "drawArrays").length, 3);
   assert.equal(mock.calls.filter(([name]) => name === "readPixels").length, 0);
   preview.dispose();

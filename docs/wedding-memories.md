@@ -33,9 +33,12 @@ unfiltered source while a photo is under review, then saves the crop visible at
 the moment the guest chooses **Use photo**. Controls leave the rendered imprint
 readable without covering the scene.
 The live Original look displays the camera video directly. Film looks use a
-WebGL preview with a 2D, downscaled fallback when GPU rendering is unavailable;
+WebGL preview, refreshed from each video frame, with a 200 ms callback watchdog
+and paced animation-frame fallback if frame callbacks stop arriving. A 2D,
+downscaled fallback remains available when GPU rendering is unavailable;
 full-resolution capture, frozen review, gallery images, and exports use the
-still-photo renderer.
+still-photo renderer. The iPhone freeze report prompted the callback and texture
+fallbacks; its specific failure mechanism has not been reproduced on a phone.
 The rendered stamp is a restrained burnt-orange, tracked monospace imprint.
 It runs vertically near the lower-left edge on portrait images and horizontally
 at the lower-left on landscape and square images. The event line includes the

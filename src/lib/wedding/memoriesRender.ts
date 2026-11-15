@@ -374,9 +374,6 @@ export function createCameraWebGLPreview(
     context.vertexAttribPointer(texcoord, 2, context.FLOAT, false, 16, 8);
     context.uniform1i(context.getUniformLocation(activeProgram, "u_video"), 0);
 
-    let textureInitialized = false;
-    let textureWidth = 0;
-    let textureHeight = 0;
     let disposed = false;
     let currentCanvasWidth = 0;
     let currentCanvasHeight = 0;
@@ -399,20 +396,9 @@ export function createCameraWebGLPreview(
         }
         context.activeTexture(context.TEXTURE0);
         context.bindTexture(context.TEXTURE_2D, texture);
-        const sourceDimensions = getPhotoDimensions(source);
-        if (
-          !textureInitialized ||
-          sourceDimensions.width !== textureWidth ||
-          sourceDimensions.height !== textureHeight
-        ) {
-          context.texImage2D(context.TEXTURE_2D, 0, context.RGBA, context.RGBA, context.UNSIGNED_BYTE, source);
-          textureInitialized = true;
-          textureWidth = sourceDimensions.width;
-          textureHeight = sourceDimensions.height;
-        } else {
-          // This updates the existing GPU texture directly; no pixel readback or CPU filter pass.
-          context.texSubImage2D(context.TEXTURE_2D, 0, 0, 0, context.RGBA, context.UNSIGNED_BYTE, source);
-        }
+        // Re-specify each video image on the same texture object rather than
+        // relying on same-size live-video texSubImage2D refresh behavior.
+        context.texImage2D(context.TEXTURE_2D, 0, context.RGBA, context.RGBA, context.UNSIGNED_BYTE, source);
         const dimensions = getPhotoDimensions(source);
         const crop = getPhotoCrop(dimensions.width, dimensions.height, frame.aspectRatio);
         const cropUniform = [
