@@ -87,7 +87,7 @@ function CameraSurface({
   onUpload: (file: File) => Promise<void>;
 }) {
   const [film, setFilm] = useState<PhotoFilm>(
-    resolvePhotoFilm(defaults?.film ?? "classic-chrome")
+    resolvePhotoFilm(defaults?.film ?? "fp2")
   );
   const [stamp] = useState(defaults?.stamp ?? MEMORY_HASHTAG);
   const [facing, setFacing] = useState<"environment" | "user">("environment");

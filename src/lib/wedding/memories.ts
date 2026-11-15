@@ -97,7 +97,7 @@ export type MemorySettings = {
 const defaultSettings: MemorySettings = {
   welcome: "Share the moments you captured with us.",
   cover: "",
-  film: "classic-chrome",
+  film: "fp2",
   stamp: MEMORY_HASHTAG,
   bankRecipient: "",
   bankDetails: "",

@@ -34,6 +34,7 @@ const {
   renderPhotoStampLayer,
   createCameraWebGLPreview,
   CAMERA_FILM_FRAGMENT_SHADER,
+  PHOTO_FILM_PRESETS,
 } = renderModule.exports;
 
 test("a camera permission that resolves after close stops every late track", async () => {
@@ -313,13 +314,13 @@ test("WebGL live preview reuses its texture and refreshes it with each live vide
   assert.ok(preview);
   const video = { videoWidth: 640, videoHeight: 480, pixelVersion: 1 };
   const frame = getCameraFrameGeometry(390, 844);
-  preview.render(video, frame, "classic-chrome");
+  preview.render(video, frame, "fp2");
   video.pixelVersion = 2;
-  preview.render(video, frame, "acros");
+  preview.render(video, frame, "fv5");
   video.pixelVersion = 3;
   video.videoWidth = 1280;
   video.videoHeight = 720;
-  preview.render(video, frame, "acros");
+  preview.render(video, frame, "fv5");
   assert.equal(mock.calls.filter(([name]) => name === "createProgram").length, 1);
   assert.equal(mock.calls.filter(([name]) => name === "createBuffer").length, 1);
   assert.equal(mock.calls.filter(([name]) => name === "createTexture").length, 1);
@@ -345,12 +346,14 @@ test("WebGL compile/context-loss failures are observable and can fall back", () 
   assert.equal(lost, 1);
   mock.gl.lost = true;
   assert.throws(
-    () => preview.render({ videoWidth: 640, videoHeight: 480 }, getCameraFrameGeometry(640, 480), "classic-neg"),
+    () => preview.render({ videoWidth: 640, videoHeight: 480 }, getCameraFrameGeometry(640, 480), "fs16"),
     /context was lost/
   );
   preview.dispose();
   assert.ok(CAMERA_FILM_FRAGMENT_SHADER.includes("filmTone"));
-  assert.ok(CAMERA_FILM_FRAGMENT_SHADER.includes("u_film == 4"));
+  assert.deepEqual(PHOTO_FILM_PRESETS.map((preset) => preset.id), ["none", "fp2", "fs16", "fv5"]);
+  for (const index of [1, 2, 3])
+    assert.ok(CAMERA_FILM_FRAGMENT_SHADER.includes(`u_film == ${index}`));
   const throwingCanvas = {
     getContext() { throw new Error("context unavailable"); },
   };

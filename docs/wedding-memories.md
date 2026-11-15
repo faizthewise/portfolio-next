@@ -16,15 +16,15 @@ browser profile; Firebase anonymous identity is browser-specific, not a real
 person identity. Publishing the routes does not activate Firebase services.
 
 The guest hub keeps the name, photo count, and available actions together. The
-camera opens as a full-screen view with Original, Classic Chrome, Classic Neg.,
-Nostalgic Neg., and Acros looks in a horizontal strip. Each captured photo saves
-the selected look and wedding stamp with the image; guests can change the look
-on the frozen preview before saving. Photo originals remain unchanged, while
-gallery views and exports use the same crop, filter, and stamp renderer. The
-shared gallery is available from the hub. The looks are lightweight browser
-approximations inspired by Fujifilm's descriptions, not Fujifilm's proprietary
-camera simulations: [Film Simulation](https://www.fujifilm-x.com/global/products/film-simulation/),
-[X-H2 still-photo manual](https://fujifilm-dsc.com/en-int/manual/x-h2/menu_shooting/image_quality_setting/).
+camera opens as a full-screen view with Original, FP2, FS16, and FV5 looks in a
+horizontal strip. Each captured photo saves the selected look and wedding stamp
+with the image; guests can change the look on the frozen preview before saving.
+Photo originals remain unchanged, while gallery views and exports use the same
+crop, filter, and stamp renderer. The shared gallery is available from the hub.
+The three color looks are local stylistic approximations informed by the
+descriptions for [VSCO Fuji presets](https://www.vsco.co/features/film-filters/fujifilm-presets).
+They are not claims of exact proprietary filter matches; paired VSCO reference
+exports are not available for comparison.
 
 The camera feed fills the viewport; its name, close control, film strip, shutter,
 and upload/flip actions float over the image. Preview and review framing follow
@@ -154,17 +154,16 @@ the live Firebase project still need checking after the one-time setup above.
   reserved slot; if bytes reached Storage before a metadata error, the app checks
   object metadata and commits the matching existing object without overwriting.
 - Original image bytes are retained. Gallery previews and ZIP exports render the
-  selected Original, Classic Chrome, Classic Neg., Nostalgic Neg., or Acros look
-  and custom stamp into a separate styled image; originals remain included in
-  exports.
+  selected Original, FP2, FS16, or FV5 look and custom stamp into a separate
+  styled image; originals remain included in exports.
 - New camera captures persist the guest-selected `film`, `stamp`, and
   `capturedAt` fields as optional `photoStyle` metadata. Older photos without
   this metadata continue to use the couple's current default settings. Firestore
   rules validate the optional map and reject unknown fields or unsupported film
-  values. Legacy `warm` and `soft` values remain accepted and retain their
-  original rendering for existing photos and queued uploads. If an old owner
-  default uses one of those values, the camera and dashboard show Classic Chrome
-  as the closest available new choice; this does not rewrite historical photo
+  values. Legacy `classic-chrome`, `classic-neg`, `nostalgic-neg`, `acros`,
+  `warm`, and `soft` values remain accepted and retain their original rendering
+  for existing photos and queued uploads. Existing owner defaults are shown as
+  FP2 in the camera and dashboard; this does not rewrite historical photo
   metadata.
 - ZIP creation runs in the owner's browser and holds the archive's media in
   memory; available browser memory limits the size of a single export.

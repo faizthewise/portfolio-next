@@ -240,7 +240,7 @@ test("reserved slot accepts original photo bytes once, rejects overwrite and den
     status: "complete",
   };
   const photoStyle = {
-    film: "classic-chrome",
+    film: "fp2",
     stamp: "#GuestChoice",
     capturedAt: Date.now(),
   };
@@ -278,10 +278,11 @@ test("reserved slot accepts original photo bytes once, rejects overwrite and den
   await setDoc(secondPhotoRef, { ...secondPhoto, photoStyle });
   assert.deepEqual((await getDoc(secondPhotoRef)).data().photoStyle, photoStyle);
   for (const [slot, film] of [
-    [3, "classic-neg"],
-    [4, "nostalgic-neg"],
-    [5, "acros"],
+    [3, "fp2"],
+    [4, "fs16"],
+    [5, "fv5"],
     [6, "none"],
+    [7, "classic-neg"],
   ]) {
     const reservation = (await getDoc(doc(guestDb, `${root}/reservations/${uid}_${slot}`))).data();
     const photoPath = `weddings/${event}/memoryAlbums/main/photos/${uid}/${slot}/original`;
@@ -299,7 +300,44 @@ test("reserved slot accepts original photo bytes once, rejects overwrite and den
     });
   }
   const gallery = await getDocs(query(collection(otherDb, `${root}/photos`), where("status", "==", "complete"), where("uid", "==", uid), orderBy("createdAt", "desc"), limit(24)));
-  assert.equal(gallery.size, 6);
+  assert.equal(gallery.size, 7);
+});
+
+test("owner settings rules accept all new looks and reject unknown or guest writes", async () => {
+  const settingsRef = doc(ownerDb, `${root}/public/settings`);
+  const settings = {
+    welcome: "Welcome to our celebration.",
+    cover: "",
+    film: "fp2",
+    stamp: "#FaIzTheOneForHarissa",
+    bankRecipient: "",
+    bankDetails: "",
+    qrUrl: "",
+  };
+  for (const film of ["fp2", "fs16", "fv5"]) {
+    await setDoc(settingsRef, {
+      ...settings,
+      film,
+      updatedAt: serverTimestamp(),
+    });
+    assert.equal((await getDoc(settingsRef)).data().film, film);
+  }
+  await assert.rejects(
+    setDoc(settingsRef, {
+      ...settings,
+      film: "sepia",
+      updatedAt: serverTimestamp(),
+    }),
+    (error) => error.code === "permission-denied"
+  );
+  await assert.rejects(
+    setDoc(doc(guestDb, `${root}/public/settings`), {
+      ...settings,
+      film: "fp2",
+      updatedAt: serverTimestamp(),
+    }),
+    (error) => error.code === "permission-denied"
+  );
 });
 
 test("private voice metadata and bytes stay hidden from other guests", async () => {

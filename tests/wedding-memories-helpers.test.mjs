@@ -156,6 +156,21 @@ test("camera frame crop, filters, and preview/final crop geometry stay consisten
     Array.from(renderer.applyPhotoFilter(original.slice(), "soft")),
     [107, 124, 140, 255]
   );
+  const legacyPatch = new Uint8ClampedArray([184, 122, 98, 173]);
+  for (const [film, expected] of [
+    ["classic-chrome", [174, 125, 106, 173]],
+    ["classic-neg", [192, 121, 93, 173]],
+    ["nostalgic-neg", [185, 124, 97, 173]],
+    ["acros", [137, 137, 137, 173]],
+    ["warm", [200, 126, 86, 173]],
+    ["soft", [179, 129, 110, 173]],
+  ]) {
+    assert.deepEqual(
+      Array.from(renderer.applyPhotoFilter(legacyPatch.slice(), film)),
+      expected,
+      `${film} keeps the original saved-photo rendering`
+    );
+  }
 
   const renderLogs = [];
   const video = { videoWidth: 4000, videoHeight: 3000 };
@@ -403,9 +418,10 @@ test("camera frame crop, filters, and preview/final crop geometry stay consisten
 
 test("film presets are distinct, deterministic, alpha-safe, and preserve tonal detail", () => {
   const ids = renderer.PHOTO_FILM_PRESETS.map((preset) => preset.id);
-  assert.deepEqual(ids, ["none", "classic-chrome", "classic-neg", "nostalgic-neg", "acros"]);
-  assert.equal(renderer.resolvePhotoFilm("warm"), "classic-chrome");
-  assert.equal(renderer.resolvePhotoFilm("soft"), "classic-chrome");
+  assert.deepEqual(ids, ["none", "fp2", "fs16", "fv5"]);
+  for (const legacy of ["classic-chrome", "classic-neg", "nostalgic-neg", "acros", "warm", "soft"])
+    assert.equal(renderer.resolvePhotoFilm(legacy), "fp2");
+  assert.equal(renderer.resolvePhotoFilm("fs16"), "fs16");
   const colors = new Uint8ClampedArray([
     24, 40, 75, 255,
     88, 54, 38, 255,
@@ -418,13 +434,29 @@ test("film presets are distinct, deterministic, alpha-safe, and preserve tonal d
     assert.deepEqual(looks[index], Array.from(renderer.applyPhotoFilter(colors.slice(), film)));
     for (let pixel = 0; pixel < colors.length; pixel += 4)
       assert.equal(looks[index][pixel + 3], colors[pixel + 3]);
-    if (film === "acros") {
-      for (let pixel = 0; pixel < colors.length; pixel += 4) {
-        assert.equal(looks[index][pixel], looks[index][pixel + 1]);
-        assert.equal(looks[index][pixel + 1], looks[index][pixel + 2]);
-      }
-    }
   }
+  const chromaticPatch = [184, 122, 98, 255];
+  const patchChroma = ([red, green, blue]) => Math.max(red, green, blue) - Math.min(red, green, blue);
+  assert.ok(
+    patchChroma(Array.from(renderer.applyPhotoFilter(new Uint8ClampedArray(chromaticPatch), "fp2")).slice(0, 3)) >
+      patchChroma(chromaticPatch),
+    "FP2 enriches color while protecting midtone skin"
+  );
+  assert.ok(
+    patchChroma(Array.from(renderer.applyPhotoFilter(new Uint8ClampedArray(chromaticPatch), "fs16")).slice(0, 3)) <
+      patchChroma(chromaticPatch),
+    "FS16 keeps color more natural"
+  );
+  assert.ok(
+    patchChroma(Array.from(renderer.applyPhotoFilter(new Uint8ClampedArray(chromaticPatch), "fv5")).slice(0, 3)) >
+      patchChroma(Array.from(renderer.applyPhotoFilter(new Uint8ClampedArray(chromaticPatch), "fp2")).slice(0, 3)),
+    "FV5 is the most saturated of the new looks"
+  );
+  const fs16Dark = Array.from(renderer.applyPhotoFilter(new Uint8ClampedArray([20, 20, 20, 255]), "fs16"));
+  assert.ok(fs16Dark[1] > fs16Dark[0] && fs16Dark[1] > fs16Dark[2], "FS16 adds a restrained green-cyan shadow fade");
+  const fs16Highlight = Array.from(renderer.applyPhotoFilter(new Uint8ClampedArray([250, 250, 250, 255]), "fs16"));
+  assert.ok(Math.max(...fs16Highlight.slice(0, 3)) - Math.min(...fs16Highlight.slice(0, 3)) <= 1,
+    "FS16 leaves white fabric nearly neutral");
 
   const grayRamp = new Uint8ClampedArray(256 * 4);
   for (let value = 0; value < 256; value++) {
@@ -445,8 +477,6 @@ test("film presets are distinct, deterministic, alpha-safe, and preserve tonal d
       );
       luminance.push(gray);
       assert.equal(first[index + 3], 255);
-      if (film === "acros")
-        assert.equal(first[index], first[index + 1], "Acros is grayscale");
       if (value) assert.ok(gray >= luminance[value - 1], `${film} tone curve is monotonic`);
     }
     assert.ok(new Set(luminance.slice(0, 26)).size >= 12, `${film} keeps shadow detail`);
@@ -645,7 +675,7 @@ test("favourites persist/removal works and complete owner ZIP contains every med
   await data.saveWish(eventId, "Helper guest", "Best wishes for your new journey.");
   const longStamp = `#FaIzTheOneForHarissa ${"Unbroken".repeat(9)}`;
   const settings = { welcome: "Welcome", cover: "", stamp: longStamp, bankRecipient: "", bankDetails: "", qrUrl: "" };
-  for (const film of ["none", "classic-chrome", "classic-neg", "nostalgic-neg", "acros", "warm", "soft"]) {
+  for (const film of ["none", "fp2", "fs16", "fv5", "classic-chrome", "classic-neg", "nostalgic-neg", "acros", "warm", "soft"]) {
     await data.updateSettings(eventId, { ...settings, film });
     assert.equal((await firestore.getDoc(firestore.doc(owner.db, `${root}/public/settings`))).data().film, film);
   }

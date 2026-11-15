@@ -1,17 +1,25 @@
 export const PHOTO_FILM_PRESETS = [
   { id: "none", name: "Original", description: "Natural color and contrast." },
-  { id: "classic-chrome", name: "Classic Chrome", description: "Muted color with cool, defined shadows." },
-  { id: "classic-neg", name: "Classic Neg.", description: "Crisp contrast with lively color separation." },
-  { id: "nostalgic-neg", name: "Nostalgic Neg.", description: "Amber highlights and deep, rich shadows." },
-  { id: "acros", name: "Acros", description: "Detailed monochrome with gentle tonal contrast." },
+  { id: "fp2", name: "FP2", description: "Fuji Pro 160C: rich color and crisp contrast." },
+  { id: "fs16", name: "FS16", description: "Fuji Superia 1600: natural color, soft contrast, and a green fade." },
+  { id: "fv5", name: "FV5", description: "Fuji Velvia 50: vivid color, strong contrast, and warm magenta tones." },
 ] as const;
 
 export type SelectablePhotoFilm = (typeof PHOTO_FILM_PRESETS)[number]["id"];
-export type PhotoFilm = SelectablePhotoFilm | "warm" | "soft";
+export type LegacyPhotoFilm =
+  | "classic-chrome"
+  | "classic-neg"
+  | "nostalgic-neg"
+  | "acros"
+  | "warm"
+  | "soft";
+export type PhotoFilm = SelectablePhotoFilm | LegacyPhotoFilm;
 
 /** Legacy looks remain available to old records, but are not offered for new photos. */
 export function resolvePhotoFilm(film: PhotoFilm): SelectablePhotoFilm {
-  return film === "warm" || film === "soft" ? "classic-chrome" : film;
+  if (film === "none" || film === "fp2" || film === "fs16" || film === "fv5")
+    return film;
+  return "fp2";
 }
 export type PhotoStyle = {
   film: PhotoFilm;
@@ -160,11 +168,37 @@ export function applyPhotoFilter(
     const highlight =
       smoothstep(0.48, 0.62, luminance) *
       (1 - smoothstep(0.82, 0.96, luminance));
+    const skin = film === "fp2" || film === "fs16" || film === "fv5"
+      ? skinProtection(r, g, b, luminance)
+      : 0;
     let outR = r;
     let outG = g;
     let outB = b;
 
-    if (film === "classic-chrome") {
+    if (film === "fp2") {
+      const tone = filmTone(luminance, 1.27);
+      [outR, outG, outB] = addLuminance(r, g, b, tone);
+      [outR, outG, outB] = saturate(outR, outG, outB, 1.17 - skin * 0.1);
+      outR += highlight * 0.006;
+      outG += shadow * 0.003;
+      outB += shadow * 0.004 - highlight * 0.006;
+    } else if (film === "fs16") {
+      const tone = filmTone(luminance, 0.88) + (1 - luminance) * 0.004;
+      const darkFade = 1 - smoothstep(0.03, 0.32, luminance);
+      [outR, outG, outB] = addLuminance(r, g, b, tone);
+      [outR, outG, outB] = saturate(outR, outG, outB, 0.94 - skin * 0.025);
+      outR -= darkFade * 0.004;
+      outR += highlight * 0.002;
+      outG += darkFade * 0.01 + shadow * 0.012 + highlight * 0.003;
+      outB += darkFade * 0.008 + shadow * 0.006;
+    } else if (film === "fv5") {
+      const tone = filmTone(luminance, 1.34);
+      [outR, outG, outB] = addLuminance(r, g, b, tone);
+      [outR, outG, outB] = saturate(outR, outG, outB, 1.3 - skin * 0.16);
+      outR += shadow * 0.006 + highlight * 0.018;
+      outG -= shadow * 0.004;
+      outB += shadow * 0.009 - highlight * 0.008;
+    } else if (film === "classic-chrome") {
       const tone = filmTone(luminance, 1.14);
       [outR, outG, outB] = addLuminance(r, g, b, tone);
       [outR, outG, outB] = saturate(outR, outG, outB, 0.78);
@@ -222,6 +256,12 @@ function smoothstep(edge0: number, edge1: number, value: number) {
   return t * t * (3 - 2 * t);
 }
 
+function skinProtection(r: number, g: number, b: number, luminance: number) {
+  const warm = smoothstep(0.015, 0.12, r - g) * smoothstep(-0.01, 0.08, g - b);
+  const midtone = smoothstep(0.1, 0.25, luminance) * (1 - smoothstep(0.68, 0.82, luminance));
+  return warm * midtone;
+}
+
 function addLuminance(r: number, g: number, b: number, nextLuminance: number) {
   const oldLuminance = r * 0.2126 + g * 0.7152 + b * 0.0722;
   const delta = nextLuminance - oldLuminance;
@@ -267,6 +307,12 @@ vec3 saturateColor(vec3 color, float amount) {
   float y = lum(color);
   return vec3(y) + (color - vec3(y)) * amount;
 }
+float skinProtection(vec3 color, float y) {
+  float warm = smoothUnit(0.015, 0.12, color.r - color.g)
+    * smoothUnit(-0.01, 0.08, color.g - color.b);
+  float midtone = smoothUnit(0.1, 0.25, y) * (1.0 - smoothUnit(0.68, 0.82, y));
+  return warm * midtone;
+}
 void main() {
   vec2 uv = u_crop.xy + v_texcoord * u_crop.zw;
   vec4 source = texture2D(u_video, uv);
@@ -274,22 +320,22 @@ void main() {
   float y = lum(color);
   float shadow = smoothUnit(0.015, 0.15, y) * (1.0 - smoothUnit(0.3, 0.48, y));
   float highlight = smoothUnit(0.48, 0.62, y) * (1.0 - smoothUnit(0.82, 0.96, y));
+  float skin = skinProtection(color, y);
 
   if (u_film == 1) {
-    color = saturateColor(addLuminance(color, filmTone(y, 1.14)), 0.78);
-    color += vec3(-shadow * 0.014 + highlight * 0.01,
-      shadow * 0.005, shadow * 0.032 - highlight * 0.006);
+    color = saturateColor(addLuminance(color, filmTone(y, 1.27)), 1.17 - skin * 0.1);
+    color += vec3(highlight * 0.006, shadow * 0.003,
+      shadow * 0.004 - highlight * 0.006);
   } else if (u_film == 2) {
-    color = saturateColor(addLuminance(color, filmTone(y, 1.22)), 1.13);
-    color += vec3(-shadow * 0.012 + highlight * 0.021,
-      shadow * 0.009 + highlight * 0.006,
-      shadow * 0.022 - highlight * 0.018);
+    color = saturateColor(addLuminance(color, filmTone(y, 0.88) + (1.0 - y) * 0.004), 0.94 - skin * 0.025);
+    float darkFade = 1.0 - smoothUnit(0.03, 0.32, y);
+    color += vec3(-darkFade * 0.004 + highlight * 0.002,
+      darkFade * 0.01 + shadow * 0.012 + highlight * 0.003,
+      darkFade * 0.008 + shadow * 0.006);
   } else if (u_film == 3) {
-    color = saturateColor(addLuminance(color, filmTone(y, 1.12) - shadow * 0.006), 0.96);
-    color += vec3(highlight * 0.048, highlight * 0.021, -highlight * 0.035 + shadow * 0.012);
-  } else if (u_film == 4) {
-    float mono = dot(color, vec3(0.27, 0.63, 0.1));
-    color = vec3(filmTone(mono, 1.2));
+    color = saturateColor(addLuminance(color, filmTone(y, 1.34)), 1.3 - skin * 0.16);
+    color += vec3(shadow * 0.006 + highlight * 0.018,
+      -shadow * 0.004, shadow * 0.009 - highlight * 0.008);
   }
   gl_FragColor = vec4(clamp(color, 0.0, 1.0), source.a);
 }

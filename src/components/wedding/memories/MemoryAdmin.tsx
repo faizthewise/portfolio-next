@@ -39,7 +39,7 @@ import styles from "./Memories.module.css";
 const emptySettings: MemorySettings = {
   welcome: "",
   cover: "",
-  film: "classic-chrome",
+  film: "fp2",
   stamp: "#FaIzTheOneForHarissa",
   bankRecipient: "",
   bankDetails: "",
