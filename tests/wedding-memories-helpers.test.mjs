@@ -157,101 +157,248 @@ test("camera frame crop, filters, and preview/final crop geometry stay consisten
     [107, 124, 140, 255]
   );
 
-  const drawCalls = [];
   const renderLogs = [];
+  const video = { videoWidth: 4000, videoHeight: 3000 };
   const makeCanvas = (width, height) => {
-    const log = { width, height, texts: [], fills: [], saves: 0, restores: 0 };
+    const log = { width, height, commands: [], saves: 0, restores: 0 };
     renderLogs.push(log);
-    let fontSize = 0;
+    let font = "700 10px monospace";
+    let fillStyle = "";
+    let shadowColor = "";
     const context = {
-      save() { log.saves++; },
-      restore() { log.restores++; },
-      clearRect() {},
-      drawImage(...args) { drawCalls.push(args); },
-      set font(value) {
-        fontSize = Number.parseFloat(value);
-        log.fontSize = fontSize;
+      save() { log.saves++; log.commands.push({ type: "save" }); },
+      restore() { log.restores++; log.commands.push({ type: "restore" }); },
+      clearRect(...args) { log.commands.push({ type: "clearRect", args }); },
+      drawImage(...args) { log.commands.push({ type: "drawImage", args }); },
+      set font(value) { font = value; log.commands.push({ type: "font", value }); },
+      get font() { return font; },
+      set fillStyle(value) { fillStyle = value; log.commands.push({ type: "fillStyle", value }); },
+      set shadowColor(value) { shadowColor = value; log.commands.push({ type: "shadowColor", value }); },
+      set shadowBlur(value) { log.commands.push({ type: "shadowBlur", value }); },
+      set textAlign(value) { log.commands.push({ type: "textAlign", value }); },
+      set textBaseline(value) { log.commands.push({ type: "textBaseline", value }); },
+      translate(x, y) { log.commands.push({ type: "translate", x, y }); },
+      rotate(angle) { log.commands.push({ type: "rotate", angle }); },
+      measureText(value) {
+        return { width: Array.from(value).length * Number.parseFloat(font.match(/([\d.]+)px/)[1]) * 0.6 };
       },
-      measureText(value) { return { width: value.length * fontSize * 0.52 }; },
-      createLinearGradient(...args) { log.gradient = args; return { addColorStop() {} }; },
-      fillRect(...args) { log.fills.push(args); },
-      fillText(value, x, y, maxWidth) { log.texts.push({ value, x, y, maxWidth }); },
-      getImageData(_x, _y, w, h) {
-        return { data: new Uint8ClampedArray(w * h * 4) };
-      },
+      fillText(value, x, y) { log.commands.push({ type: "fillText", value, x, y, font, fillStyle, shadowColor }); },
+      getImageData(_x, _y, width, height) { return { data: new Uint8ClampedArray(width * height * 4) }; },
       putImageData() {},
     };
     return { width, height, getContext: () => context };
   };
-  const video = { videoWidth: 4000, videoHeight: 3000 };
+  const capturedAt = Date.parse("2026-11-14T16:27:00Z");
   const style = {
     film: "none",
-    stamp: "#GuestChoice",
-    capturedAt: Date.now(),
+    stamp: "#guestChoice",
+    capturedAt,
     coupleNames: "Harissa & Faiz",
   };
   const previousDocument = globalThis.document;
-  globalThis.document = { createElement: () => makeCanvas(960, 1200) };
+  globalThis.document = { createElement: () => makeCanvas(900, 1600) };
   try {
-    renderer.renderPhotoCanvasInto(video, makeCanvas(360, 450), style);
+    const portraitPreview = makeCanvas(360, 640);
+    renderer.renderPhotoCanvasInto(video, portraitPreview, style);
     renderer.renderPhotoCanvas(video, {
       ...style,
-      aspectRatio: 4 / 5,
-      outputWidth: 960,
-      outputHeight: 1200,
+      aspectRatio: 9 / 16,
+      outputWidth: 900,
+      outputHeight: 1600,
     });
-    const blankStamp = renderer.renderPhotoCanvas(video, {
+    renderer.renderPhotoCanvasInto(video, makeCanvas(640, 360), {
+      ...style,
+      aspectRatio: 16 / 9,
+    });
+    renderer.renderPhotoCanvasInto(video, makeCanvas(640, 360), {
+      ...style,
+      stamp: "x".repeat(100),
+      aspectRatio: 16 / 9,
+    });
+    renderer.renderPhotoCanvasInto(video, makeCanvas(360, 640), {
       ...style,
       stamp: "",
-      aspectRatio: 4 / 5,
-      outputWidth: 360,
-      outputHeight: 450,
+      aspectRatio: 9 / 16,
     });
-    assert.equal(blankStamp.width, 360);
   } finally {
     globalThis.document = previousDocument;
   }
-  assert.deepEqual(drawCalls[0].slice(1, 5), drawCalls[1].slice(1, 5));
-  const preview = renderLogs[0];
-  const final = renderLogs[1];
-  assert.deepEqual(
-    preview.texts.map((entry) => entry.value),
-    final.texts.map((entry) => entry.value)
+
+  const caption = "* HARISSA & FAIZ | 15 NOV 2026 12:27 AM";
+  assert.equal(renderer.formatPhotoStampDate(capturedAt), "15 NOV 2026 12:27 AM");
+  assert.equal(renderer.formatPhotoStampCaption(style.coupleNames, capturedAt), caption);
+  const portraitPreview = renderLogs[0];
+  const portraitFull = renderLogs[1];
+  const portraitCommands = portraitPreview.commands;
+  assert.ok(portraitCommands.some((command) => command.type === "rotate" && command.angle === Math.PI / 2));
+  assert.ok(portraitCommands.some((command) => command.type === "fillStyle" && command.value === "#df7137"));
+  assert.ok(portraitCommands.some((command) => command.type === "font" && command.value.includes("'Courier New'")));
+  assert.ok(portraitCommands.some((command) => command.type === "shadowColor"));
+  assert.ok(portraitCommands.some((command) => command.type === "fillText" && command.value === "*"));
+  assert.ok(!portraitCommands.some((command) => ["fillRect", "createLinearGradient"].includes(command.type)));
+  const drawn = portraitCommands.filter((command) => command.type === "fillText");
+  assert.ok(drawn.map((command) => command.value).join("").includes(caption));
+  assert.ok(drawn.map((command) => command.value).join("").includes("#guestChoice"));
+  assert.ok(
+    drawn[1].x - drawn[0].x > 5,
+    "per-character tracking should be visible at preview scale"
   );
-  assert.ok(preview.texts.some((entry) => entry.value === "#GuestChoice"));
-  assert.ok(preview.texts.some((entry) => entry.value === "Harissa & Faiz"));
-  assert.ok(preview.texts.some((entry) => entry.value.includes("2026")));
-  const round = (value) => Number(value.toFixed(6));
-  const normalized = (log) => ({
-    fontSize: round(log.fontSize / log.height),
-    gradient: log.gradient.map((value, index) =>
-      round(value / (index % 2 ? log.height : log.width))
-    ),
-    fills: log.fills.map(([x, y, width, height]) => [
-      round(x / log.width),
-      round(y / log.height),
-      round(width / log.width),
-      round(height / log.height),
-    ]),
-    texts: log.texts.map(({ value, x, y, maxWidth }) => [
-      value,
-      round(x / log.width),
-      round(y / log.height),
-      round(maxWidth / log.width),
-    ]),
-  });
-  const previewGeometry = normalized(preview);
-  const finalGeometry = normalized(final);
-  assert.deepEqual(previewGeometry.texts.map((x) => x[0]), finalGeometry.texts.map((x) => x[0]));
-  for (const key of ["fontSize", "gradient", "fills", "texts"]) {
-    const left = JSON.stringify(previewGeometry[key]);
-    const right = JSON.stringify(finalGeometry[key]);
-    assert.equal(left, right, `${key} should scale proportionally`);
+  assert.equal(portraitPreview.saves, portraitPreview.restores);
+
+  const makeMetricContext = (log) => {
+    let font = "700 10px monospace";
+    return {
+      save() {}, restore() {},
+      set font(value) { font = value; log.font = value; },
+      measureText(value) {
+        return { width: Array.from(value).length * Number.parseFloat(font.match(/([\d.]+)px/)[1]) * 0.6 };
+      },
+    };
+  };
+  const metricStyle = { stamp: "#guestChoice", capturedAt, coupleNames: "Harissa & Faiz" };
+  const portraitLayout = renderer.getPhotoStampLayout(makeMetricContext({}), 360, 640, metricStyle);
+  const portraitFullLayout = renderer.getPhotoStampLayout(makeMetricContext({}), 900, 1600, metricStyle);
+  const normalizedLayout = (layout, width, height) => {
+    const norm = (value) => Number(value.toFixed(4));
+    return {
+      bounds: [layout.bounds.x / width, layout.bounds.y / height, layout.bounds.width / width, layout.bounds.height / height].map(norm),
+      reservedLeft: norm(layout.reservedLeft / width),
+      reservedBottom: norm(layout.reservedBottom / height),
+      main: layout.mainPositions.map(({ x, y, rotated }) => [norm(x / width), norm(y / height), rotated]),
+      custom: layout.customPositions.map(({ x, y, rotated }) => [norm(x / width), norm(y / height), rotated]),
+    };
+  };
+  assert.equal(portraitLayout.orientation, "portrait");
+  assert.ok(portraitLayout.reservedLeft > 0);
+  assert.ok(portraitLayout.reservedBottom < 120, "portrait only reserves modest safe-edge space below");
+  assert.deepEqual(normalizedLayout(portraitLayout, 360, 640), normalizedLayout(portraitFullLayout, 900, 1600));
+  assert.ok(Math.abs(
+    portraitLayout.mainPositions[0].y +
+      portraitLayout.mainLines[0].length * portraitLayout.fontSize * 0.6 +
+      (portraitLayout.mainLines[0].length - 1) * portraitLayout.letterSpacing -
+      (640 - portraitLayout.edgeInset)
+  ) < 0.1);
+
+  const boundaryAspect = 414 / 450;
+  const roundedPreview = renderer.getPhotoStampLayout(
+    makeMetricContext({}),
+    662,
+    720,
+    { ...metricStyle, aspectRatio: boundaryAspect }
+  );
+  const roundedCapture = renderer.getPhotoStampLayout(
+    makeMetricContext({}),
+    1472,
+    1600,
+    { ...metricStyle, aspectRatio: boundaryAspect }
+  );
+  assert.equal(roundedPreview.orientation, "landscape");
+  assert.equal(roundedCapture.orientation, "landscape");
+  assert.deepEqual(
+    normalizedLayout(roundedPreview, 662, 720).main.map(([x, y, rotated]) => [x, y, rotated]),
+    normalizedLayout(roundedCapture, 1472, 1600).main.map(([x, y, rotated]) => [x, y, rotated])
+  );
+  assert.equal(
+    renderer.getPhotoStampLayout(makeMetricContext({}), 662, 720, {
+      ...metricStyle,
+      aspectRatio: 0.919,
+    }).orientation,
+    "portrait"
+  );
+  for (const viewportWidth of [413.95, 414, 414.05]) {
+    const frame = renderer.getCameraFrameGeometry(viewportWidth, 450);
+    const canonicalStampAspect = frame.captureWidth / frame.captureHeight;
+    const styleForFrame = {
+      ...metricStyle,
+      aspectRatio: frame.aspectRatio,
+      stampAspectRatio: canonicalStampAspect,
+    };
+    const previewLayout = renderer.getPhotoStampLayout(
+      makeMetricContext({}),
+      frame.previewWidth,
+      frame.previewHeight,
+      styleForFrame
+    );
+    const captureLayout = renderer.getPhotoStampLayout(
+      makeMetricContext({}),
+      frame.captureWidth,
+      frame.captureHeight,
+      styleForFrame
+    );
+    const thumbnailScale = 720 / Math.max(frame.captureWidth, frame.captureHeight);
+    const thumbnailLayout = renderer.getPhotoStampLayout(
+      makeMetricContext({}),
+      Math.round(frame.captureWidth * thumbnailScale),
+      Math.round(frame.captureHeight * thumbnailScale),
+      { ...metricStyle, stampAspectRatio: canonicalStampAspect }
+    );
+    assert.equal(previewLayout.orientation, "landscape");
+    assert.equal(captureLayout.orientation, previewLayout.orientation);
+    assert.equal(thumbnailLayout.orientation, captureLayout.orientation);
   }
-  assert.equal(preview.saves, preview.restores);
-  assert.equal(final.saves, final.restores);
-  assert.ok(renderLogs[2].texts.some((entry) => entry.value === "Harissa & Faiz"));
-  assert.ok(renderLogs[2].texts.some((entry) => entry.value.includes("2026")));
+
+  const landscapeLayout = renderer.getPhotoStampLayout(
+    makeMetricContext({}),
+    640,
+    360,
+    metricStyle
+  );
+  const longStamp = renderer.getPhotoStampLayout(
+    makeMetricContext({}),
+    320,
+    180,
+    { ...metricStyle, stamp: "#" + "LongStamp".repeat(11), aspectRatio: 16 / 9 }
+  );
+  const blankStamp = renderer.getPhotoStampLayout(
+    makeMetricContext({}),
+    640,
+    360,
+    { ...metricStyle, stamp: "" }
+  );
+  assert.equal(landscapeLayout.orientation, "landscape");
+  assert.equal(landscapeLayout.reservedLeft, 0);
+  assert.ok(landscapeLayout.reservedBottom >= landscapeLayout.bounds.height);
+  assert.ok(
+    landscapeLayout.customBounds.y + landscapeLayout.customBounds.height < landscapeLayout.mainBounds.y,
+    "the secondary stamp block sits completely above the main event line"
+  );
+  const expectedMainWidth = Math.max(
+    ...landscapeLayout.mainLines.map((line) =>
+      Array.from(line).length * landscapeLayout.fontSize * 0.6 +
+      Math.max(0, Array.from(line).length - 1) * landscapeLayout.letterSpacing
+    )
+  );
+  assert.ok(
+    Math.abs(landscapeLayout.mainBounds.width - expectedMainWidth) < 0.001,
+    "main bounds use the main font metrics, not the secondary font"
+  );
+  assert.ok(longStamp.customLines.every((line) => line.length > 0));
+  assert.ok(
+    longStamp.customLines.every(
+      (line) =>
+        line.length * longStamp.secondaryFontSize * 0.6 +
+          (line.length - 1) * longStamp.secondaryLetterSpacing <=
+          320 - longStamp.edgeInset * 2
+    ),
+    "wrapped custom text stays inside its bounded axis"
+  );
+  assert.deepEqual(blankStamp.customLines, []);
+  assert.ok(blankStamp.mainLines.join(" ").includes(caption));
+  const squareLongStamp = renderer.getPhotoStampLayout(
+    makeMetricContext({}),
+    1200,
+    1200,
+    { ...metricStyle, stamp: "#" + "LongStamp".repeat(11) }
+  );
+  assert.equal(squareLongStamp.orientation, "landscape");
+  assert.equal(squareLongStamp.mainLines.length, 1, "the main caption remains readable on a square image");
+  assert.ok(squareLongStamp.customLines.length > 1, "a long custom stamp wraps within the square image axis");
+  assert.ok(
+    squareLongStamp.customBounds.y + squareLongStamp.customBounds.height < squareLongStamp.mainBounds.y,
+    "square custom text does not collide with the event caption"
+  );
+  assert.equal(portraitFull.commands.filter((command) => command.type === "fillText").length, drawn.length);
+
 });
 
 test("film presets are distinct, deterministic, alpha-safe, and preserve tonal detail", () => {
@@ -549,8 +696,8 @@ test("favourites persist/removal works and complete owner ZIP contains every med
   assert.ok(manifest.publicVoices.some((voice) => voice.uid === baseUid));
   const stamps = stampLines.join(" ");
   assert.match(stamps.replace(/\s+/g, ""), /FaIzTheOneForHarissa/);
-  assert.match(stamps, /Harissa & Faiz/);
-  assert.match(stamps, /2026/);
+  const compactStamp = stamps.replace(/\s+/g, "");
+  assert.match(compactStamp, /\*HARISSA&FAIZ\|15NOV2026/);
   assert.ok(
     stampLines.every((line) => line.length * 8 <= 90),
     "each rendered stamp line must fit within 90% of the 100px canvas width"

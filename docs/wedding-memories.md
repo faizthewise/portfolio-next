@@ -26,6 +26,19 @@ approximations inspired by Fujifilm's descriptions, not Fujifilm's proprietary
 camera simulations: [Film Simulation](https://www.fujifilm-x.com/global/products/film-simulation/),
 [X-H2 still-photo manual](https://fujifilm-dsc.com/en-int/manual/x-h2/menu_shooting/image_quality_setting/).
 
+The camera feed fills the viewport; its name, close control, film strip, shutter,
+and upload/flip actions float over the image. Preview and review framing follow
+the current viewport aspect, including after device rotation. The app keeps the
+unfiltered source while a photo is under review, then saves the crop visible at
+the moment the guest chooses **Use photo**. Controls leave the rendered imprint
+readable without covering the scene.
+The rendered stamp is a restrained burnt-orange, tracked monospace imprint.
+It runs vertically near the lower-left edge on portrait images and horizontally
+at the lower-left on landscape and square images. The event line includes the
+capture time in Malaysia time; the exact custom hashtag or message appears as a
+smaller secondary imprint. The same layout is used in live preview, review,
+gallery images, and exports.
+
 ## One-time Firebase setup
 
 1. In Firebase project `jemputan-kahwin-6bd29`, create the default Firestore

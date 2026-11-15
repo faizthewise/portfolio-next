@@ -22,6 +22,8 @@ export type PhotoStyle = {
 export type PhotoRenderOptions = PhotoStyle & {
   coupleNames: string;
   aspectRatio?: number;
+  /** Display imprint direction from the canonical saved frame, not rounded preview pixels. */
+  stampAspectRatio?: number;
   maxDimension?: number;
   outputWidth?: number;
   outputHeight?: number;
@@ -33,6 +35,60 @@ export type PhotoCrop = {
   y: number;
   width: number;
   height: number;
+};
+
+export type CameraFrameGeometry = {
+  aspectRatio: number;
+  previewWidth: number;
+  previewHeight: number;
+  captureWidth: number;
+  captureHeight: number;
+};
+
+export function getCameraFrameGeometry(
+  viewportWidth: number,
+  viewportHeight: number,
+  previewLongEdge = 720,
+  captureLongEdge = 1600
+): CameraFrameGeometry {
+  if (!(viewportWidth > 0 && viewportHeight > 0))
+    throw new Error("Camera viewport dimensions are not ready.");
+  const viewportLongEdge = Math.max(viewportWidth, viewportHeight);
+  const dimensionsFor = (longEdge: number) => {
+    const scale = longEdge / viewportLongEdge;
+    return {
+      width: Math.max(1, Math.round(viewportWidth * scale)),
+      height: Math.max(1, Math.round(viewportHeight * scale)),
+    };
+  };
+  const preview = dimensionsFor(previewLongEdge);
+  const capture = dimensionsFor(captureLongEdge);
+  return {
+    aspectRatio: viewportWidth / viewportHeight,
+    previewWidth: preview.width,
+    previewHeight: preview.height,
+    captureWidth: capture.width,
+    captureHeight: capture.height,
+  };
+}
+
+export type PhotoStampLayout = {
+  orientation: "portrait" | "landscape";
+  bounds: { x: number; y: number; width: number; height: number };
+  mainBounds: { x: number; y: number; width: number; height: number };
+  customBounds: { x: number; y: number; width: number; height: number } | null;
+  reservedLeft: number;
+  reservedBottom: number;
+  caption: string;
+  mainLines: string[];
+  customLines: string[];
+  mainPositions: { x: number; y: number; rotated: boolean }[];
+  customPositions: { x: number; y: number; rotated: boolean }[];
+  fontSize: number;
+  secondaryFontSize: number;
+  letterSpacing: number;
+  secondaryLetterSpacing: number;
+  edgeInset: number;
 };
 
 export function getPhotoDimensions(source: CanvasImageSource) {
@@ -182,11 +238,24 @@ function saturate(r: number, g: number, b: number, amount: number) {
 }
 
 export function formatPhotoStampDate(capturedAt: number) {
-  return new Intl.DateTimeFormat("en-MY", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Kuala_Lumpur",
-  }).format(new Date(capturedAt));
+  const values = new Map(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kuala_Lumpur",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    })
+      .formatToParts(new Date(capturedAt))
+      .map((part) => [part.type, part.value])
+  );
+  return `${values.get("day")} ${values.get("month")?.toUpperCase()} ${values.get("year")} ${values.get("hour")}:${values.get("minute")} ${values.get("dayPeriod")?.toUpperCase()}`;
+}
+
+export function formatPhotoStampCaption(coupleNames: string, capturedAt: number) {
+  return `* ${coupleNames.toLocaleUpperCase("en-US")} | ${formatPhotoStampDate(capturedAt)}`;
 }
 
 export function renderPhotoCanvas(
@@ -217,6 +286,44 @@ export function renderPhotoCanvas(
     Math.round(options.outputHeight ?? crop.height * scale)
   );
   return renderPhotoCanvasInto(source, canvas, options, crop);
+}
+
+export function renderCameraFrameInto(
+  source: CanvasImageSource,
+  canvas: HTMLCanvasElement,
+  frame: Pick<CameraFrameGeometry, "aspectRatio" | "captureWidth" | "captureHeight">,
+  options: PhotoRenderOptions
+) {
+  const dimensions = getPhotoDimensions(source);
+  const crop = getPhotoCrop(
+    dimensions.width,
+    dimensions.height,
+    frame.aspectRatio
+  );
+  return renderPhotoCanvasInto(
+    source,
+    canvas,
+    {
+      ...options,
+      aspectRatio: frame.aspectRatio,
+      stampAspectRatio: frame.captureWidth / frame.captureHeight,
+    },
+    crop
+  );
+}
+
+export function renderCameraFrame(
+  source: CanvasImageSource,
+  frame: CameraFrameGeometry,
+  options: PhotoRenderOptions
+) {
+  return renderPhotoCanvas(source, {
+    ...options,
+    aspectRatio: frame.aspectRatio,
+    stampAspectRatio: frame.captureWidth / frame.captureHeight,
+    outputWidth: frame.captureWidth,
+    outputHeight: frame.captureHeight,
+  });
 }
 
 export function renderPhotoCanvasInto(
@@ -252,7 +359,11 @@ export function renderPhotoCanvasInto(
       context.putImageData(image, 0, 0);
     }
     if (options.includeStamp !== false)
-      drawPhotoStamp(context, canvas, options);
+      drawPhotoStamp(context, canvas, {
+        ...options,
+        stampAspectRatio:
+          options.stampAspectRatio ?? options.aspectRatio ?? crop.width / crop.height,
+      });
     return canvas;
   } finally {
     context.restore();
@@ -295,48 +406,278 @@ function drawPhotoStamp(
   canvas: HTMLCanvasElement,
   options: PhotoRenderOptions
 ) {
-  const shortEdge = Math.min(canvas.width, canvas.height);
-  const fontSize = Math.max(1, shortEdge * 0.035);
-  context.font = `${fontSize}px Georgia, serif`;
-  const maxWidth = canvas.width * 0.9;
-  const lines = [
-    ...(options.stamp.trim()
-      ? wrapPhotoStampLine(context, options.stamp.trim(), maxWidth)
-      : []),
-    ...wrapPhotoStampLine(context, options.coupleNames, maxWidth),
-    ...wrapPhotoStampLine(
-      context,
-      formatPhotoStampDate(options.capturedAt),
-      maxWidth
-    ),
-  ];
-  const lineHeight = fontSize * 1.25;
-  const bandHeight = lines.length * lineHeight + fontSize * 1.1;
-  const gradient = context.createLinearGradient(
-    0,
-    canvas.height - bandHeight,
-    0,
-    canvas.height
-  );
-  gradient.addColorStop(0, "rgba(22,24,20,0)");
-  gradient.addColorStop(0.32, "rgba(22,24,20,.55)");
-  gradient.addColorStop(1, "rgba(22,24,20,.74)");
-  context.fillStyle = gradient;
-  context.fillRect(0, canvas.height - bandHeight, canvas.width, bandHeight);
-  context.fillStyle = "#fffdf8";
-  context.shadowColor = "rgba(0,0,0,.3)";
-  context.shadowBlur = Math.max(1, fontSize / 5);
-  context.textAlign = "right";
-  lines.forEach((line, index) =>
-    context.fillText(
-      line,
-      canvas.width * 0.95,
-      canvas.height -
-        fontSize * 0.45 -
-        (lines.length - index - 1) * lineHeight,
-      maxWidth
-    )
-  );
+  const layout = getPhotoStampLayout(context, canvas.width, canvas.height, options);
+  context.save();
+  try {
+    context.fillStyle = "#df7137";
+    context.shadowColor = "rgba(223, 113, 55, .38)";
+    context.shadowBlur = Math.max(1, layout.fontSize * 0.1);
+    context.textAlign = "left";
+    context.textBaseline = "alphabetic";
+
+    context.font = `700 ${layout.fontSize}px 'Courier New', monospace`;
+    layout.mainLines.forEach((line, index) => {
+      drawStampLine(context, line, layout.mainPositions[index], layout.letterSpacing);
+    });
+
+    context.font = `700 ${layout.secondaryFontSize}px 'Courier New', monospace`;
+    context.shadowBlur = Math.max(1, layout.secondaryFontSize * 0.08);
+    layout.customLines.forEach((line, index) => {
+      drawStampLine(
+        context,
+        line,
+        layout.customPositions[index],
+        layout.secondaryLetterSpacing
+      );
+    });
+  } finally {
+    context.restore();
+  }
+}
+
+function drawStampLine(
+  context: CanvasRenderingContext2D,
+  line: string,
+  position: PhotoStampLayout["mainPositions"][number],
+  spacing: number
+) {
+  context.save();
+  try {
+    if (position.rotated) {
+      context.translate(position.x, position.y);
+      context.rotate(Math.PI / 2);
+      drawTrackedText(context, line, 0, 0, spacing);
+    } else drawTrackedText(context, line, position.x, position.y, spacing);
+  } finally {
+    context.restore();
+  }
+}
+
+function drawTrackedText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  spacing: number
+) {
+  let cursor = x;
+  for (const character of Array.from(text)) {
+    context.fillText(character, cursor, y);
+    cursor += context.measureText(character).width + spacing;
+  }
+}
+
+function trackedWidth(
+  context: Pick<CanvasRenderingContext2D, "measureText">,
+  text: string,
+  spacing: number
+) {
+  const characters = Array.from(text);
+  return characters.reduce((width, character) => width + context.measureText(character).width, 0) +
+    Math.max(0, characters.length - 1) * spacing;
+}
+
+function wrapTrackedText(
+  context: Pick<CanvasRenderingContext2D, "measureText">,
+  text: string,
+  maxWidth: number,
+  spacing: number
+) {
+  const lines: string[] = [];
+  let line = "";
+  for (const token of text.match(/\s+|\S+/g) ?? []) {
+    if (/^\s+$/.test(token)) {
+      if (line && trackedWidth(context, line + token, spacing) <= maxWidth)
+        line += token;
+      continue;
+    }
+    if (line && trackedWidth(context, line + token, spacing) <= maxWidth) {
+      line += token;
+      continue;
+    }
+    if (line) {
+      lines.push(line.trimEnd());
+      line = "";
+    }
+    let fragment = "";
+    for (const character of Array.from(token)) {
+      if (fragment && trackedWidth(context, fragment + character, spacing) > maxWidth) {
+        lines.push(fragment);
+        fragment = character;
+      } else fragment += character;
+    }
+    line = fragment;
+  }
+  if (line) lines.push(line.trimEnd());
+  return lines.length ? lines : [""];
+}
+
+export function getPhotoStampLayout(
+  context: Pick<CanvasRenderingContext2D, "save" | "restore" | "font" | "measureText">,
+  width: number,
+  height: number,
+  options: Pick<PhotoRenderOptions, "stamp" | "capturedAt" | "coupleNames" | "aspectRatio" | "stampAspectRatio">
+): PhotoStampLayout {
+  const shortEdge = Math.min(width, height);
+  const fontSize = Math.max(1, shortEdge * 0.025);
+  const secondaryFontSize = fontSize * 0.58;
+  const letterSpacing = fontSize * 0.1;
+  const secondaryLetterSpacing = secondaryFontSize * 0.12;
+  const edgeInset = Math.max(1, shortEdge * 0.047);
+  const portrait = (options.stampAspectRatio ?? options.aspectRatio ?? width / height) < 0.92;
+  const orientation = portrait ? "portrait" : "landscape";
+  const caption = formatPhotoStampCaption(options.coupleNames, options.capturedAt);
+  const maxAxis = Math.max(fontSize * 1.2, (portrait ? height : width) - edgeInset * 2);
+  context.save();
+  try {
+    context.font = `700 ${fontSize}px 'Courier New', monospace`;
+    const mainLines = wrapTrackedText(context, caption, maxAxis, letterSpacing);
+    const mainWidths = mainLines.map((line) =>
+      trackedWidth(context, line, letterSpacing)
+    );
+    context.font = `700 ${secondaryFontSize}px 'Courier New', monospace`;
+    const customLines = options.stamp
+      ? wrapTrackedText(context, options.stamp, maxAxis, secondaryLetterSpacing)
+      : [];
+    const customWidths = customLines.map((line) =>
+      trackedWidth(context, line, secondaryLetterSpacing)
+    );
+
+    let mainPositions: PhotoStampLayout["mainPositions"];
+    let customPositions: PhotoStampLayout["customPositions"];
+    let bounds: PhotoStampLayout["bounds"];
+    let mainBounds: PhotoStampLayout["mainBounds"];
+    let customBounds: PhotoStampLayout["customBounds"] = null;
+    let reservedLeft = 0;
+    let reservedBottom = 0;
+
+    if (portrait) {
+      const mainColumnGap = fontSize * 0.42;
+      const mainColumnWidth = fontSize + mainColumnGap;
+      const customColumnGap = secondaryFontSize * 0.35;
+      const customColumnWidth = secondaryFontSize + customColumnGap;
+      const customStartX = edgeInset + mainLines.length * mainColumnWidth + fontSize * 0.2;
+      mainPositions = mainLines.map((line, index) => ({
+        x: edgeInset + index * mainColumnWidth,
+        y: height - edgeInset - mainWidths[index],
+        rotated: true,
+      }));
+      customPositions = customLines.map((line, index) => ({
+        x: customStartX + index * customColumnWidth,
+        y: height - edgeInset - customWidths[index],
+        rotated: true,
+      }));
+      const mainTop = Math.min(...mainPositions.map((position) => position.y));
+      mainBounds = {
+        x: edgeInset,
+        y: mainTop - fontSize * 0.85,
+        width: mainLines.length * fontSize + (mainLines.length - 1) * mainColumnGap,
+        height: height - edgeInset - (mainTop - fontSize * 0.85),
+      };
+      if (customPositions.length) {
+        const customTop = Math.min(...customPositions.map((position) => position.y));
+        customBounds = {
+          x: customStartX,
+          y: customTop - secondaryFontSize * 0.85,
+          width: customLines.length * secondaryFontSize + (customLines.length - 1) * customColumnGap,
+          height: height - edgeInset - (customTop - secondaryFontSize * 0.85),
+        };
+      }
+      const textRight = customPositions.length
+        ? customPositions.at(-1)!.x + secondaryFontSize
+        : mainPositions.at(-1)!.x + fontSize;
+      const top = Math.min(mainBounds.y, customBounds?.y ?? height - edgeInset);
+      bounds = {
+        x: edgeInset,
+        y: top,
+        width: textRight - edgeInset,
+        height: height - edgeInset - top,
+      };
+      reservedLeft = textRight + edgeInset * 0.28;
+      reservedBottom = edgeInset + fontSize * 0.35;
+    } else {
+      const mainLineHeight = fontSize * 1.32;
+      const secondaryLineHeight = secondaryFontSize * 1.3;
+      const gap = customLines.length ? secondaryFontSize * 0.7 : 0;
+      mainPositions = mainLines.map((_, index) => ({
+        x: edgeInset,
+        y: height - edgeInset - (mainLines.length - index - 1) * mainLineHeight,
+        rotated: false,
+      }));
+      const customBottom =
+        (mainPositions[0]?.y ?? height - edgeInset) -
+        (customLines.length ? fontSize * 1.2 : 0);
+      customPositions = customLines.map((_, index) => ({
+        x: edgeInset,
+        y: customBottom - (customLines.length - index - 1) * secondaryLineHeight,
+        rotated: false,
+      }));
+      const mainTop = (mainPositions[0]?.y ?? height - edgeInset) - fontSize * 0.85;
+      const mainBottom =
+        (mainPositions.at(-1)?.y ?? height - edgeInset) + fontSize * 0.2;
+      // mainWidths were measured before switching the context to the smaller
+      // secondary font. Keep the reported bounds aligned with the painted line.
+      const mainWidth = Math.max(...mainWidths, 0);
+      mainBounds = {
+        x: edgeInset,
+        y: mainTop,
+        width: mainWidth,
+        height: mainBottom - mainTop,
+      };
+      if (customPositions.length) {
+        const customTop = customPositions[0].y - secondaryFontSize * 0.85;
+        const customBottom = customPositions.at(-1)!.y + secondaryFontSize * 0.2;
+        const customWidth = Math.max(
+          ...customLines.map((line) => trackedWidth(context, line, secondaryLetterSpacing)),
+          0
+        );
+        customBounds = {
+          x: edgeInset,
+          y: customTop,
+          width: customWidth,
+          height: customBottom - customTop,
+        };
+      }
+      const right = Math.max(
+        ...mainWidths.map((lineWidth) => edgeInset + lineWidth),
+        ...customWidths.map((lineWidth) => edgeInset + lineWidth),
+        edgeInset
+      );
+      const textTop = Math.min(mainBounds.y, customBounds?.y ?? mainBounds.y);
+      const textBottom = Math.max(
+        mainBounds.y + mainBounds.height,
+        (customBounds?.y ?? 0) + (customBounds?.height ?? 0)
+      );
+      bounds = {
+        x: edgeInset,
+        y: textTop,
+        width: right - edgeInset,
+        height: textBottom - textTop,
+      };
+      reservedBottom = height - bounds.y + gap + edgeInset * 0.25;
+    }
+
+    return {
+      orientation,
+      bounds,
+      mainBounds,
+      customBounds,
+      reservedLeft,
+      reservedBottom,
+      caption,
+      mainLines,
+      customLines,
+      mainPositions,
+      customPositions,
+      fontSize,
+      secondaryFontSize,
+      letterSpacing,
+      secondaryLetterSpacing,
+      edgeInset,
+    };
+  } finally {
+    context.restore();
+  }
 }
 
 function clamp(value: number) {

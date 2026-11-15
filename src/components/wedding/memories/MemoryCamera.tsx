@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Camera as CameraIcon, SwitchCamera, Check, RefreshCw, Upload, X } from "lucide-react";
 import { MEMORY_HASHTAG } from "@/lib/wedding/memories";
 import {
   PHOTO_FILM_PRESETS,
+  getCameraFrameGeometry,
   getPhotoDimensions,
+  getPhotoStampLayout,
+  renderCameraFrame,
+  renderCameraFrameInto,
   renderPhotoCanvas,
-  renderPhotoCanvasInto,
   resolvePhotoFilm,
   type PhotoFilm,
   type PhotoStyle,
@@ -90,19 +93,35 @@ function CameraSurface({
   const [pending, setPending] = useState(true);
   const [busy, setBusy] = useState(false);
   const [review, setReview] = useState<ReviewFrame | null>(null);
+  const [reviewImageLoaded, setReviewImageLoaded] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const screen = useRef<HTMLDivElement>(null);
   const streamRef = useRef<MediaStream>();
   const requestActive = useRef(true);
   const shutterGate = useRef(new CaptureGate());
   const saveGate = useRef(new CaptureGate());
   const dialog = useRef<HTMLElement>(null);
   const presetButtons = useRef(new Map<string, HTMLButtonElement>());
+  const reviewImage = useRef<{
+    raw: Blob;
+    image: HTMLImageElement;
+    objectUrl: string;
+  } | null>(null);
   const isGarden = side === "bride";
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const frame = useMemo(
+    () =>
+      viewport.width && viewport.height
+        ? getCameraFrameGeometry(viewport.width, viewport.height)
+        : null,
+    [viewport]
+  );
 
   const releaseStream = useCallback(() => {
     stopCameraStream(streamRef.current);
@@ -116,6 +135,28 @@ function CameraSurface({
       inline: "nearest",
     });
   }, [film]);
+
+  useEffect(() => {
+    const node = stage.current;
+    if (!node) return;
+    const measure = () => {
+      const rect = node.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0)
+        setViewport((current) =>
+          current.width === rect.width && current.height === rect.height
+            ? current
+            : { width: rect.width, height: rect.height }
+        );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
@@ -210,25 +251,40 @@ function CameraSurface({
   }, [releaseStream]);
 
   useEffect(() => {
-    if (!ready || review || !video.current || !canvas.current) return;
+    if (!ready || !frame || review || !video.current || !canvas.current) return;
     const videoElement = video.current;
     const target = canvas.current;
     const paint = () => {
       const dimensions = getPhotoDimensions(videoElement);
       if (!dimensions.width || !dimensions.height) return;
       try {
-        renderPhotoCanvasInto(
-          videoElement,
-          target,
-          {
-            film,
-            stamp,
-            capturedAt: Date.now(),
-            coupleNames,
-            aspectRatio: 4 / 5,
-          },
-          undefined
-        );
+        const options = {
+          film,
+          stamp,
+          capturedAt: Date.now(),
+          coupleNames,
+          aspectRatio: frame.aspectRatio,
+          stampAspectRatio: frame.captureWidth / frame.captureHeight,
+        };
+        renderCameraFrameInto(videoElement, target, frame, options);
+        const context = target.getContext("2d");
+        if (context) {
+          const stampLayout = getPhotoStampLayout(
+            context,
+            target.width,
+            target.height,
+            options
+          );
+          const cssScale = viewport.height / target.height;
+          screen.current?.style.setProperty(
+            "--camera-stamp-reserve-left",
+            `${stampLayout.reservedLeft * cssScale}px`
+          );
+          screen.current?.style.setProperty(
+            "--camera-stamp-reserve-bottom",
+            `${stampLayout.reservedBottom * cssScale}px`
+          );
+        }
       } catch (reason) {
         setError(`Camera preview failed: ${(reason as Error).message}`);
         releaseStream();
@@ -237,54 +293,97 @@ function CameraSurface({
     paint();
     const timer = window.setInterval(paint, 120);
     return () => window.clearInterval(timer);
-  }, [ready, review, film, stamp, coupleNames, releaseStream]);
+  }, [ready, review, film, stamp, coupleNames, frame, viewport.height, releaseStream]);
 
   useEffect(() => {
-    if (!review || !canvas.current) return;
+    const raw = review?.raw;
     let active = true;
+    reviewImage.current = null;
+    setReviewImageLoaded(false);
+    if (!raw) return;
     const image = new Image();
-    const source = URL.createObjectURL(review.raw);
+    const objectUrl = URL.createObjectURL(raw);
     image.onload = () => {
-      if (!active || !canvas.current) return;
-      try {
-        renderPhotoCanvasInto(
-          image,
-          canvas.current,
-          { ...review.style, film, coupleNames, aspectRatio: 4 / 5 },
-          undefined
-        );
-        setError("");
-      } catch (reason) {
-        setError(`Photo preview failed: ${(reason as Error).message}`);
-      }
+      if (!active) return;
+      reviewImage.current = { raw, image, objectUrl };
+      setReviewImageLoaded(true);
     };
     image.onerror = () => {
       if (active) setError("Could not prepare the photo review. Retake the photo or choose an existing one.");
     };
-    image.src = source;
+    image.src = objectUrl;
     return () => {
       active = false;
+      image.onload = null;
+      image.onerror = null;
       image.src = "";
-      URL.revokeObjectURL(source);
+      if (reviewImage.current?.raw === raw) reviewImage.current = null;
+      URL.revokeObjectURL(objectUrl);
     };
-  }, [review, film, coupleNames]);
+  }, [review?.raw]);
+
+  useEffect(() => {
+    const cached = reviewImage.current;
+    if (
+      !review ||
+      !reviewImageLoaded ||
+      !cached ||
+      cached.raw !== review.raw ||
+      !canvas.current ||
+      !frame
+    )
+      return;
+    try {
+      renderCameraFrameInto(cached.image, canvas.current, frame, {
+        ...review.style,
+        film,
+        coupleNames,
+      });
+      const context = canvas.current.getContext("2d");
+      if (context) {
+        const stampLayout = getPhotoStampLayout(
+          context,
+          canvas.current.width,
+          canvas.current.height,
+          {
+            stamp: review.style.stamp,
+            capturedAt: review.style.capturedAt,
+            coupleNames,
+            aspectRatio: frame.aspectRatio,
+            stampAspectRatio: frame.captureWidth / frame.captureHeight,
+          }
+        );
+        screen.current?.style.setProperty(
+          "--camera-stamp-reserve-left",
+          `${stampLayout.reservedLeft * (viewport.height / canvas.current.height)}px`
+        );
+        screen.current?.style.setProperty(
+          "--camera-stamp-reserve-bottom",
+          `${stampLayout.reservedBottom * (viewport.height / canvas.current.height)}px`
+        );
+      }
+      setError("");
+    } catch (reason) {
+      setError(`Photo preview failed: ${(reason as Error).message}`);
+    }
+  }, [review, reviewImageLoaded, film, coupleNames, frame, viewport.height]);
 
   const shutter = async () => {
-    if (!video.current || !ready || !remaining) return;
+    if (!video.current || !ready || !remaining || !frame) return;
     setError("");
     setStatus("");
     await shutterGate.current.run(async () => {
       setBusy(true);
       try {
         const capturedAt = Date.now();
+        const dimensions = getPhotoDimensions(video.current!);
         const rawCanvas = renderPhotoCanvas(video.current!, {
           film: "none",
           stamp: "",
           capturedAt,
           coupleNames,
-          aspectRatio: 4 / 5,
-          outputWidth: 960,
-          outputHeight: 1200,
+          aspectRatio: dimensions.width / dimensions.height,
+          maxDimension: 1600,
           includeStamp: false,
         });
         const raw = await canvasToBlob(rawCanvas);
@@ -301,13 +400,22 @@ function CameraSurface({
   };
 
   const usePhoto = async () => {
-    if (!review) return;
+    if (!review || !frame || !reviewImageLoaded) return;
     await saveGate.current.run(async () => {
       setBusy(true);
       setError("");
       try {
-        const style = { ...review.style, film };
-        await onSave(review.raw, style);
+        const cached = reviewImage.current;
+        if (!cached || cached.raw !== review.raw)
+          throw new Error("The frozen photo is still loading. Try again shortly.");
+        const croppedRaw = renderCameraFrame(cached.image, frame, {
+          film: "none",
+          stamp: "",
+          capturedAt: review.style.capturedAt,
+          coupleNames,
+          includeStamp: false,
+        });
+        await onSave(await canvasToBlob(croppedRaw), review.style);
         setReview(null);
         setStatus("Photo saved to your album. You can take another.");
       } catch (reason) {
@@ -336,7 +444,10 @@ function CameraSurface({
   };
 
   return (
-    <div className={`${styles.cameraScreen} ${isGarden ? styles.cameraGarden : styles.cameraSongket}`}>
+    <div
+      ref={screen}
+      className={`${styles.cameraScreen} ${isGarden ? styles.cameraGarden : styles.cameraSongket}`}
+    >
       <section
         ref={dialog}
         className={styles.cameraDialog}
@@ -355,7 +466,7 @@ function CameraSurface({
             <X aria-hidden="true" />
           </button>
         </header>
-        <div className={styles.cameraStage}>
+        <div className={styles.cameraStage} ref={stage}>
           <video
             ref={video}
             className={styles.cameraSource}
@@ -374,8 +485,8 @@ function CameraSurface({
           <canvas
             ref={canvas}
             className={styles.cameraPreviewCanvas}
-            width={360}
-            height={450}
+            width={frame?.previewWidth ?? 1}
+            height={frame?.previewHeight ?? 1}
             aria-label={review ? "Preview of the photo with its selected style" : "Live camera preview with selected style and photo stamp"}
           />
           {!ready && !review && (
@@ -383,7 +494,6 @@ function CameraSurface({
               {pending ? "Opening camera…" : "Camera preview unavailable"}
             </p>
           )}
-          {review && <span className={styles.reviewTag}>Review photo</span>}
         </div>
         <div className={styles.cameraControls}>
           <div className={styles.cameraFilters} role="group" aria-label="Photo look">
@@ -414,7 +524,7 @@ function CameraSurface({
               <button type="button" className={styles.cameraSecondary} disabled={busy} onClick={() => setReview(null)}>
                 <RefreshCw aria-hidden="true" /> Retake
               </button>
-              <button type="button" className={styles.cameraShutter} disabled={busy} onClick={() => void usePhoto()}>
+              <button type="button" className={styles.cameraShutter} disabled={busy || !reviewImageLoaded} onClick={() => void usePhoto()}>
                 <Check aria-hidden="true" /> {busy ? "Saving…" : "Use photo"}
               </button>
             </div>
@@ -461,7 +571,7 @@ function CameraSurface({
               Reopen camera
             </button>
           )}
-          <p className={styles.cameraHelp}>JPG, PNG, or WebP · up to 12 MB each. Your filter and wedding stamp appear in the saved photo.</p>
+          <p className={styles.srOnly}>Choose a JPG, PNG, or WebP photo up to 12 MB. Your selected look and wedding stamp are applied to the saved photo.</p>
         </div>
       </section>
     </div>
