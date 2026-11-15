@@ -27,6 +27,7 @@ import {
 } from "@/lib/wedding/memories";
 import type { WeddingEventId } from "@/lib/wedding/invitations";
 import { brideInvitation, groomInvitation } from "@/lib/wedding/invitations";
+import { PHOTO_FILM_PRESETS, resolvePhotoFilm } from "@/lib/wedding/memoriesRender";
 import {
   MEMORY_PUBLIC_ALBUMS,
   memoryCanonicalUrl,
@@ -38,7 +39,7 @@ import styles from "./Memories.module.css";
 const emptySettings: MemorySettings = {
   welcome: "",
   cover: "",
-  film: "none",
+  film: "classic-chrome",
   stamp: "#FaIzTheOneForHarissa",
   bankRecipient: "",
   bankDetails: "",
@@ -71,7 +72,9 @@ export function MemoryAdmin({ side }: { side: "bride" | "groom" }) {
         const isOwner = token.claims.owner === true;
         setOwner(isOwner);
         if (isOwner) {
-          await readSettings(event.id).then(setSettings);
+          await readSettings(event.id).then((value) =>
+            setSettings({ ...value, film: resolvePhotoFilm(value.film) })
+          );
           await countMemories(event.id).then(setCounts);
         } else setError("This account is not enabled as the wedding owner.");
       } catch (e) {
@@ -81,7 +84,10 @@ export function MemoryAdmin({ side }: { side: "bride" | "groom" }) {
   }, [event.id]);
   useEffect(() => {
     if (!owner) return;
-    const unsubscribe = readSettingsSnapshot(event.id, setSettings, (reason) =>
+    const unsubscribe = readSettingsSnapshot(
+      event.id,
+      (value) => setSettings({ ...value, film: resolvePhotoFilm(value.film) }),
+      (reason) =>
       setError(`Could not load couple settings: ${reason.message}`)
     );
     return () => {
@@ -269,10 +275,17 @@ export function MemoryAdmin({ side }: { side: "bride" | "groom" }) {
                     })
                   }
                 >
-                  <option value="none">Original tone</option>
-                  <option value="warm">Warm</option>
-                  <option value="soft">Soft</option>
+                  {PHOTO_FILM_PRESETS.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.name}
+                    </option>
+                  ))}
                 </select>
+                <small className={styles.adminHelp}>
+                  {PHOTO_FILM_PRESETS.find(
+                    (preset) => preset.id === resolvePhotoFilm(settings.film)
+                  )?.description}
+                </small>
               </label>
               <label>
                 Custom stamp

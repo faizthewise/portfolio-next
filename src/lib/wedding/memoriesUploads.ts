@@ -1,4 +1,5 @@
 import { getWeddingGuest } from "@/lib/wedding/firebase";
+import type { PhotoStyle } from "@/lib/wedding/memoriesRender";
 import { recordVoice, reservePhoto, uploadPhoto } from "@/lib/wedding/memories";
 import {
   createAudioJob,
@@ -19,13 +20,14 @@ export async function savePhotoDraft(
   side: WeddingMemorySide,
   event: UploadJob["event"],
   name: string,
-  blob: Blob
+  blob: Blob,
+  photoStyle?: PhotoStyle
 ): Promise<UploadJob> {
   if (!name.trim() || name.trim().length > 100)
     throw new Error("Enter your name before adding photos.");
   const invalid = await validatePhotoBytes(blob);
   if (invalid) throw new Error(invalid);
-  const job = createPhotoJob(side, event, name, blob);
+  const job = createPhotoJob(side, event, name, blob, photoStyle);
   await saveUploadJob(job);
   return job;
 }
@@ -115,7 +117,8 @@ async function processUploadJobOnce(
         (percent) => {
           handlers.onProgress?.(current.id, percent);
         },
-        current.uploadKey
+        current.uploadKey,
+        current.photoStyle
       );
     } else {
       if (!current.uid) {

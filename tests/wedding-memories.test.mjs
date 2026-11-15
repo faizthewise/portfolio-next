@@ -219,8 +219,87 @@ test("reserved slot accepts original photo bytes once, rejects overwrite and den
     createdAt: serverTimestamp(),
     status: "complete",
   });
+  const legacyPhoto = await getDoc(
+    doc(guestDb, `${root}/photos/${uid}_${slot}`)
+  );
+  assert.equal(legacyPhoto.exists(), true);
+  const secondReservation = await getDoc(
+    doc(guestDb, `${root}/reservations/${uid}_2`)
+  );
+  const secondPath = `weddings/${event}/memoryAlbums/main/photos/${uid}/2/original`;
+  const secondPhotoRef = doc(guestDb, `${root}/photos/${uid}_2`);
+  const secondPhoto = {
+    uid,
+    slot: 2,
+    guestName: secondReservation.data().guestName,
+    uploadKey: secondReservation.data().uploadKey,
+    originalPath: secondPath,
+    contentType: "image/jpeg",
+    size: 4,
+    createdAt: serverTimestamp(),
+    status: "complete",
+  };
+  const photoStyle = {
+    film: "classic-chrome",
+    stamp: "#GuestChoice",
+    capturedAt: Date.now(),
+  };
+  const invalidStyles = [
+    { ...photoStyle, unexpected: true },
+    { ...photoStyle, film: "sepia" },
+    { ...photoStyle, stamp: 123 },
+    { ...photoStyle, stamp: "x".repeat(101) },
+    { film: "soft", stamp: "#MissingTime" },
+    { ...photoStyle, capturedAt: 0 },
+    { ...photoStyle, capturedAt: Date.now() + 2 * 24 * 60 * 60 * 1000 },
+  ];
+  for (const invalidStyle of invalidStyles) {
+    await assert.rejects(
+      setDoc(secondPhotoRef, { ...secondPhoto, photoStyle: invalidStyle }),
+      (error) => error.code === "permission-denied"
+    );
+  }
+  await uploadBytes(
+    ref(
+      guestStorage,
+      secondPath
+    ),
+    new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+    {
+      contentType: "image/jpeg",
+      customMetadata: {
+        uid,
+        slot: "2",
+        event,
+        uploadKey: secondReservation.data().uploadKey,
+      },
+    }
+  );
+  await setDoc(secondPhotoRef, { ...secondPhoto, photoStyle });
+  assert.deepEqual((await getDoc(secondPhotoRef)).data().photoStyle, photoStyle);
+  for (const [slot, film] of [
+    [3, "classic-neg"],
+    [4, "nostalgic-neg"],
+    [5, "acros"],
+    [6, "none"],
+  ]) {
+    const reservation = (await getDoc(doc(guestDb, `${root}/reservations/${uid}_${slot}`))).data();
+    const photoPath = `weddings/${event}/memoryAlbums/main/photos/${uid}/${slot}/original`;
+    await uploadBytes(ref(guestStorage, photoPath), new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
+      contentType: "image/jpeg",
+      customMetadata: { uid, slot: String(slot), event, uploadKey: reservation.uploadKey },
+    });
+    await setDoc(doc(guestDb, `${root}/photos/${uid}_${slot}`), {
+      ...secondPhoto,
+      slot,
+      guestName: reservation.guestName,
+      uploadKey: reservation.uploadKey,
+      originalPath: photoPath,
+      photoStyle: { ...photoStyle, film },
+    });
+  }
   const gallery = await getDocs(query(collection(otherDb, `${root}/photos`), where("status", "==", "complete"), where("uid", "==", uid), orderBy("createdAt", "desc"), limit(24)));
-  assert.equal(gallery.size, 1);
+  assert.equal(gallery.size, 6);
 });
 
 test("private voice metadata and bytes stay hidden from other guests", async () => {

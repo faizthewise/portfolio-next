@@ -2,7 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Cormorant_Garamond, Great_Vibes, Lora } from "next/font/google";
-import { Heart, Camera, Mic, Upload, Image as ImageIcon } from "lucide-react";
+import { Heart, Mic, Upload, Image as ImageIcon } from "lucide-react";
 import { getBlob, getDownloadURL, ref } from "firebase/storage";
 import { getWeddingStorage, getWeddingGuest } from "@/lib/wedding/firebase";
 import { brideInvitation, groomInvitation } from "@/lib/wedding/invitations";
@@ -47,6 +47,10 @@ import {
   mergeMemoryRows,
   resetMemoryPage,
 } from "@/lib/wedding/memoriesPagination";
+import { MemoryCamera } from "./MemoryCamera";
+import { MemoryGuestHub } from "./MemoryGuestHub";
+import { MemoryGuestPanel } from "./MemoryGuestPanel";
+import type { PhotoStyle } from "@/lib/wedding/memoriesRender";
 import styles from "./Memories.module.css";
 
 const memoryTitle = Cormorant_Garamond({
@@ -96,24 +100,24 @@ export function MemoryExperience({
   const [storageNotice, setStorageNotice] = useState("");
   const [wish, setWish] = useState("");
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-  const [cameraOn, setCameraOn] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
-  const [cameraPending, setCameraPending] = useState(false);
   const [recording, setRecording] = useState(false);
   const [microphonePending, setMicrophonePending] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [privateVoice, setPrivateVoice] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [guestPanel, setGuestPanel] = useState<null | "album" | "voice" | "wish" | "salam">(null);
   const [photoCount, setPhotoCount] = useState(0);
   const [guestUid, setGuestUid] = useState("");
+  const guestPanelRef = useRef(guestPanel);
+  guestPanelRef.current = guestPanel;
+  const microphoneGenerationRef = useRef(0);
   const pageCursorRef = useRef(resetMemoryPage<PhotoCursor>());
   const myPageCursorRef = useRef(resetMemoryPage<PhotoCursor>());
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const cameraRef = useRef<MediaStream>();
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder>();
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number>();
   const recordingTickRef = useRef<number>();
-  const cameraRequestRef = useRef(false);
   const microphoneRequestRef = useRef(false);
   const inFlightRef = useRef(new Set<string>());
   const activeRef = useRef(true);
@@ -218,13 +222,8 @@ export function MemoryExperience({
       unsubs.forEach((u) => u());
     };
   }, [eventId, guestUid, page]);
-  useEffect(() => {
-    if (cameraOn && videoRef.current && cameraRef.current)
-      videoRef.current.srcObject = cameraRef.current;
-  }, [cameraOn]);
   useEffect(
     () => () => {
-      cameraRef.current?.getTracks().forEach((t) => t.stop());
       window.clearTimeout(timerRef.current);
       window.clearInterval(recordingTickRef.current);
       const recorder = recorderRef.current;
@@ -259,40 +258,52 @@ export function MemoryExperience({
       );
     }
   }, [name, side]);
-  const releaseCamera = () => {
-    cameraRef.current?.getTracks().forEach((t) => t.stop());
-    cameraRef.current = undefined;
-    setCameraOn(false);
-    setCameraReady(false);
-  };
-  async function startCamera() {
-    if (cameraRequestRef.current || cameraRef.current) return;
-    cameraRequestRef.current = true;
-    setCameraPending(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false,
-      });
-      if (!activeRef.current) {
-        stream.getTracks().forEach((track) => track.stop());
-        return;
-      }
-      cameraRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      setCameraOn(true);
+  function requireName(action: string) {
+    if (name.trim()) return true;
+    setError(`Enter your name before ${action}.`);
+    if (guestPanelRef.current) closeGuestPanel();
+    window.requestAnimationFrame(() => nameInputRef.current?.focus());
+    return false;
+  }
+  function openCamera() {
+    if (requireName("taking a photo")) {
       setError("");
-    } catch (e) {
-      setError(`Camera unavailable: ${(e as Error).message}`);
-    } finally {
-      cameraRequestRef.current = false;
-      if (activeRef.current) setCameraPending(false);
+      setCameraOpen(true);
     }
+  }
+  function openPanel(panel: "album" | "voice" | "wish" | "salam") {
+    if ((panel === "voice" || panel === "wish") && !requireName(panel === "voice" ? "recording" : "writing a wish")) return;
+    setError("");
+    setMessage("");
+    setGuestPanel(panel);
+  }
+  function closeGuestPanel() {
+    guestPanelRef.current = null;
+    if (microphonePending || microphoneRequestRef.current) {
+      microphoneGenerationRef.current += 1;
+      microphoneRequestRef.current = false;
+      setMicrophonePending(false);
+    }
+    if (recording) stopRecording();
+    setGuestPanel(null);
+  }
+  async function saveCapturedPhoto(raw: Blob, photoStyle: PhotoStyle) {
+    if (!requireName("saving a photo"))
+      throw new Error("Enter your name before saving this photo.");
+    const job = await savePhotoDraft(
+      side,
+      eventId,
+      name.trim(),
+      raw,
+      photoStyle
+    );
+    setQueue((rows) => [...rows, job]);
+    void uploadJob(job);
   }
   async function processFile(file: File | Blob) {
     setError("");
     if (!name.trim()) {
-      setError("Enter your name before adding photos.");
+      requireName("adding photos");
       return;
     }
     try {
@@ -301,6 +312,7 @@ export function MemoryExperience({
       void uploadJob(job);
     } catch (e) {
       setError((e as Error).message);
+      throw e;
     }
   }
   useEffect(() => {
@@ -315,12 +327,15 @@ export function MemoryExperience({
     try {
       await processUploadJob(job, {
         onJob: (next) => {
-          if (activeRef.current)
+          if (activeRef.current) {
             setQueue((rows) =>
               rows.some((row) => row.id === next.id)
                 ? rows.map((row) => (row.id === next.id ? next : row))
                 : [...rows, next]
             );
+            if (next.side === side && next.kind === "photo" && next.slot)
+              setPhotoCount((count) => Math.max(count, next.slot!));
+          }
         },
         onProgress: (id, percent) => {
           if (activeRef.current && inFlightRef.current.has(id))
@@ -361,29 +376,12 @@ export function MemoryExperience({
     window.addEventListener("online", resume);
     return () => window.removeEventListener("online", resume);
   }, [side, eventId]);
-  function capture() {
-    if (
-      !videoRef.current ||
-      !cameraReady ||
-      !videoRef.current.videoWidth ||
-      !videoRef.current.videoHeight
-    )
-      return;
-    const c = document.createElement("canvas");
-    c.width = videoRef.current.videoWidth;
-    c.height = videoRef.current.videoHeight;
-    c.getContext("2d")?.drawImage(videoRef.current, 0, 0);
-    c.toBlob(
-      (b) => {
-        if (b) void processFile(b);
-        else setError("The camera could not create a photo. Please try again.");
-      },
-      "image/jpeg",
-      0.92
-    );
-    releaseCamera();
-  }
   async function sendWish() {
+    if (!requireName("sending a wish")) return;
+    if (!wish.trim()) {
+      setError("Write a wish before sharing it.");
+      return;
+    }
     try {
       await saveWish(eventId, name, wish);
       setWish("");
@@ -451,12 +449,20 @@ export function MemoryExperience({
     )
       return;
     microphoneRequestRef.current = true;
+    const requestId = ++microphoneGenerationRef.current;
     setMicrophonePending(true);
     let stream: MediaStream | undefined;
     try {
-      if (!name.trim()) throw new Error("Enter your name before recording.");
+      if (!requireName("recording")) return;
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (!activeRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      if (
+        requestId !== microphoneGenerationRef.current ||
+        guestPanelRef.current !== "voice"
+      ) {
         stream.getTracks().forEach((track) => track.stop());
         return;
       }
@@ -512,10 +518,16 @@ export function MemoryExperience({
       timerRef.current = window.setTimeout(() => stopRecording(), 30_000);
     } catch (e) {
       stream?.getTracks().forEach((t) => t.stop());
-      setError((e as Error).message);
+      if (
+        requestId === microphoneGenerationRef.current &&
+        guestPanelRef.current === "voice"
+      )
+        setError((e as Error).message);
     } finally {
-      microphoneRequestRef.current = false;
-      if (activeRef.current) setMicrophonePending(false);
+      if (requestId === microphoneGenerationRef.current) {
+        microphoneRequestRef.current = false;
+        if (activeRef.current) setMicrophonePending(false);
+      }
     }
   }
   function stopRecording() {
@@ -568,32 +580,32 @@ export function MemoryExperience({
           {storageNotice}
         </p>
       )}
-      <section
-        className={styles.hero}
-        style={
-          settings?.cover
-            ? {
-                backgroundImage: `linear-gradient(0deg, #fffdf8e8, #fffdf8b3), url("${settings.cover}")`,
-              }
-            : undefined
-        }
-      >
-        <p className={styles.eyebrow}>
-          {event.name.toUpperCase()} · {MEMORY_HASHTAG}
-        </p>
-        <p className={`${styles.couple} ${memoryNames.className}`}>
-          {MEMORY_PUBLIC_ALBUMS[side].coupleNames}
-        </p>
-        <h1 className={memoryTitle.className}>
-          {isGallery ? "Our shared memories" : "Help us remember this day"}
-        </h1>
-        <p>{settings?.welcome || "Share the moments you captured with us."}</p>
-        <p className={`${styles.eventDetails} ${memoryTitle.className}`}>
-          {displayDate}
-          <br />
-          {wedding.venue}
-        </p>
-      </section>
+      {isGallery && (
+        <section
+          className={styles.hero}
+          style={
+            settings?.cover
+              ? {
+                  backgroundImage: `linear-gradient(0deg, #fffdf8e8, #fffdf8b3), url("${settings.cover}")`,
+                }
+              : undefined
+          }
+        >
+          <p className={styles.eyebrow}>
+            {event.name.toUpperCase()} · {MEMORY_HASHTAG}
+          </p>
+          <p className={`${styles.couple} ${memoryNames.className}`}>
+            {MEMORY_PUBLIC_ALBUMS[side].coupleNames}
+          </p>
+          <h1 className={memoryTitle.className}>Shared memories</h1>
+          <p>{settings?.welcome || "Share the moments you captured with us."}</p>
+          <p className={`${styles.eventDetails} ${memoryTitle.className}`}>
+            {displayDate}
+            <br />
+            {wedding.venue}
+          </p>
+        </section>
+      )}
       {isGallery ? (
         <>
           <section className={styles.section}>
@@ -636,22 +648,23 @@ export function MemoryExperience({
             ) : (photoView === "my" ? myPhotos : photos).length ? (
               <div className={styles.grid}>
                 {(photoView === "my" ? myPhotos : photos)
-                  .filter((p) =>
+                  .filter((photo) =>
                     photoView === "favorites"
-                      ? favoriteIds.includes(p.id)
+                      ? favoriteIds.includes(photo.id)
                       : true
                   )
                   .filter(
-                    (p) => guestFilter === "all" || p.guestName === guestFilter
+                    (photo) =>
+                      guestFilter === "all" || photo.guestName === guestFilter
                   )
-                  .map((p) => (
+                  .map((photo) => (
                     <PhotoCard
-                      key={p.id}
-                      photo={p}
+                      key={photo.id}
+                      photo={photo}
                       side={side}
                       settings={settings}
                       onFavorite={toggleFavorite}
-                      favorite={favoriteIds.includes(p.id)}
+                      favorite={favoriteIds.includes(photo.id)}
                     />
                   ))}
               </div>
@@ -660,14 +673,6 @@ export function MemoryExperience({
                 No photos yet. Be the first to share one.
               </p>
             )}
-            {(photoView === "my" ? myPhotos : photos).length > 0 &&
-              !(photoView === "my" ? myPhotos : photos).some((p) =>
-                photoView === "favorites"
-                  ? favoriteIds.includes(p.id)
-                  : guestFilter === "all" || p.guestName === guestFilter
-              ) && (
-                <p className={styles.muted}>No photos match these filters.</p>
-              )}
             {(photoView === "my" ? myHasMore : hasMore) && (
               <button
                 className={styles.secondary}
@@ -683,10 +688,10 @@ export function MemoryExperience({
           <section className={styles.section}>
             <h2>Written wishes</h2>
             {wishes.length ? (
-              wishes.map((w) => (
-                <article className={styles.wish} key={w.id}>
-                  <strong>{w.guestName}</strong>
-                  <p>{w.message}</p>
+              wishes.map((entry) => (
+                <article className={styles.wish} key={entry.id}>
+                  <strong>{entry.guestName}</strong>
+                  <p>{entry.message}</p>
                 </article>
               ))
             ) : (
@@ -696,7 +701,9 @@ export function MemoryExperience({
           <section className={styles.section}>
             <h2>Voice notes</h2>
             {voices.length ? (
-              voices.map((v) => <VoicePlayer key={v.id} voice={v} />)
+              voices.map((voice) => (
+                <VoicePlayer key={voice.id} voice={voice} />
+              ))
             ) : (
               <p className={styles.muted}>No public voice notes yet.</p>
             )}
@@ -704,224 +711,238 @@ export function MemoryExperience({
         </>
       ) : (
         <>
-          <section className={styles.section}>
-            <h2>My photos</h2>
-            {myPhotos.length ? (
-              <div className={styles.grid}>
-                {myPhotos.map((photo) => (
-                  <PhotoCard
-                    key={photo.id}
-                    photo={photo}
-                    side={side}
-                    settings={settings}
-                    onFavorite={toggleFavorite}
-                    favorite={favoriteIds.includes(photo.id)}
+          <MemoryGuestHub
+            theme={event.theme}
+            coupleNames={MEMORY_PUBLIC_ALBUMS[side].coupleNames}
+            date={displayDate}
+            venue={wedding.venue}
+            welcome={settings?.welcome || "Share the moments you captured with us."}
+            cover={settings?.cover}
+            remaining={Math.max(
+              0,
+              PHOTO_LIMIT - photoCount -
+                queue.filter(
+                  (job) => job.side === side && job.kind === "photo" && !job.slot
+                ).length
+            )}
+            used={photoCount}
+            name={name}
+            nameRef={nameInputRef}
+            onNameChange={setName}
+            onCamera={openCamera}
+            onAlbum={() => openPanel("album")}
+            onVoice={() => openPanel("voice")}
+            onWish={() => openPanel("wish")}
+            onSalamKaut={() => openPanel("salam")}
+            galleryHref={memoryPath(side, "gallery")}
+            queueSummary={queue.filter((job) => job.side === side).length
+              ? `${queue.filter((job) => job.side === side).length} saved upload${queue.filter((job) => job.side === side).length === 1 ? "" : "s"}. Open My album for status or retry.`
+              : ""}
+            status={message}
+            namesClassName={memoryNames.className}
+          />
+          {guestPanel === "album" && (
+            <MemoryGuestPanel theme={event.theme} title="My album" message={message} error={error} onClose={closeGuestPanel}>
+              <section className={styles.section}>
+                <p className={styles.small}>
+                  {photoCount} of {PHOTO_LIMIT} photo slots used. Photos stay in
+                  this album for anyone with its link to view.
+                </p>
+                <label className={styles.button}>
+                  <Upload size={17} aria-hidden="true" /> Add existing photos
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    onChange={(event) => {
+                      Array.from(event.currentTarget.files ?? []).forEach(
+                        (file) => void processFile(file).catch(() => undefined)
+                      );
+                      event.currentTarget.value = "";
+                    }}
                   />
-                ))}
-              </div>
-            ) : (
-              <p className={styles.muted}>
-                Your uploaded photos will appear here.
-              </p>
-            )}
-          </section>
-          <section className={styles.section}>
-            <label className={styles.label}>
-              Your name
-              <input
-                maxLength={100}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Name shown in the gallery"
-              />
-            </label>
-            <p className={styles.small}>
-              20 photos per celebration. Return in this browser to find your
-              photos. {photoCount} of {PHOTO_LIMIT} photo slots used.
-            </p>
-            <div className={styles.actions}>
-              <label className={styles.button}>
-                <Upload size={17} /> Choose photos
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  onChange={(e) => {
-                    Array.from(e.target.files || []).forEach(
-                      (f) => void processFile(f)
-                    );
-                    e.currentTarget.value = "";
-                  }}
-                />
-              </label>
-              <button
-                className={styles.button}
-                disabled={cameraPending || cameraOn}
-                onClick={() => void startCamera()}
-              >
-                <Camera size={17} />{" "}
-                {cameraPending
-                  ? "Requesting camera…"
-                  : cameraOn
-                  ? "Camera open"
-                  : "Open camera"}
-              </button>
-            </div>
-            {cameraOn && (
-              <div className={styles.camera}>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  onLoadedMetadata={() =>
-                    setCameraReady(
-                      Boolean(
-                        videoRef.current?.videoWidth &&
-                          videoRef.current?.videoHeight
-                      )
-                    )
-                  }
-                />
-                <button
-                  className={styles.button}
-                  disabled={!cameraReady}
-                  onClick={capture}
-                >
-                  Take photo
-                </button>
-                <button className={styles.secondary} onClick={releaseCamera}>
-                  Close camera
-                </button>
-              </div>
-            )}
-            <p className={styles.small}>
-              JPG, PNG, or WebP · up to 12 MB each. Original photos are
-              retained.
-            </p>
-            {queue.length > 0 && (
-              <div className={styles.queue}>
-                <h3>Upload queue</h3>
+                </label>
+                {myPhotos.length ? (
+                  <div className={styles.grid}>
+                    {myPhotos.map((photo) => (
+                      <PhotoCard
+                        key={photo.id}
+                        photo={photo}
+                        side={side}
+                        settings={settings}
+                        onFavorite={toggleFavorite}
+                        favorite={favoriteIds.includes(photo.id)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className={styles.muted}>Your saved photos will appear here.</p>
+                )}
+                {myHasMore && (
+                  <button
+                    type="button"
+                    className={styles.secondary}
+                    disabled={loadingMore}
+                    onClick={() => void loadMoreMyPhotos()}
+                  >
+                    {loadingMore ? "Loading…" : "Load more of your photos"}
+                  </button>
+                )}
                 {queue
-                  .filter((x) => x.side === side && x.kind === "photo")
-                  .map((item) => (
-                    <div key={item.id}>
+                  .filter((job) => job.side === side && job.kind === "photo")
+                  .map((job) => (
+                    <div className={styles.queue} key={job.id}>
                       <span>
-                        Photo {item.slot ?? "pending reservation"} ·{" "}
-                        {item.status}
+                        Photo {job.slot ?? "waiting for a slot"} · {job.status}
                       </span>
-                      {progress[item.id] !== undefined && (
-                        <progress value={progress[item.id]} max="100" />
+                      {progress[job.id] !== undefined && (
+                        <progress value={progress[job.id]} max="100" />
                       )}
-                      {item.error && (
-                        <span className={styles.error}>{item.error}</span>
-                      )}
+                      {job.error && <p className={styles.error}>{job.error}</p>}
                       <button
-                        disabled={item.status === "Uploading"}
-                        onClick={() => void uploadJob(item)}
+                        type="button"
+                        className={styles.secondary}
+                        disabled={job.status === "Uploading"}
+                        onClick={() => void uploadJob(job)}
                       >
-                        Retry
+                        Retry upload
                       </button>
                     </div>
                   ))}
-              </div>
-            )}
-          </section>
-          <section className={styles.section}>
-            <h2>Write a wish</h2>
-            <label className={styles.label}>
-              Your wish
-              <textarea maxLength={2000} value={wish} onChange={(e) => setWish(e.target.value)} placeholder="A message for Faiz and Harissa" />
-            </label>
-            <p className={styles.small}>{wish.length}/2,000 characters</p>
-            <button className={styles.button} onClick={() => void sendWish()}>
-              Share wish
-            </button>
-          </section>
-          <section className={styles.section}>
-            <h2>Record a voice note</h2>
-            <p>
-              Record up to 30 seconds. Private notes can only be played by the
-              couple in their dashboard.
-            </p>
-            <label className={styles.check}>
-              <input
-                type="checkbox"
-                checked={privateVoice}
-                disabled={recording || microphonePending}
-                onChange={(e) => setPrivateVoice(e.target.checked)}
-              />{" "}
-              Keep this voice note private
-            </label>
-            <button
-              className={styles.button}
-              disabled={microphonePending}
-              onClick={() =>
-                void (recording ? stopRecording() : startRecording())
-              }
-            >
-              <Mic size={17} />
-              {microphonePending
-                ? "Requesting microphone…"
-                : recording
-                ? `Stop and send (${30 - recordingSeconds}s left)`
-                : "Start recording (30 seconds max)"}
-            </button>
-            {queue
-              .filter((item) => item.side === side && item.kind === "audio")
-              .map((item) => (
-                <div className={styles.queue} key={item.id}>
-                  <span>Voice note · {item.status}</span>
-                  {item.error && (
-                    <span className={styles.error}>{item.error}</span>
-                  )}
-                  <button
-                    disabled={item.status.includes("Uploading")}
-                    onClick={() => void uploadJob(item)}
-                  >
-                    Retry
-                  </button>
-                </div>
-              ))}
-          </section>
-          <section className={styles.section}>
-            <h2>Salam Kaut</h2>
-            <p>
-              Send your doa for the couple, or contribute through the existing
-              gift page.
-            </p>
-            {settings?.bankRecipient && (
-              <p>
-                <strong>Recipient:</strong> {settings.bankRecipient}
-                <br />
-                <strong>Details:</strong> {settings.bankDetails}
-              </p>
-            )}
-            {settings?.qrUrl && (
-              <img
-                className={styles.bankQr}
-                src={settings.qrUrl}
-                alt="Couple’s Salam Kaut contribution QR code"
-              />
-            )}
-            <Link
-              className={styles.button}
-              href={
-                side === "bride"
-                  ? "/jemputan-walimatulurus-harissa-faiz?salam=1"
-                  : "/jemputan-walimatulurus-faiz-harissa?salam=1"
-              }
-            >
-              Open Salam Kaut
-            </Link>
-          </section>
+              </section>
+            </MemoryGuestPanel>
+          )}
+          {guestPanel === "voice" && (
+            <MemoryGuestPanel theme={event.theme} title="Voice note" message={message} error={error} onClose={closeGuestPanel}>
+              <section className={styles.section}>
+                <p>
+                  Record up to 30 seconds. Private notes can only be played by
+                  the couple.
+                </p>
+                <label className={styles.check}>
+                  <input
+                    type="checkbox"
+                    checked={privateVoice}
+                    disabled={recording || microphonePending}
+                    onChange={(event) => setPrivateVoice(event.target.checked)}
+                  />
+                  Keep this voice note private
+                </label>
+                <button
+                  type="button"
+                  className={styles.button}
+                  disabled={microphonePending}
+                  onClick={() =>
+                    void (recording ? stopRecording() : startRecording())
+                  }
+                >
+                  <Mic size={17} aria-hidden="true" />
+                  {microphonePending
+                    ? "Requesting microphone…"
+                    : recording
+                      ? `Stop and send (${30 - recordingSeconds}s left)`
+                      : "Start recording (30 seconds max)"}
+                </button>
+                {queue
+                  .filter((job) => job.side === side && job.kind === "audio")
+                  .map((job) => (
+                    <div className={styles.queue} key={job.id}>
+                      <span>Voice note · {job.status}</span>
+                      {job.error && <p className={styles.error}>{job.error}</p>}
+                      <button
+                        type="button"
+                        className={styles.secondary}
+                        disabled={job.status.includes("Uploading")}
+                        onClick={() => void uploadJob(job)}
+                      >
+                        Retry voice note
+                      </button>
+                    </div>
+                  ))}
+              </section>
+            </MemoryGuestPanel>
+          )}
+          {guestPanel === "wish" && (
+            <MemoryGuestPanel theme={event.theme} title="Write a wish" message={message} error={error} onClose={closeGuestPanel}>
+              <section className={styles.section}>
+                <label className={styles.label}>
+                  Your wish
+                  <textarea
+                    maxLength={2000}
+                    value={wish}
+                    onChange={(event) => setWish(event.target.value)}
+                    placeholder="A message for Faiz and Harissa"
+                  />
+                </label>
+                <p className={styles.small}>{wish.length}/2,000 characters</p>
+                <button
+                  type="button"
+                  className={styles.button}
+                  onClick={() => void sendWish()}
+                >
+                  Share wish
+                </button>
+              </section>
+            </MemoryGuestPanel>
+          )}
+          {guestPanel === "salam" && (
+            <MemoryGuestPanel theme={event.theme} title="Salam Kaut" message={message} error={error} onClose={closeGuestPanel}>
+              <section className={styles.section}>
+                <p>Send your doa or contribute through the existing gift page.</p>
+                {settings?.bankRecipient && (
+                  <p>
+                    <strong>Recipient:</strong> {settings.bankRecipient}
+                    <br />
+                    <strong>Details:</strong> {settings.bankDetails}
+                  </p>
+                )}
+                {settings?.qrUrl && (
+                  <img
+                    className={styles.bankQr}
+                    src={settings.qrUrl}
+                    alt="Couple’s Salam Kaut contribution QR code"
+                  />
+                )}
+                <Link
+                  className={styles.button}
+                  href={
+                    side === "bride"
+                      ? "/jemputan-walimatulurus-harissa-faiz?salam=1"
+                      : "/jemputan-walimatulurus-faiz-harissa?salam=1"
+                  }
+                >
+                  Open Salam Kaut
+                </Link>
+              </section>
+            </MemoryGuestPanel>
+          )}
+          {cameraOpen && (
+            <MemoryCamera
+              side={side}
+              coupleNames={MEMORY_PUBLIC_ALBUMS[side].coupleNames}
+              date={displayDate}
+              guestName={name.trim()}
+              remaining={Math.max(
+                0,
+                PHOTO_LIMIT - photoCount -
+                  queue.filter(
+                    (job) => job.side === side && job.kind === "photo" && !job.slot
+                  ).length
+              )}
+              defaults={settings}
+              onClose={() => setCameraOpen(false)}
+              onSave={saveCapturedPhoto}
+              onUpload={processFile}
+            />
+          )}
         </>
       )}
-      {message && (
+      {message && isGallery && (
         <p role="status" className={styles.status}>
           {message}
         </p>
       )}
-      {error && (
+      {error && (!guestPanel && !cameraOpen) && (
         <p role="alert" title={error} className={styles.error}>
           {error.includes("permission") || error.includes("insufficient")
             ? "Memories are not active yet. The couple needs to publish Firebase setup first."
@@ -1018,6 +1039,7 @@ function PhotoCard({
                 photoDate: photo.createdAt?.toDate(),
                 coupleNames:
                   MEMORY_PUBLIC_ALBUMS[side].coupleNames,
+                photoStyle: photo.photoStyle,
               }
             );
             setPreview(canvas.toDataURL("image/jpeg", 0.86));
@@ -1058,6 +1080,7 @@ function PhotoCard({
     photo.id,
     photo.originalPath,
     photo.createdAt,
+    photo.photoStyle,
     settings?.film,
     settings?.stamp,
     side,
@@ -1209,6 +1232,7 @@ function PhotoLightbox({
         {
           photoDate,
           coupleNames: MEMORY_PUBLIC_ALBUMS[side].coupleNames,
+          photoStyle: photo.photoStyle,
         }
       );
       const styled = await new Promise<Blob>((resolve, reject) =>
@@ -1241,6 +1265,7 @@ function PhotoLightbox({
         aria-modal="true"
         aria-labelledby={titleId}
         className={styles.lightboxDialog}
+        data-overlay-layer="photo-lightbox"
         tabIndex={-1}
       >
         <h2 id={titleId} className={styles.srOnly}>

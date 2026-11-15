@@ -129,13 +129,24 @@ service cloud.firestore {
     function validSlot(slot) { return slot is int && slot >= 1 && slot <= 20; }
     function validUploadKey(key) { return key is string && key.matches('[a-zA-Z0-9-]{36}'); }
     function boundedMemoryName(value) { return value is string && value.size() > 0 && value.size() <= 100; }
+    function validPhotoStyle(data) {
+      return !('photoStyle' in data) || (
+        data.photoStyle is map
+        && data.photoStyle.keys().hasOnly(['film', 'stamp', 'capturedAt'])
+        && data.photoStyle.keys().hasAll(['film', 'stamp', 'capturedAt'])
+        && data.photoStyle.film in ['none', 'classic-chrome', 'classic-neg', 'nostalgic-neg', 'acros', 'warm', 'soft']
+        && data.photoStyle.stamp is string && data.photoStyle.stamp.size() <= 100
+        && data.photoStyle.capturedAt is int && data.photoStyle.capturedAt > 0
+        && data.photoStyle.capturedAt <= request.time.toMillis() + 86400000
+      );
+    }
     match /weddings/{eventId}/memoryAlbums/main/public/{settingId} {
       allow read: if memoryEvent(eventId) && settingId == 'settings';
       allow create, update: if memoryEvent(eventId) && settingId == 'settings' && coupleOwner()
         && request.resource.data.keys().hasOnly(['welcome', 'cover', 'film', 'stamp', 'bankRecipient', 'bankDetails', 'qrUrl', 'updatedAt'])
         && request.resource.data.welcome is string && request.resource.data.welcome.size() <= 1000
         && request.resource.data.cover is string && request.resource.data.cover.size() <= 2048
-        && request.resource.data.film in ['none', 'warm', 'soft']
+        && request.resource.data.film in ['none', 'classic-chrome', 'classic-neg', 'nostalgic-neg', 'acros', 'warm', 'soft']
         && request.resource.data.stamp is string && request.resource.data.stamp.size() <= 100
         && request.resource.data.bankRecipient is string && request.resource.data.bankRecipient.size() <= 100
         && request.resource.data.bankDetails is string && request.resource.data.bankDetails.size() <= 300
@@ -172,7 +183,8 @@ service cloud.firestore {
         || resource.data.status == 'complete' || coupleOwner());
       allow list: if memoryEvent(eventId) && (resource.data.status == 'complete' || coupleOwner());
       allow create: if memoryEvent(eventId) && signedIn() && reservedPhoto()
-        && request.resource.data.keys().hasOnly(['uid', 'slot', 'guestName', 'uploadKey', 'originalPath', 'contentType', 'size', 'createdAt', 'status'])
+        && request.resource.data.keys().hasOnly(['uid', 'slot', 'guestName', 'uploadKey', 'originalPath', 'contentType', 'size', 'createdAt', 'status', 'photoStyle'])
+        && validPhotoStyle(request.resource.data)
         && request.resource.data.uid == request.auth.uid && boundedMemoryName(request.resource.data.guestName)
         && request.resource.data.originalPath == 'weddings/' + eventId + '/memoryAlbums/main/photos/' + request.auth.uid + '/' + string(request.resource.data.slot) + '/original'
         && request.resource.data.contentType in ['image/jpeg', 'image/png', 'image/webp']

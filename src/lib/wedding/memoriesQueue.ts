@@ -1,3 +1,4 @@
+import type { PhotoStyle } from "@/lib/wedding/memoriesRender";
 export type WeddingMemorySide = "bride" | "groom";
 export type UploadKind = "photo" | "audio";
 export type UploadJob = {
@@ -11,6 +12,7 @@ export type UploadJob = {
   createdAt: number;
   uid?: string;
   slot?: number;
+  photoStyle?: PhotoStyle;
   isPrivate?: boolean;
   metadataSaved?: boolean;
   bytesUploaded?: boolean;
@@ -141,7 +143,8 @@ export function createPhotoJob(
   side: WeddingMemorySide,
   event: UploadJob["event"],
   name: string,
-  blob: Blob
+  blob: Blob,
+  photoStyle?: PhotoStyle
 ): UploadJob {
   const uploadKey = crypto.randomUUID();
   return {
@@ -152,6 +155,7 @@ export function createPhotoJob(
     uploadKey,
     name: name.trim(),
     blob,
+    photoStyle,
     createdAt: Date.now(),
     status: "Saved on this device",
   };

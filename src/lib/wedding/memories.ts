@@ -32,6 +32,11 @@ import {
 } from "@/lib/wedding/firebase";
 import type { WeddingEventId } from "@/lib/wedding/invitations";
 import { memoryCanonicalUrl } from "@/lib/wedding/memoryRoutes";
+import {
+  renderPhotoCanvas,
+  type PhotoFilm,
+  type PhotoStyle,
+} from "@/lib/wedding/memoriesRender";
 import { validatePhotoBytes } from "@/lib/wedding/memoriesQueue";
 
 export const MEMORY_EVENTS = {
@@ -62,6 +67,7 @@ export type MemoryPhoto = {
   size: number;
   createdAt?: { toDate(): Date };
   uploadKey?: string;
+  photoStyle?: PhotoStyle;
   caption?: string;
 };
 export type MemoryWish = {
@@ -82,7 +88,7 @@ export type MemoryVoice = {
 export type MemorySettings = {
   welcome: string;
   cover: string;
-  film: "none" | "warm" | "soft";
+  film: PhotoFilm;
   stamp: string;
   bankRecipient: string;
   bankDetails: string;
@@ -91,13 +97,26 @@ export type MemorySettings = {
 const defaultSettings: MemorySettings = {
   welcome: "Share the moments you captured with us.",
   cover: "",
-  film: "none",
+  film: "classic-chrome",
   stamp: MEMORY_HASHTAG,
   bankRecipient: "",
   bankDetails: "",
   qrUrl: "",
 };
 const root = (event: WeddingEventId) => `weddings/${event}/memoryAlbums/main`;
+function samePhotoStyle(
+  existing: unknown,
+  requested?: PhotoStyle
+): boolean {
+  if (!requested) return existing === undefined;
+  if (!existing || typeof existing !== "object") return false;
+  const style = existing as PhotoStyle;
+  return (
+    style.film === requested.film &&
+    style.stamp === requested.stamp &&
+    style.capturedAt === requested.capturedAt
+  );
+}
 export const memoryUrl = (side: "bride" | "groom") =>
   memoryCanonicalUrl(side);
 export const MEMORY_PAGE_SIZE = 24;
@@ -143,7 +162,8 @@ export async function uploadPhoto(
   guestName: string,
   file: Blob,
   onProgress: (value: number) => void,
-  uploadKey?: string
+  uploadKey?: string,
+  photoStyle?: PhotoStyle
 ) {
   if (
     slot < 1 ||
@@ -214,6 +234,7 @@ export async function uploadPhoto(
       metadata.uploadKey === stableUploadKey &&
       metadata.size === file.size &&
       metadata.contentType === file.type &&
+      samePhotoStyle(metadata.photoStyle, photoStyle) &&
       metadata.status === "complete"
     )
       return id;
@@ -229,6 +250,7 @@ export async function uploadPhoto(
     size: file.size,
     createdAt: serverTimestamp(),
     status: "complete",
+    ...(photoStyle ? { photoStyle } : {}),
   });
   return id;
 }
@@ -617,6 +639,7 @@ export async function exportMemoryFiles(
       const styled = drawStyledPhoto(image, settings.film, settings.stamp, {
         photoDate: dateValue(p.createdAt),
         coupleNames: coupleNamesForEvent(event),
+        photoStyle: p.photoStyle,
       });
       const styledBlob = await new Promise<Blob>((resolve, reject) =>
         styled.toBlob(
@@ -663,102 +686,20 @@ export function drawStyledPhoto(
     maxDimension?: number;
     photoDate?: Date;
     coupleNames?: string;
+    photoStyle?: PhotoStyle;
   } = {}
 ) {
-  const canvas = document.createElement("canvas");
-  const longestEdge = Math.max(image.naturalWidth, image.naturalHeight);
-  const scale = options.maxDimension
-    ? Math.min(1, options.maxDimension / longestEdge)
-    : 1;
-  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas is unavailable.");
-  ctx.filter =
-    film === "warm"
-      ? "sepia(.18) saturate(1.12)"
-      : film === "soft"
-      ? "saturate(.78) brightness(1.04)"
-      : "none";
-  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-  ctx.filter = "none";
-  const eventDate = options.photoDate ?? new Date();
-  const dateText = new Intl.DateTimeFormat("en-MY", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Kuala_Lumpur",
-  }).format(eventDate);
-  const lines = [
-    stamp.trim(),
-    options.coupleNames ?? "Harissa & Faiz",
-    dateText,
-  ].filter(Boolean);
-  const fontSize = Math.max(
-    16,
-    Math.round(Math.min(canvas.width, canvas.height) * 0.035)
-  );
-  ctx.font = `${fontSize}px Georgia, serif`;
-  const maxTextWidth = canvas.width * 0.9;
-  const wrapped = lines.flatMap((line) =>
-    wrapStampLine(ctx, line, maxTextWidth)
-  );
-  const lineHeight = Math.round(fontSize * 1.25);
-  const bandHeight = Math.max(0, wrapped.length * lineHeight + fontSize * 1.1);
-  const gradient = ctx.createLinearGradient(
-    0,
-    canvas.height - bandHeight,
-    0,
-    canvas.height
-  );
-  gradient.addColorStop(0, "rgba(22,24,20,0)");
-  gradient.addColorStop(0.32, "rgba(22,24,20,.55)");
-  gradient.addColorStop(1, "rgba(22,24,20,.74)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, canvas.height - bandHeight, canvas.width, bandHeight);
-  ctx.fillStyle = "#fffdf8";
-  ctx.shadowColor = "rgba(0,0,0,.3)";
-  ctx.shadowBlur = Math.max(1, fontSize / 5);
-  ctx.textAlign = "right";
-  wrapped.forEach((line, index) =>
-    ctx.fillText(
-      line,
-      canvas.width * 0.95,
-      canvas.height -
-        fontSize * 0.45 -
-        (wrapped.length - index - 1) * lineHeight
-    )
-  );
-  return canvas;
-}
-function wrapStampLine(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number
-) {
-  const words = text.split(/\s+/).filter(Boolean);
-  const output: string[] = [];
-  let line = "";
-  for (const word of words) {
-    if (ctx.measureText(word).width > maxWidth) {
-      if (line) { output.push(line); line = ""; }
-      let fragment = "";
-      for (const character of Array.from(word)) {
-        if (fragment && ctx.measureText(fragment + character).width > maxWidth) {
-          output.push(fragment);
-          fragment = character;
-        } else fragment += character;
-      }
-      line = fragment;
-      continue;
-    }
-    const candidate = line ? `${line} ${word}` : word;
-    if (line && ctx.measureText(candidate).width > maxWidth) {
-      output.push(line);
-      line = word;
-    } else line = candidate;
-  }
-  if (line) output.push(line);
-  return output;
+  const selected = options.photoStyle;
+  return renderPhotoCanvas(image, {
+    film: selected?.film ?? film,
+    stamp: selected?.stamp ?? stamp,
+    capturedAt:
+      selected?.capturedAt ??
+      options.photoDate?.getTime() ??
+      Date.now(),
+    coupleNames: options.coupleNames ?? "Harissa & Faiz",
+    maxDimension: options.maxDimension,
+  });
 }
 function dateValue(value: unknown): Date | undefined {
   if (
