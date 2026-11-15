@@ -237,6 +237,243 @@ function saturate(r: number, g: number, b: number, amount: number) {
   ] as const;
 }
 
+/** Fragment shader for the live camera. Still-photo rendering keeps using the CPU renderer. */
+export const CAMERA_FILM_FRAGMENT_SHADER = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform sampler2D u_video;
+uniform vec4 u_crop;
+uniform int u_film;
+varying vec2 v_texcoord;
+
+float smoothUnit(float edge0, float edge1, float value) {
+  float t = clamp((value - edge0) / (edge1 - edge0), 0.0, 1.0);
+  return t * t * (3.0 - 2.0 * t);
+}
+float filmTone(float value, float amount) {
+  float base = 0.025 + value * 0.95;
+  float centered = base - 0.5;
+  float shaped = base + centered * (0.5 - abs(centered)) * (amount - 1.0) * 1.2;
+  return clamp(shaped, 0.0, 1.0);
+}
+float lum(vec3 color) { return dot(color, vec3(0.2126, 0.7152, 0.0722)); }
+vec3 addLuminance(vec3 color, float nextLuminance) {
+  return color + vec3(nextLuminance - lum(color));
+}
+vec3 saturateColor(vec3 color, float amount) {
+  float y = lum(color);
+  return vec3(y) + (color - vec3(y)) * amount;
+}
+void main() {
+  vec2 uv = u_crop.xy + v_texcoord * u_crop.zw;
+  vec4 source = texture2D(u_video, uv);
+  vec3 color = source.rgb;
+  float y = lum(color);
+  float shadow = smoothUnit(0.015, 0.15, y) * (1.0 - smoothUnit(0.3, 0.48, y));
+  float highlight = smoothUnit(0.48, 0.62, y) * (1.0 - smoothUnit(0.82, 0.96, y));
+
+  if (u_film == 1) {
+    color = saturateColor(addLuminance(color, filmTone(y, 1.14)), 0.78);
+    color += vec3(-shadow * 0.014 + highlight * 0.01,
+      shadow * 0.005, shadow * 0.032 - highlight * 0.006);
+  } else if (u_film == 2) {
+    color = saturateColor(addLuminance(color, filmTone(y, 1.22)), 1.13);
+    color += vec3(-shadow * 0.012 + highlight * 0.021,
+      shadow * 0.009 + highlight * 0.006,
+      shadow * 0.022 - highlight * 0.018);
+  } else if (u_film == 3) {
+    color = saturateColor(addLuminance(color, filmTone(y, 1.12) - shadow * 0.006), 0.96);
+    color += vec3(highlight * 0.048, highlight * 0.021, -highlight * 0.035 + shadow * 0.012);
+  } else if (u_film == 4) {
+    float mono = dot(color, vec3(0.27, 0.63, 0.1));
+    color = vec3(filmTone(mono, 1.2));
+  }
+  gl_FragColor = vec4(clamp(color, 0.0, 1.0), source.a);
+}
+`;
+
+export const CAMERA_FILM_VERTEX_SHADER = `
+attribute vec2 a_position;
+attribute vec2 a_texcoord;
+varying vec2 v_texcoord;
+void main() {
+  gl_Position = vec4(a_position, 0.0, 1.0);
+  v_texcoord = a_texcoord;
+}
+`;
+
+export type CameraWebGLPreview = {
+  render(source: HTMLVideoElement, frame: CameraFrameGeometry, film: SelectablePhotoFilm): void;
+  dispose(): void;
+};
+
+export function createCameraWebGLPreview(
+  canvas: HTMLCanvasElement,
+  onContextLost?: () => void
+): CameraWebGLPreview | null {
+  let gl: WebGLRenderingContext | null;
+  try {
+    gl = (canvas.getContext("webgl", {
+      alpha: false,
+      antialias: false,
+      depth: false,
+      preserveDrawingBuffer: false,
+    }) ?? canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
+  } catch {
+    return null;
+  }
+  if (!gl) return null;
+  const context = gl;
+
+  let program: WebGLProgram | null = null;
+  let buffer: WebGLBuffer | null = null;
+  let texture: WebGLTexture | null = null;
+  let vertexShader: WebGLShader | null = null;
+  let fragmentShader: WebGLShader | null = null;
+  try {
+    vertexShader = compileCameraShader(context, context.VERTEX_SHADER, CAMERA_FILM_VERTEX_SHADER);
+    fragmentShader = compileCameraShader(context, context.FRAGMENT_SHADER, CAMERA_FILM_FRAGMENT_SHADER);
+    program = context.createProgram();
+    if (!program) throw new Error("Could not allocate a camera shader program.");
+    context.attachShader(program, vertexShader);
+    context.attachShader(program, fragmentShader);
+    context.linkProgram(program);
+    if (!context.getProgramParameter(program, context.LINK_STATUS))
+      throw new Error(context.getProgramInfoLog(program) || "Camera shader link failed.");
+    const activeProgram = program;
+
+    buffer = context.createBuffer();
+    texture = context.createTexture();
+    if (!buffer || !texture) throw new Error("Could not allocate camera preview resources.");
+    context.bindBuffer(context.ARRAY_BUFFER, buffer);
+    context.bufferData(
+      context.ARRAY_BUFFER,
+      new Float32Array([
+        -1, -1, 0, 0,
+        1, -1, 1, 0,
+        -1, 1, 0, 1,
+        1, 1, 1, 1,
+      ]),
+      context.STATIC_DRAW
+    );
+    context.bindTexture(context.TEXTURE_2D, texture);
+    context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_S, context.CLAMP_TO_EDGE);
+    context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_T, context.CLAMP_TO_EDGE);
+    context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MIN_FILTER, context.LINEAR);
+    context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MAG_FILTER, context.LINEAR);
+    context.pixelStorei(context.UNPACK_FLIP_Y_WEBGL, 1);
+    context.useProgram(activeProgram);
+    const position = context.getAttribLocation(activeProgram, "a_position");
+    const texcoord = context.getAttribLocation(activeProgram, "a_texcoord");
+    context.enableVertexAttribArray(position);
+    context.vertexAttribPointer(position, 2, context.FLOAT, false, 16, 0);
+    context.enableVertexAttribArray(texcoord);
+    context.vertexAttribPointer(texcoord, 2, context.FLOAT, false, 16, 8);
+    context.uniform1i(context.getUniformLocation(activeProgram, "u_video"), 0);
+
+    let textureInitialized = false;
+    let textureWidth = 0;
+    let textureHeight = 0;
+    let disposed = false;
+    let currentCanvasWidth = 0;
+    let currentCanvasHeight = 0;
+    let currentFilm = -1;
+    let currentCrop = "";
+    const onLost = (event: Event) => {
+      event.preventDefault();
+      onContextLost?.();
+    };
+    canvas.addEventListener("webglcontextlost", onLost);
+
+    return {
+      render(source, frame, film) {
+        if (disposed) throw new Error("Camera preview renderer has been disposed.");
+        if (context.isContextLost()) throw new Error("Camera graphics context was lost.");
+        if (canvas.width !== currentCanvasWidth || canvas.height !== currentCanvasHeight) {
+          currentCanvasWidth = canvas.width;
+          currentCanvasHeight = canvas.height;
+          context.viewport(0, 0, canvas.width, canvas.height);
+        }
+        context.activeTexture(context.TEXTURE0);
+        context.bindTexture(context.TEXTURE_2D, texture);
+        const sourceDimensions = getPhotoDimensions(source);
+        if (
+          !textureInitialized ||
+          sourceDimensions.width !== textureWidth ||
+          sourceDimensions.height !== textureHeight
+        ) {
+          context.texImage2D(context.TEXTURE_2D, 0, context.RGBA, context.RGBA, context.UNSIGNED_BYTE, source);
+          textureInitialized = true;
+          textureWidth = sourceDimensions.width;
+          textureHeight = sourceDimensions.height;
+        } else {
+          // This updates the existing GPU texture directly; no pixel readback or CPU filter pass.
+          context.texSubImage2D(context.TEXTURE_2D, 0, 0, 0, context.RGBA, context.UNSIGNED_BYTE, source);
+        }
+        const dimensions = getPhotoDimensions(source);
+        const crop = getPhotoCrop(dimensions.width, dimensions.height, frame.aspectRatio);
+        const cropUniform = [
+          crop.x / dimensions.width,
+          1 - (crop.y + crop.height) / dimensions.height,
+          crop.width / dimensions.width,
+          crop.height / dimensions.height,
+        ];
+        const cropKey = cropUniform.join(":");
+        const filmIndex = film === "none"
+          ? 0
+          : PHOTO_FILM_PRESETS.findIndex((preset) => preset.id === film);
+        context.useProgram(activeProgram);
+        if (currentFilm !== filmIndex) {
+          context.uniform1i(context.getUniformLocation(activeProgram, "u_film"), filmIndex);
+          currentFilm = filmIndex;
+        }
+        if (currentCrop !== cropKey) {
+          context.uniform4fv(context.getUniformLocation(activeProgram, "u_crop"), cropUniform);
+          currentCrop = cropKey;
+        }
+        context.drawArrays(context.TRIANGLE_STRIP, 0, 4);
+      },
+      dispose() {
+        if (disposed) return;
+        disposed = true;
+        canvas.removeEventListener("webglcontextlost", onLost);
+        if (!context.isContextLost()) {
+          if (program) context.deleteProgram(program);
+          if (buffer) context.deleteBuffer(buffer);
+          if (texture) context.deleteTexture(texture);
+          if (vertexShader) context.deleteShader(vertexShader);
+          if (fragmentShader) context.deleteShader(fragmentShader);
+        }
+      },
+    };
+  } catch {
+    if (!context.isContextLost()) {
+      if (program) context.deleteProgram(program);
+      if (buffer) context.deleteBuffer(buffer);
+      if (texture) context.deleteTexture(texture);
+      if (vertexShader) context.deleteShader(vertexShader);
+      if (fragmentShader) context.deleteShader(fragmentShader);
+    }
+    return null;
+  }
+}
+
+function compileCameraShader(gl: WebGLRenderingContext, type: number, source: string) {
+  const shader = gl.createShader(type);
+  if (!shader) throw new Error("Could not allocate a camera shader.");
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    const message = gl.getShaderInfoLog(shader) || "Camera shader compile failed.";
+    gl.deleteShader(shader);
+    throw new Error(message);
+  }
+  return shader;
+}
+
 export function formatPhotoStampDate(capturedAt: number) {
   const values = new Map(
     new Intl.DateTimeFormat("en-US", {
@@ -405,7 +642,7 @@ function drawPhotoStamp(
   context: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   options: PhotoRenderOptions
-) {
+): PhotoStampLayout {
   const layout = getPhotoStampLayout(context, canvas.width, canvas.height, options);
   context.save();
   try {
@@ -433,6 +670,18 @@ function drawPhotoStamp(
   } finally {
     context.restore();
   }
+  return layout;
+}
+
+/** Draws only the transparent imprint layer, for the live camera overlay. */
+export function renderPhotoStampLayer(
+  canvas: HTMLCanvasElement,
+  options: PhotoRenderOptions
+): PhotoStampLayout {
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas is unavailable.");
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  return drawPhotoStamp(context, canvas, options);
 }
 
 function drawStampLine(

@@ -7,14 +7,17 @@ import {
   getCameraFrameGeometry,
   getPhotoDimensions,
   getPhotoStampLayout,
+  createCameraWebGLPreview,
   renderCameraFrame,
   renderCameraFrameInto,
   renderPhotoCanvas,
+  renderPhotoStampLayer,
   resolvePhotoFilm,
+  type CameraWebGLPreview,
   type PhotoFilm,
   type PhotoStyle,
 } from "@/lib/wedding/memoriesRender";
-import { acquireCameraStream, CaptureGate, stopCameraStream } from "@/lib/wedding/memoriesCamera";
+import { acquireCameraStream, CaptureGate, getCameraCaptureConstraints, scheduleVideoFrames, stopCameraStream } from "@/lib/wedding/memoriesCamera";
 import type { MemorySettings } from "@/lib/wedding/memories";
 import styles from "./Memories.module.css";
 
@@ -97,14 +100,22 @@ function CameraSurface({
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [liveStampTime, setLiveStampTime] = useState(() => Date.now());
+  const [gpuUnavailable, setGpuUnavailable] = useState(false);
+  const [fallbackActive, setFallbackActive] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const gpuCanvas = useRef<HTMLCanvasElement>(null);
+  const fallbackCanvas = useRef<HTMLCanvasElement>(null);
+  const stampCanvas = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const screen = useRef<HTMLDivElement>(null);
   const streamRef = useRef<MediaStream>();
   const requestActive = useRef(true);
   const shutterGate = useRef(new CaptureGate());
   const saveGate = useRef(new CaptureGate());
+  const gpuRenderer = useRef<CameraWebGLPreview | null>(null);
+  const fallbackActiveRef = useRef(false);
   const dialog = useRef<HTMLElement>(null);
   const presetButtons = useRef(new Map<string, HTMLButtonElement>());
   const reviewImage = useRef<{
@@ -122,11 +133,23 @@ function CameraSurface({
         : null,
     [viewport]
   );
+  const fallbackFrame = useMemo(
+    () =>
+      viewport.width && viewport.height
+        ? getCameraFrameGeometry(viewport.width, viewport.height, 360)
+        : null,
+    [viewport]
+  );
 
   const releaseStream = useCallback(() => {
     stopCameraStream(streamRef.current);
     streamRef.current = undefined;
     setReady(false);
+  }, []);
+  const setFallbackMode = useCallback((active: boolean) => {
+    if (fallbackActiveRef.current === active) return;
+    fallbackActiveRef.current = active;
+    setFallbackActive(active);
   }, []);
 
   useEffect(() => {
@@ -135,6 +158,28 @@ function CameraSurface({
       inline: "nearest",
     });
   }, [film]);
+
+  useEffect(() => {
+    const node = gpuCanvas.current;
+    if (!node) return;
+    const renderer = createCameraWebGLPreview(node, () => setGpuUnavailable(true));
+    gpuRenderer.current = renderer;
+    setGpuUnavailable(!renderer);
+    return () => {
+      renderer?.dispose();
+      if (gpuRenderer.current === renderer) gpuRenderer.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    let timer = 0;
+    const updateAtMinute = () => {
+      setLiveStampTime(Date.now());
+      timer = window.setTimeout(updateAtMinute, 60_000 - (Date.now() % 60_000) + 20);
+    };
+    timer = window.setTimeout(updateAtMinute, 60_000 - (Date.now() % 60_000) + 20);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const node = stage.current;
@@ -211,7 +256,7 @@ function CameraSurface({
     }
     void acquireCameraStream(
       request,
-      { video: { facingMode: { ideal: facing } }, audio: false },
+      getCameraCaptureConstraints(facing),
       () => current && requestActive.current
     )
       .then((stream) => {
@@ -251,49 +296,84 @@ function CameraSurface({
   }, [releaseStream]);
 
   useEffect(() => {
-    if (!ready || !frame || review || !video.current || !canvas.current) return;
+    if (!ready || !frame || !video.current) return;
     const videoElement = video.current;
-    const target = canvas.current;
-    const paint = () => {
+    if (review || film === "none") {
+      setFallbackMode(false);
+      return;
+    }
+    const fallback = fallbackCanvas.current;
+    const drawFallback = () => {
+      if (!fallback || !fallbackFrame) return;
+      const options = {
+        film,
+        stamp: "",
+        capturedAt: liveStampTime,
+        coupleNames,
+        aspectRatio: frame.aspectRatio,
+        stampAspectRatio: frame.captureWidth / frame.captureHeight,
+        includeStamp: false,
+      };
+      renderCameraFrameInto(videoElement, fallback, fallbackFrame, options);
+      setFallbackMode(true);
+    };
+    const render = () => {
+      if (videoElement.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
       const dimensions = getPhotoDimensions(videoElement);
       if (!dimensions.width || !dimensions.height) return;
       try {
-        const options = {
-          film,
-          stamp,
-          capturedAt: Date.now(),
-          coupleNames,
-          aspectRatio: frame.aspectRatio,
-          stampAspectRatio: frame.captureWidth / frame.captureHeight,
-        };
-        renderCameraFrameInto(videoElement, target, frame, options);
-        const context = target.getContext("2d");
-        if (context) {
-          const stampLayout = getPhotoStampLayout(
-            context,
-            target.width,
-            target.height,
-            options
-          );
-          const cssScale = viewport.height / target.height;
-          screen.current?.style.setProperty(
-            "--camera-stamp-reserve-left",
-            `${stampLayout.reservedLeft * cssScale}px`
-          );
-          screen.current?.style.setProperty(
-            "--camera-stamp-reserve-bottom",
-            `${stampLayout.reservedBottom * cssScale}px`
-          );
+        if (gpuUnavailable || !gpuRenderer.current) {
+          drawFallback();
+          return;
         }
-      } catch (reason) {
-        setError(`Camera preview failed: ${(reason as Error).message}`);
-        releaseStream();
+        gpuRenderer.current.render(videoElement, frame, resolvePhotoFilm(film));
+        setFallbackMode(false);
+      } catch {
+        setGpuUnavailable(true);
+        try {
+          drawFallback();
+        } catch (reason) {
+          setError(`Camera preview failed: ${(reason as Error).message}`);
+          releaseStream();
+        }
       }
     };
-    paint();
-    const timer = window.setInterval(paint, 120);
-    return () => window.clearInterval(timer);
-  }, [ready, review, film, stamp, coupleNames, frame, viewport.height, releaseStream]);
+    return scheduleVideoFrames(videoElement, render);
+  }, [
+    ready,
+    review,
+    film,
+    coupleNames,
+    frame,
+    fallbackFrame,
+    liveStampTime,
+    gpuUnavailable,
+    releaseStream,
+    setFallbackMode,
+  ]);
+
+  useEffect(() => {
+    if (!ready || review || !frame || !stampCanvas.current) return;
+    try {
+      const layout = renderPhotoStampLayer(stampCanvas.current, {
+        film: "none",
+        stamp,
+        capturedAt: liveStampTime,
+        coupleNames,
+        aspectRatio: frame.aspectRatio,
+        stampAspectRatio: frame.captureWidth / frame.captureHeight,
+      });
+      const scale = viewport.height / stampCanvas.current.height;
+      const left = `${layout.reservedLeft * scale}px`;
+      const bottom = `${layout.reservedBottom * scale}px`;
+      if (screen.current?.style.getPropertyValue("--camera-stamp-reserve-left") !== left)
+        screen.current?.style.setProperty("--camera-stamp-reserve-left", left);
+      if (screen.current?.style.getPropertyValue("--camera-stamp-reserve-bottom") !== bottom)
+        screen.current?.style.setProperty("--camera-stamp-reserve-bottom", bottom);
+    } catch (reason) {
+      setError(`Photo stamp preview failed: ${(reason as Error).message}`);
+    }
+  }, [ready, review, frame, viewport.height, stamp, coupleNames, liveStampTime]);
 
   useEffect(() => {
     const raw = review?.raw;
@@ -473,8 +553,12 @@ function CameraSurface({
             autoPlay
             muted
             playsInline
-            onLoadedMetadata={() => {
-              if (video.current?.videoWidth && video.current.videoHeight)
+            onLoadedData={() => {
+              const element = video.current;
+              if (element &&
+                element.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+                element.videoWidth &&
+                element.videoHeight)
                 setReady(true);
             }}
             onError={() => {
@@ -483,11 +567,36 @@ function CameraSurface({
             }}
           />
           <canvas
+            ref={gpuCanvas}
+            className={styles.cameraGpuCanvas}
+            width={frame?.previewWidth ?? 1}
+            height={frame?.previewHeight ?? 1}
+            hidden={film === "none" || fallbackActive || gpuUnavailable || !!review}
+            aria-hidden="true"
+          />
+          <canvas
+            ref={fallbackCanvas}
+            className={styles.cameraFallbackCanvas}
+            width={fallbackFrame?.previewWidth ?? 1}
+            height={fallbackFrame?.previewHeight ?? 1}
+            hidden={!fallbackActive || film === "none" || !!review}
+            aria-hidden="true"
+          />
+          <canvas
             ref={canvas}
             className={styles.cameraPreviewCanvas}
             width={frame?.previewWidth ?? 1}
             height={frame?.previewHeight ?? 1}
+            hidden={!review}
             aria-label={review ? "Preview of the photo with its selected style" : "Live camera preview with selected style and photo stamp"}
+          />
+          <canvas
+            ref={stampCanvas}
+            className={styles.cameraStampCanvas}
+            width={frame?.previewWidth ?? 1}
+            height={frame?.previewHeight ?? 1}
+            hidden={!!review}
+            aria-hidden="true"
           />
           {!ready && !review && (
             <p className={styles.cameraStageMessage} role="status">

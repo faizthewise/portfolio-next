@@ -32,6 +32,10 @@ the current viewport aspect, including after device rotation. The app keeps the
 unfiltered source while a photo is under review, then saves the crop visible at
 the moment the guest chooses **Use photo**. Controls leave the rendered imprint
 readable without covering the scene.
+The live Original look displays the camera video directly. Film looks use a
+WebGL preview with a 2D, downscaled fallback when GPU rendering is unavailable;
+full-resolution capture, frozen review, gallery images, and exports use the
+still-photo renderer.
 The rendered stamp is a restrained burnt-orange, tracked monospace imprint.
 It runs vertically near the lower-left edge on portrait images and horizontally
 at the lower-left on landscape and square images. The event line includes the
