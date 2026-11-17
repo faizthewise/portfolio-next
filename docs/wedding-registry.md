@@ -6,11 +6,14 @@
   English item links stay on `/wedding-registry-en?gift=<slug>`.
 - `/wedding-registry?gift=air-fryer` opens a particular item. The `gift` value is the catalogue slug.
 - `/wedding-registry-v2` shows regular gifts and a general giving QR at the bottom,
-  without the big-gift funds. The invitation's gift previews and main gift link use this route.
+  without the big-gift funds. Links with `invitation=groom` show and download Faiz’s QR;
+  other links use Harissa’s QR. The invitation's gift previews and main gift link use this route.
 - The garden invitation uses `?mode=family`, `?mode=friend`, or `?mode=parentFriend`:
   family hides the hashtag and gifts; friend shows both; parentFriend shows gifts only.
   Missing or unrecognised modes use family. The old `friend=1` parameter is no longer used.
   Guests without the hashtag see the floral ornament in its place.
+- The groom invitation also supports `?mode=friends`: gifts and the hashtag are shown,
+  while Salam Kaut is hidden, including when `salam=1` is supplied.
 - Gift links carry the selected mode, including individual item links. Both registry return links
   preserve it, for example `/jemputan-walimatulurus-harissa-faiz?mode=parentFriend&registry=1#hadiah`.
   `registry=1` opens the invitation directly; family return links omit the gift anchor.

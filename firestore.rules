@@ -134,7 +134,7 @@ service cloud.firestore {
         data.photoStyle is map
         && data.photoStyle.keys().hasOnly(['film', 'stamp', 'capturedAt'])
         && data.photoStyle.keys().hasAll(['film', 'stamp', 'capturedAt'])
-        && data.photoStyle.film in ['none', 'classic-chrome', 'classic-neg', 'nostalgic-neg', 'acros', 'warm', 'soft']
+        && data.photoStyle.film in ['none', 'fp2', 'fs16', 'fv5', 'classic-chrome', 'classic-neg', 'nostalgic-neg', 'acros', 'warm', 'soft']
         && data.photoStyle.stamp is string && data.photoStyle.stamp.size() <= 100
         && data.photoStyle.capturedAt is int && data.photoStyle.capturedAt > 0
         && data.photoStyle.capturedAt <= request.time.toMillis() + 86400000
@@ -146,7 +146,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['welcome', 'cover', 'film', 'stamp', 'bankRecipient', 'bankDetails', 'qrUrl', 'updatedAt'])
         && request.resource.data.welcome is string && request.resource.data.welcome.size() <= 1000
         && request.resource.data.cover is string && request.resource.data.cover.size() <= 2048
-        && request.resource.data.film in ['none', 'classic-chrome', 'classic-neg', 'nostalgic-neg', 'acros', 'warm', 'soft']
+        && request.resource.data.film in ['none', 'fp2', 'fs16', 'fv5', 'classic-chrome', 'classic-neg', 'nostalgic-neg', 'acros', 'warm', 'soft']
         && request.resource.data.stamp is string && request.resource.data.stamp.size() <= 100
         && request.resource.data.bankRecipient is string && request.resource.data.bankRecipient.size() <= 100
         && request.resource.data.bankDetails is string && request.resource.data.bankDetails.size() <= 300

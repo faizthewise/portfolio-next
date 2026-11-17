@@ -74,6 +74,9 @@ export function RegistryContent({
   const copy = registryCopy[locale];
   const fundCopy = contributionCopy[locale];
   const pagePath = router.pathname;
+  const groomRegistry = router.query.invitation === "groom";
+  const qrFilename = groomRegistry ? "Faiz-QR.jpeg" : "harissa-qr.jpeg";
+  const qrPath = `/images/${qrFilename}`;
   const returnPath = invitationReturnPath(
     getInvitationMode(router.query.mode),
     router.query.invitation
@@ -511,7 +514,7 @@ export function RegistryContent({
               </button>
             </div>
           )}
-          {variant === "qr" && router.isReady && router.query.invitation !== "groom" && (
+          {variant === "qr" && router.isReady && (
             <section
               className={styles["giving-section"]}
               aria-labelledby="giving-title"
@@ -519,8 +522,8 @@ export function RegistryContent({
               <p>{copy.qrIntro}</p>
               <figure className={styles["payment-qr"]}>
                 <Image
-                  src="/images/harissa-qr.jpeg"
-                  alt={copy.qrAlt}
+                  src={qrPath}
+                  alt={groomRegistry ? copy.groomQrAlt : copy.qrAlt}
                   width={615}
                   height={884}
                   unoptimized
@@ -528,8 +531,8 @@ export function RegistryContent({
                 <figcaption>{copy.qrCaption}</figcaption>
               </figure>
               <a
-                href="/images/harissa-qr.jpeg"
-                download="harissa-qr.jpeg"
+                href={qrPath}
+                download={qrFilename}
                 className={styles.secondary}
               >
                 {copy.qrDownload}

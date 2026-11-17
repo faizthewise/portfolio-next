@@ -41,6 +41,7 @@ export const registryCopy = {
     qrIntro:
       "Jika ingin menitipkan hadiah dalam bentuk wang, anda boleh menggunakan kod QR di bawah. Setiap ingatan dan doa amat dihargai.",
     qrAlt: "Kod QR Harissa untuk hadiah wang",
+    groomQrAlt: "Kod QR Faiz untuk hadiah wang",
     qrCaption: "Imbas kod QR melalui aplikasi perbankan pilihan anda.",
     qrDownload: "Simpan kod QR",
     close: "Tutup butiran hadiah",
@@ -115,6 +116,7 @@ export const registryCopy = {
     qrIntro:
       "If you’d like to give a monetary gift, you’re welcome to use the QR code below. Every kind thought and warm wish is deeply appreciated.",
     qrAlt: "Harissa’s QR code for monetary gifts",
+    groomQrAlt: "Faiz’s QR code for monetary gifts",
     qrCaption: "Scan the QR code with your preferred banking app.",
     qrDownload: "Save QR code",
     close: "Close gift details",

@@ -3,6 +3,7 @@ import { brideInvitationPath, groomInvitationPath } from "./invitations";
 export type InvitationMode =
   | "family"
   | "friend"
+  | "friends"
   | "parentFriend"
   | "sekeluarga";
 
@@ -10,6 +11,7 @@ export function getInvitationMode(
   value: string | string[] | undefined
 ): InvitationMode {
   return value === "friend" ||
+    value === "friends" ||
     value === "parentFriend" ||
     value === "sekeluarga"
     ? value

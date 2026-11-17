@@ -32,7 +32,7 @@ const { getInvitationMode, invitationReturnPath } = loadModule(
 );
 
 test("registry return links preserve each invitation and its guest mode", () => {
-  for (const mode of ["family", "friend", "parentFriend", "sekeluarga"]) {
+  for (const mode of ["family", "friend", "friends", "parentFriend", "sekeluarga"]) {
     for (const side of [undefined, "groom"]) {
       const url = new URL(
         invitationReturnPath(mode, side),
@@ -52,6 +52,7 @@ test("registry return links preserve each invitation and its guest mode", () => 
       );
     }
   }
+  assert.equal(getInvitationMode("friends"), "friends");
   assert.equal(getInvitationMode("unknown"), "family");
   assert.equal(getInvitationMode(["friend"]), "family");
   assert.ok(

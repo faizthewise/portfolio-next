@@ -213,3 +213,21 @@ test("Salam Kaut links to the existing QR section only when enabled", () => {
     salam = false;
   }
 });
+
+test("groom friends mode shows gifts and hides Salam Kaut even when requested", () => {
+  try {
+    mode = "friends";
+    for (const enabled of [false, true]) {
+      salam = enabled;
+      const html = render(groomInvitation);
+      assert.match(html, /id="hadiah"/);
+      assert.match(html, /mode=friends/);
+      assert.match(html, /invitation=groom/);
+      assert.doesNotMatch(html, /(?:id|href)="#?salam-kaut"/);
+      assert.doesNotMatch(html, /Faiz-QR\.jpeg/);
+    }
+  } finally {
+    mode = "friend";
+    salam = false;
+  }
+});

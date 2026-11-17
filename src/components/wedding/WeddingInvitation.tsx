@@ -472,7 +472,9 @@ export default function WeddingInvitation({
   };
   const showGifts =
     router.isReady && mode !== "family" && mode !== "sekeluarga";
-  const showHashtag = router.isReady && mode === "friend";
+  const showHashtag =
+    router.isReady && (mode === "friend" || mode === "friends");
+  const hideSalamKaut = wedding.side === "groom" && mode === "friends";
   const regularGifts = registryProducts.filter(
     (product) => !product.contribution
   );
@@ -981,7 +983,7 @@ export default function WeddingInvitation({
                           <Gift className="h-4 w-4" /> Hadiah
                         </a>
                       )}
-                      {wedding.side === "groom" && showSalam && (
+                      {wedding.side === "groom" && showSalam && !hideSalamKaut && (
                         <a
                           href="#salam-kaut"
                           className="inline-flex items-center gap-2 rounded-full border border-[rgb(var(--wedding-rgb-607a60))]/30 bg-[rgb(var(--wedding-rgb-607a60))] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[rgb(var(--wedding-rgb-4f7058))]"
@@ -1258,7 +1260,7 @@ export default function WeddingInvitation({
             </section>
           )}
 
-          {wedding.side === "groom" && showGifts && (
+          {wedding.side === "groom" && showGifts && !hideSalamKaut && (
             <section
               id="salam-kaut"
               className="stationery-section garden-stationery-section relative scroll-mt-6 overflow-hidden border-y border-[rgb(var(--wedding-rgb-a79a78))]/20 bg-[rgb(var(--wedding-rgb-eef0e8))] px-6 py-24 text-[rgb(var(--wedding-rgb-3e5949))]"
