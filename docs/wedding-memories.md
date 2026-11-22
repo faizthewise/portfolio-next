@@ -17,9 +17,9 @@ person identity. Publishing the routes does not activate Firebase services.
 
 The guest hub keeps the name, photo count, and available actions together. The
 camera opens as a full-screen view with Original, FP2, FS16, and FV5 looks in a
-horizontal strip. Each captured photo saves the selected look and wedding stamp
-with the image; guests can change the look on the frozen preview before saving.
-Photo originals remain unchanged, while gallery views and exports use the same
+horizontal strip. Each captured photo saves the selected look, capture time, and
+wedding stamp into a local draft. Photo originals remain unchanged, while gallery
+views and exports use the same
 crop, filter, and stamp renderer. The shared gallery is available from the hub.
 The three color looks are local stylistic approximations informed by the
 descriptions for [VSCO Fuji presets](https://www.vsco.co/features/film-filters/fujifilm-presets).
@@ -27,11 +27,14 @@ They are not claims of exact proprietary filter matches; paired VSCO reference
 exports are not available for comparison.
 
 The camera feed fills the viewport; its name, close control, film strip, shutter,
-and upload/flip actions float over the image. Preview and review framing follow
-the current viewport aspect, including after device rotation. The app keeps the
-unfiltered source while a photo is under review, then saves the crop visible at
-the moment the guest chooses **Use photo**. Controls leave the rendered imprint
-readable without covering the scene.
+and flip action float over the image. The live view has no wedding imprint or
+reserved stamp area. Shutter freezes the current viewport crop, selected film
+look, and capture time into a local draft, then returns to the viewfinder.
+Guests open Photos to review, delete, add device-picked photos, and upload all
+or selected drafts. Drafts survive camera close/reopen and page refresh in the
+same browser profile. They enter the retryable upload queue only after the guest
+explicitly chooses Upload. Saved photo stamps remain visible in draft previews,
+gallery images, and exports.
 The live Original look displays the camera video directly. Film looks use a
 WebGL preview, refreshed from each video frame, with a 200 ms callback watchdog
 and paced animation-frame fallback if frame callbacks stop arriving. A 2D,
@@ -43,8 +46,8 @@ The rendered stamp is a restrained burnt-orange, tracked monospace imprint.
 It runs vertically near the lower-left edge on portrait images and horizontally
 at the lower-left on landscape and square images. The event line includes the
 capture time in Malaysia time; the exact custom hashtag or message appears as a
-smaller secondary imprint. The same layout is used in live preview, review,
-gallery images, and exports.
+smaller secondary imprint. This layout appears in draft previews, gallery
+images, and exports, but not over the live camera feed.
 
 ## One-time Firebase setup
 

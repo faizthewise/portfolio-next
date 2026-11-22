@@ -12,6 +12,8 @@ export function MemoryGuestHub({
   cover,
   remaining,
   used,
+  canReviewDrafts,
+  draftCount,
   name,
   nameRef,
   namesClassName,
@@ -33,11 +35,13 @@ export function MemoryGuestHub({
   cover?: string;
   remaining: number;
   used: number;
+  canReviewDrafts: boolean;
+  draftCount: number;
   name: string;
   nameRef: RefObject<HTMLInputElement>;
   namesClassName: string;
   onNameChange: (value: string) => void;
-  onCamera: () => void;
+  onCamera: (reviewOnly?: boolean) => void;
   onAlbum: () => void;
   onVoice: () => void;
   onWish: () => void;
@@ -84,12 +88,21 @@ export function MemoryGuestHub({
       <button
         type="button"
         className={styles.hubPrimaryAction}
-        disabled={remaining <= 0}
-        onClick={onCamera}
+        disabled={remaining <= 0 && !canReviewDrafts}
+        onClick={() => onCamera(remaining <= 0 && canReviewDrafts)}
       >
-        <Camera size={21} aria-hidden="true" />
-        Open camera
+        {remaining <= 0 && canReviewDrafts ? (
+          <ImagePlus size={21} aria-hidden="true" />
+        ) : (
+          <Camera size={21} aria-hidden="true" />
+        )}
+        {remaining <= 0 && canReviewDrafts ? "Review saved photos" : "Open camera"}
       </button>
+      {draftCount > 0 && (
+        <p className={styles.hubQueueStatus} role="status">
+          {draftCount} {draftCount === 1 ? "photo" : "photos"} saved on this device · upload when ready
+        </p>
+      )}
       <div className={styles.hubActionGrid}>
         <button type="button" onClick={onAlbum}>
           <ImagePlus aria-hidden="true" />

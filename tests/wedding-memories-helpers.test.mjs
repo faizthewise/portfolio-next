@@ -509,7 +509,7 @@ test("invalid photo consumes no reservation; offline draft survives reload and l
   const photoStyle = {
     film: "nostalgic-neg",
     stamp: "#GuestChoice",
-    capturedAt: Date.now(),
+    capturedAt: Date.parse("2026-11-14T16:27:00Z"),
   };
   const draft = await uploads.savePhotoDraft(
     "bride",

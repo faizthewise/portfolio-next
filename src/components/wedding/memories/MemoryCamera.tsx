@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Camera as CameraIcon, SwitchCamera, Check, RefreshCw, Image as GalleryIcon, Info, X } from "lucide-react";
+import { Camera as CameraIcon, SwitchCamera, RefreshCw, Image as GalleryIcon, Info, Trash2, Upload, X } from "lucide-react";
 import { MEMORY_HASHTAG } from "@/lib/wedding/memories";
 import {
   PHOTO_FILM_PRESETS,
   getCameraFrameGeometry,
   getPhotoDimensions,
-  getPhotoStampLayout,
   createCameraWebGLPreview,
   renderCameraFrame,
   renderCameraFrameInto,
   renderPhotoCanvas,
-  renderPhotoStampLayer,
   resolvePhotoFilm,
   type CameraWebGLPreview,
   type PhotoFilm,
@@ -19,29 +17,36 @@ import {
 } from "@/lib/wedding/memoriesRender";
 import { acquireCameraStream, CaptureGate, getCameraCaptureConstraints, scheduleVideoFrames, stopCameraStream } from "@/lib/wedding/memoriesCamera";
 import type { MemorySettings } from "@/lib/wedding/memories";
+import { validatePhotoBytes, type LocalPhotoDraft } from "@/lib/wedding/memoriesQueue";
 import styles from "./Memories.module.css";
-
-type ReviewFrame = { raw: Blob; style: PhotoStyle };
 
 export function MemoryCamera({
   side,
   coupleNames,
   date,
   remaining,
+  drafts,
+  startInTray = false,
   defaults,
   onClose,
   onSave,
   onUpload,
+  onDeleteDraft,
+  onUploadDrafts,
 }: {
   side: "bride" | "groom";
   coupleNames: string;
   date: string;
   guestName: string;
   remaining: number;
+  drafts: LocalPhotoDraft[];
+  startInTray?: boolean;
   defaults?: MemorySettings;
   onClose: () => void;
-  onSave: (raw: Blob, style: PhotoStyle) => Promise<void>;
-  onUpload: (file: File) => Promise<void>;
+  onSave: (raw: Blob, style: PhotoStyle, previewBlob?: Blob) => Promise<void>;
+  onUpload: (file: File, style: PhotoStyle, previewBlob?: Blob) => Promise<void>;
+  onDeleteDraft: (id: string) => Promise<void>;
+  onUploadDrafts: (ids?: string[]) => Promise<void>;
 }) {
   const [mounted, setMounted] = useState(false);
   const onCloseRef = useRef(onClose);
@@ -54,10 +59,14 @@ export function MemoryCamera({
       coupleNames={coupleNames}
       date={date}
       remaining={remaining}
+      drafts={drafts}
+      startInTray={startInTray}
       defaults={defaults}
       onClose={() => onCloseRef.current()}
       onSave={onSave}
       onUpload={onUpload}
+      onDeleteDraft={onDeleteDraft}
+      onUploadDrafts={onUploadDrafts}
     />,
     document.body
   );
@@ -68,19 +77,27 @@ function CameraSurface({
   coupleNames,
   date,
   remaining,
+  drafts,
+  startInTray,
   defaults,
   onClose,
   onSave,
   onUpload,
+  onDeleteDraft,
+  onUploadDrafts,
 }: {
   side: "bride" | "groom";
   coupleNames: string;
   date: string;
   remaining: number;
+  drafts: LocalPhotoDraft[];
+  startInTray: boolean;
   defaults?: MemorySettings;
   onClose: () => void;
-  onSave: (raw: Blob, style: PhotoStyle) => Promise<void>;
-  onUpload: (file: File) => Promise<void>;
+  onSave: (raw: Blob, style: PhotoStyle, previewBlob?: Blob) => Promise<void>;
+  onUpload: (file: File, style: PhotoStyle, previewBlob?: Blob) => Promise<void>;
+  onDeleteDraft: (id: string) => Promise<void>;
+  onUploadDrafts: (ids?: string[]) => Promise<void>;
 }) {
   const [film, setFilm] = useState<PhotoFilm>(
     resolvePhotoFilm(defaults?.film ?? "fp2")
@@ -89,38 +106,42 @@ function CameraSurface({
   const [facing, setFacing] = useState<"environment" | "user">("environment");
   const [retry, setRetry] = useState(0);
   const [ready, setReady] = useState(false);
-  const [pending, setPending] = useState(true);
+  const [pending, setPending] = useState(!startInTray);
   const [busy, setBusy] = useState(false);
-  const [review, setReview] = useState<ReviewFrame | null>(null);
-  const [reviewImageLoaded, setReviewImageLoaded] = useState(false);
+  const [cameraEnabled, setCameraEnabled] = useState(!startInTray);
+  const [draftTrayOpen, setDraftTrayOpen] = useState(startInTray);
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
+  const [trayError, setTrayError] = useState("");
+  const [trayStatus, setTrayStatus] = useState("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
-  const [liveStampTime, setLiveStampTime] = useState(() => Date.now());
   const [gpuUnavailable, setGpuUnavailable] = useState(false);
   const [fallbackActive, setFallbackActive] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
-  const canvas = useRef<HTMLCanvasElement>(null);
   const gpuCanvas = useRef<HTMLCanvasElement>(null);
   const fallbackCanvas = useRef<HTMLCanvasElement>(null);
-  const stampCanvas = useRef<HTMLCanvasElement>(null);
   const stage = useRef<HTMLDivElement>(null);
-  const screen = useRef<HTMLDivElement>(null);
   const streamRef = useRef<MediaStream>();
   const requestActive = useRef(true);
   const shutterGate = useRef(new CaptureGate());
-  const saveGate = useRef(new CaptureGate());
   const gpuRenderer = useRef<CameraWebGLPreview | null>(null);
   const fallbackActiveRef = useRef(false);
   const dialog = useRef<HTMLElement>(null);
   const lookDetails = useRef<HTMLDetailsElement>(null);
   const lookSummary = useRef<HTMLElement | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const reviewImage = useRef<{
-    raw: Blob;
-    image: HTMLImageElement;
-    objectUrl: string;
-  } | null>(null);
+  const trayToggle = useRef<HTMLButtonElement>(null);
+  const trayClose = useRef<HTMLButtonElement>(null);
+  const selectedDraftBack = useRef<HTMLButtonElement>(null);
+  const trayPanel = useRef<HTMLElement>(null);
+  const draftTrayOpenRef = useRef(draftTrayOpen);
+  const selectedDraftIdRef = useRef(selectedDraftId);
+  draftTrayOpenRef.current = draftTrayOpen;
+  selectedDraftIdRef.current = selectedDraftId;
+  const orderedDrafts = [...drafts].sort((first, second) => second.createdAt - first.createdAt);
+  const latestDraft = orderedDrafts[0];
+  const selectedDraft = drafts.find((draft) => draft.id === selectedDraftId);
   const isGarden = side === "bride";
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -163,16 +184,6 @@ function CameraSurface({
   }, []);
 
   useEffect(() => {
-    let timer = 0;
-    const updateAtMinute = () => {
-      setLiveStampTime(Date.now());
-      timer = window.setTimeout(updateAtMinute, 60_000 - (Date.now() % 60_000) + 20);
-    };
-    timer = window.setTimeout(updateAtMinute, 60_000 - (Date.now() % 60_000) + 20);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
     const node = stage.current;
     if (!node) return;
     const measure = () => {
@@ -198,10 +209,19 @@ function CameraSurface({
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    dialog.current?.focus();
+    if (!startInTray) dialog.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        if (selectedDraftIdRef.current) {
+          setSelectedDraftId(null);
+          requestAnimationFrame(() => trayClose.current?.focus());
+          return;
+        }
+        if (draftTrayOpenRef.current) {
+          closeDraftTray();
+          return;
+        }
         if (lookDetails.current?.open) {
           lookDetails.current.open = false;
           lookSummary.current?.focus();
@@ -211,17 +231,26 @@ function CameraSurface({
         return;
       }
       if (event.key !== "Tab") return;
+      const focusScope = draftTrayOpenRef.current
+        ? trayPanel.current
+        : dialog.current;
       const nodes = Array.from(
-        dialog.current?.querySelectorAll<HTMLElement>(
+        focusScope?.querySelectorAll<HTMLElement>(
           'button:not(:disabled), a[href], input:not(:disabled):not([tabindex="-1"]), summary, [tabindex]:not([tabindex="-1"])'
         ) ?? []
       ).filter(
         (node) =>
           node.tabIndex >= 0 &&
           !node.hidden &&
-          node.getAttribute("aria-hidden") !== "true"
+          node.getAttribute("aria-hidden") !== "true" &&
+          node.getClientRects().length > 0
       );
       if (!nodes.length) return;
+      if (!focusScope?.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? nodes.at(-1) : nodes[0])?.focus();
+        return;
+      }
       if (event.shiftKey && document.activeElement === nodes[0]) {
         event.preventDefault();
         nodes.at(-1)?.focus();
@@ -239,6 +268,10 @@ function CameraSurface({
   }, []);
 
   useEffect(() => {
+    if (!cameraEnabled) {
+      setPending(false);
+      return;
+    }
     let current = true;
     requestActive.current = true;
     setPending(true);
@@ -281,7 +314,7 @@ function CameraSurface({
       stopCameraStream(streamRef.current);
       streamRef.current = undefined;
     };
-  }, [facing, retry, releaseStream]);
+  }, [facing, retry, releaseStream, cameraEnabled]);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -299,7 +332,7 @@ function CameraSurface({
   useEffect(() => {
     if (!ready || !frame || !video.current) return;
     const videoElement = video.current;
-    if (review || film === "none") {
+    if (draftTrayOpen || film === "none") {
       setFallbackMode(false);
       return;
     }
@@ -309,7 +342,7 @@ function CameraSurface({
       const options = {
         film,
         stamp: "",
-        capturedAt: liveStampTime,
+        capturedAt: Date.now(),
         coupleNames,
         aspectRatio: frame.aspectRatio,
         stampAspectRatio: frame.captureWidth / frame.captureHeight,
@@ -342,112 +375,22 @@ function CameraSurface({
     return scheduleVideoFrames(videoElement, render);
   }, [
     ready,
-    review,
+    draftTrayOpen,
     film,
     coupleNames,
     frame,
     fallbackFrame,
-    liveStampTime,
     gpuUnavailable,
     releaseStream,
     setFallbackMode,
   ]);
 
   useEffect(() => {
-    if (!ready || review || !frame || !stampCanvas.current) return;
-    try {
-      const layout = renderPhotoStampLayer(stampCanvas.current, {
-        film: "none",
-        stamp,
-        capturedAt: liveStampTime,
-        coupleNames,
-        aspectRatio: frame.aspectRatio,
-        stampAspectRatio: frame.captureWidth / frame.captureHeight,
-      });
-      const scale = viewport.height / stampCanvas.current.height;
-      const left = `${layout.reservedLeft * scale}px`;
-      const bottom = `${layout.reservedBottom * scale}px`;
-      if (screen.current?.style.getPropertyValue("--camera-stamp-reserve-left") !== left)
-        screen.current?.style.setProperty("--camera-stamp-reserve-left", left);
-      if (screen.current?.style.getPropertyValue("--camera-stamp-reserve-bottom") !== bottom)
-        screen.current?.style.setProperty("--camera-stamp-reserve-bottom", bottom);
-    } catch (reason) {
-      setError(`Photo stamp preview failed: ${(reason as Error).message}`);
-    }
-  }, [ready, review, frame, viewport.height, stamp, coupleNames, liveStampTime]);
-
-  useEffect(() => {
-    const raw = review?.raw;
-    let active = true;
-    reviewImage.current = null;
-    setReviewImageLoaded(false);
-    if (!raw) return;
-    const image = new Image();
-    const objectUrl = URL.createObjectURL(raw);
-    image.onload = () => {
-      if (!active) return;
-      reviewImage.current = { raw, image, objectUrl };
-      setReviewImageLoaded(true);
-    };
-    image.onerror = () => {
-      if (active) setError("Could not prepare the photo review. Retake the photo or choose an existing one.");
-    };
-    image.src = objectUrl;
-    return () => {
-      active = false;
-      image.onload = null;
-      image.onerror = null;
-      image.src = "";
-      if (reviewImage.current?.raw === raw) reviewImage.current = null;
-      URL.revokeObjectURL(objectUrl);
-    };
-  }, [review?.raw]);
-
-  useEffect(() => {
-    const cached = reviewImage.current;
-    if (
-      !review ||
-      !reviewImageLoaded ||
-      !cached ||
-      cached.raw !== review.raw ||
-      !canvas.current ||
-      !frame
-    )
-      return;
-    try {
-      renderCameraFrameInto(cached.image, canvas.current, frame, {
-        ...review.style,
-        film,
-        coupleNames,
-      });
-      const context = canvas.current.getContext("2d");
-      if (context) {
-        const stampLayout = getPhotoStampLayout(
-          context,
-          canvas.current.width,
-          canvas.current.height,
-          {
-            stamp: review.style.stamp,
-            capturedAt: review.style.capturedAt,
-            coupleNames,
-            aspectRatio: frame.aspectRatio,
-            stampAspectRatio: frame.captureWidth / frame.captureHeight,
-          }
-        );
-        screen.current?.style.setProperty(
-          "--camera-stamp-reserve-left",
-          `${stampLayout.reservedLeft * (viewport.height / canvas.current.height)}px`
-        );
-        screen.current?.style.setProperty(
-          "--camera-stamp-reserve-bottom",
-          `${stampLayout.reservedBottom * (viewport.height / canvas.current.height)}px`
-        );
-      }
-      setError("");
-    } catch (reason) {
-      setError(`Photo preview failed: ${(reason as Error).message}`);
-    }
-  }, [review, reviewImageLoaded, film, coupleNames, frame, viewport.height]);
+    if (draftTrayOpen)
+      requestAnimationFrame(() =>
+        (selectedDraftId ? selectedDraftBack : trayClose).current?.focus()
+      );
+  }, [draftTrayOpen, selectedDraftId]);
 
   const shutter = async () => {
     if (!video.current || !ready || !remaining || !frame) return;
@@ -457,48 +400,18 @@ function CameraSurface({
       setBusy(true);
       try {
         const capturedAt = Date.now();
-        const dimensions = getPhotoDimensions(video.current!);
-        const rawCanvas = renderPhotoCanvas(video.current!, {
+        const style = { film, stamp, capturedAt };
+        const rawCanvas = renderCameraFrame(video.current!, frame, {
           film: "none",
           stamp: "",
           capturedAt,
           coupleNames,
-          aspectRatio: dimensions.width / dimensions.height,
-          maxDimension: 1600,
           includeStamp: false,
         });
         const raw = await canvasToBlob(rawCanvas);
-        setReview({
-          raw,
-          style: { film, stamp, capturedAt },
-        });
-      } catch (reason) {
-        setError(`Could not capture this photo: ${(reason as Error).message}`);
-      } finally {
-        setBusy(false);
-      }
-    });
-  };
-
-  const usePhoto = async () => {
-    if (!review || !frame || !reviewImageLoaded) return;
-    await saveGate.current.run(async () => {
-      setBusy(true);
-      setError("");
-      try {
-        const cached = reviewImage.current;
-        if (!cached || cached.raw !== review.raw)
-          throw new Error("The frozen photo is still loading. Try again shortly.");
-        const croppedRaw = renderCameraFrame(cached.image, frame, {
-          film: "none",
-          stamp: "",
-          capturedAt: review.style.capturedAt,
-          coupleNames,
-          includeStamp: false,
-        });
-        await onSave(await canvasToBlob(croppedRaw), review.style);
-        setReview(null);
-        setStatus("Photo saved to your album. You can take another.");
+        const previewBlob = await createStyledPreview(raw, style, coupleNames, 320);
+        await onSave(raw, style, previewBlob);
+        setStatus("Saved on this device. Review it before uploading.");
       } catch (reason) {
         setError(`Could not save this photo on this device: ${(reason as Error).message}`);
       } finally {
@@ -510,25 +423,73 @@ function CameraSurface({
   const chooseFilter = (next: PhotoFilm) => {
     if (busy) return;
     setFilm(next);
-    if (review) setReview((current) => current && { ...current, style: { ...current.style, film: next } });
   };
 
   const chooseFile = async (file?: File) => {
     if (!file) return;
-    setError("");
+    setTrayError("");
+    setTrayStatus("");
+    setBusy(true);
     try {
-      await onUpload(file);
-      setStatus("Photo added to your upload queue.");
+      const invalid = await validatePhotoBytes(file);
+      if (invalid) throw new Error(invalid);
+      const style = { film, stamp, capturedAt: Date.now() };
+      const previewBlob = await createStyledPreview(file, style, coupleNames, 320);
+      await onUpload(file, style, previewBlob);
+      setTrayStatus("Saved on this device. Review it before uploading.");
     } catch (reason) {
-      setError((reason as Error).message);
+      setTrayError((reason as Error).message);
+    } finally {
+      setBusy(false);
     }
   };
 
+  const uploadDrafts = async (ids?: string[]) => {
+    setTrayError("");
+    setTrayStatus("");
+    setBusy(true);
+    try {
+      await onUploadDrafts(ids);
+      setSelectedDraftId(null);
+      setTrayStatus("Queued for upload. My album shows progress.");
+    } catch (reason) {
+      setTrayError((reason as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteDraft = async (id: string) => {
+    setTrayError("");
+    setTrayStatus("");
+    setBusy(true);
+    try {
+      await onDeleteDraft(id);
+      setSelectedDraftId(null);
+      setTrayStatus("Photo deleted from this device.");
+    } catch (reason) {
+      setTrayError((reason as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openDraftTray = () => {
+    setTrayError("");
+    setTrayStatus("");
+    setDraftTrayOpen(true);
+  };
+  const closeDraftTray = () => {
+    setSelectedDraftId(null);
+    setDraftTrayOpen(false);
+    setCameraEnabled(true);
+    setTrayError("");
+    setTrayStatus("");
+    requestAnimationFrame(() => trayToggle.current?.focus());
+  };
+
   return (
-    <div
-      ref={screen}
-      className={`${styles.cameraScreen} ${isGarden ? styles.cameraGarden : styles.cameraSongket}`}
-    >
+    <div className={`${styles.cameraScreen} ${isGarden ? styles.cameraGarden : styles.cameraSongket}`}>
       <section
         ref={dialog}
         className={styles.cameraDialog}
@@ -537,7 +498,7 @@ function CameraSurface({
         aria-labelledby="camera-title"
         tabIndex={-1}
       >
-        <header className={styles.cameraHeader}>
+        <header className={styles.cameraHeader} aria-hidden={draftTrayOpen}>
           <div className={styles.cameraHeading}>
             <h1 id="camera-title">{coupleNames}</h1>
             <p>{date}</p>
@@ -551,7 +512,7 @@ function CameraSurface({
             </button>
           </div>
         </header>
-        <div className={styles.cameraStage} ref={stage}>
+        <div className={styles.cameraStage} ref={stage} aria-hidden={draftTrayOpen}>
           <video
             ref={video}
             className={styles.cameraSource}
@@ -576,7 +537,7 @@ function CameraSurface({
             className={styles.cameraGpuCanvas}
             width={frame?.previewWidth ?? 1}
             height={frame?.previewHeight ?? 1}
-            hidden={film === "none" || fallbackActive || gpuUnavailable || !!review}
+            hidden={film === "none" || fallbackActive || gpuUnavailable}
             aria-hidden="true"
           />
           <canvas
@@ -584,32 +545,16 @@ function CameraSurface({
             className={styles.cameraFallbackCanvas}
             width={fallbackFrame?.previewWidth ?? 1}
             height={fallbackFrame?.previewHeight ?? 1}
-            hidden={!fallbackActive || film === "none" || !!review}
+            hidden={!fallbackActive || film === "none"}
             aria-hidden="true"
           />
-          <canvas
-            ref={canvas}
-            className={styles.cameraPreviewCanvas}
-            width={frame?.previewWidth ?? 1}
-            height={frame?.previewHeight ?? 1}
-            hidden={!review}
-            aria-label={review ? "Preview of the photo with its selected style" : "Live camera preview with selected style and photo stamp"}
-          />
-          <canvas
-            ref={stampCanvas}
-            className={styles.cameraStampCanvas}
-            width={frame?.previewWidth ?? 1}
-            height={frame?.previewHeight ?? 1}
-            hidden={!!review}
-            aria-hidden="true"
-          />
-          {!ready && !review && (
+          {!ready && (
             <p className={styles.cameraStageMessage} role="status">
               {pending ? "Opening camera…" : "Camera preview unavailable"}
             </p>
           )}
         </div>
-        <div className={styles.cameraControls}>
+        <div className={styles.cameraControls} aria-hidden={draftTrayOpen}>
           <details ref={lookDetails} className={styles.cameraLookInfo}>
             <summary ref={(node) => { lookSummary.current = node; }}>
               <span>Film looks</span>
@@ -636,78 +581,181 @@ function CameraSurface({
           ) : status ? (
             <p className={styles.cameraStatus} role="status">{status}</p>
           ) : null}
-          {review ? (
-            <div className={styles.cameraReviewActions}>
-              <button type="button" className={styles.cameraSecondary} disabled={busy} onClick={() => setReview(null)}>
-                <RefreshCw aria-hidden="true" /> Retake
-              </button>
-              <button type="button" className={styles.cameraShutter} disabled={busy || !reviewImageLoaded} onClick={() => void usePhoto()}>
-                <Check aria-hidden="true" /> {busy ? "Saving…" : "Use photo"}
-              </button>
-            </div>
-          ) : (
-            <div className={styles.cameraCaptureActions}>
+          <div className={styles.cameraCaptureActions}>
+            <button
+              ref={trayToggle}
+              type="button"
+              className={styles.cameraDraftToggle}
+              aria-label={drafts.length ? `${drafts.length} photos to review` : "Photos, no saved drafts"}
+              onClick={openDraftTray}
+            >
+              <span className={styles.cameraDraftThumb}>
+                {latestDraft ? <LocalDraftThumbnail draft={latestDraft} /> : <GalleryIcon aria-hidden="true" />}
+              </span>
+              <span>{drafts.length ? `${drafts.length} photos` : "Photos"}</span>
+            </button>
+            {!ready && !pending ? (
               <button
                 type="button"
-                className={styles.cameraSideAction}
-                aria-label="Choose photo from gallery"
-                disabled={busy || remaining <= 0}
-                onClick={() => fileInput.current?.click()}
+                className={`${styles.cameraShutter} ${styles.cameraReopen}`}
+                aria-label="Reopen camera"
+                onClick={() => setRetry((value) => value + 1)}
               >
-                <GalleryIcon aria-hidden="true" />
-                <span>Gallery</span>
+                <RefreshCw aria-hidden="true" />
+                <span>Reopen</span>
               </button>
-              {!ready && !pending ? (
-                <button
-                  type="button"
-                  className={`${styles.cameraShutter} ${styles.cameraReopen}`}
-                  aria-label="Reopen camera"
-                  onClick={() => setRetry((value) => value + 1)}
-                >
-                  <RefreshCw aria-hidden="true" />
-                  <span>Reopen</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.cameraShutter}
-                  aria-label="Take photo"
-                  disabled={!ready || pending || busy || remaining <= 0}
-                  onClick={() => void shutter()}
-                >
-                  <CameraIcon aria-hidden="true" />
-                </button>
-              )}
+            ) : (
               <button
                 type="button"
-                className={styles.cameraFlip}
-                disabled={pending}
-                aria-label="Flip camera"
-                onClick={() => {
-                  releaseStream();
-                  setFacing((value) => value === "environment" ? "user" : "environment");
-                }}
+                className={styles.cameraShutter}
+                aria-label="Take photo"
+                disabled={!ready || pending || busy || remaining <= 0}
+                onClick={() => void shutter()}
               >
-                <SwitchCamera aria-hidden="true" />
-                <span>Flip</span>
+                <CameraIcon aria-hidden="true" />
               </button>
-            </div>
-          )}
-          <input
-            ref={fileInput}
-            className={styles.cameraFileInput}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            aria-label="Choose a photo from your device"
-            aria-hidden="true"
-            tabIndex={-1}
-            onChange={(event) => {
-              void chooseFile(event.currentTarget.files?.[0]);
-              event.currentTarget.value = "";
-            }}
-          />
-          <p className={styles.srOnly}>Choose a JPG, PNG, or WebP photo up to 12 MB. Your selected look and wedding stamp are applied to the saved photo.</p>
+            )}
+            <button
+              type="button"
+              className={styles.cameraFlip}
+              disabled={pending || busy}
+              aria-label="Flip camera"
+              onClick={() => {
+                releaseStream();
+                setFacing((value) => value === "environment" ? "user" : "environment");
+              }}
+            >
+              <SwitchCamera aria-hidden="true" />
+              <span>Flip</span>
+            </button>
+          </div>
+          <p className={styles.srOnly}>Photo originals stay on this device until you upload them from the Photos tray.</p>
         </div>
+        {draftTrayOpen && (
+          <div
+            className={styles.cameraDraftBackdrop}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeDraftTray();
+            }}
+          >
+            <section ref={trayPanel} className={styles.cameraDraftTray} aria-labelledby="camera-drafts-title">
+              <header className={styles.cameraDraftHeader}>
+                <div>
+                  <h2 id="camera-drafts-title">Photos to review</h2>
+                  <p>{drafts.length} saved on this device · not uploaded</p>
+                </div>
+                <button
+                  ref={trayClose}
+                  type="button"
+                  className={styles.cameraTrayClose}
+                  aria-label="Back to camera"
+                  onClick={closeDraftTray}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              </header>
+              <div className={styles.cameraDraftBody}>
+                {selectedDraft ? (
+                  <div className={styles.cameraSelectedDraft}>
+                    <DraftPhotoPreview draft={selectedDraft} coupleNames={coupleNames} />
+                    <p>Only on this device until you choose Upload.</p>
+                    <div className={styles.cameraDraftActions}>
+                      <button
+                        ref={selectedDraftBack}
+                        type="button"
+                        className={styles.cameraTrayButton}
+                        disabled={busy}
+                        onClick={() => setSelectedDraftId(null)}
+                      >
+                        Back to photos
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.cameraTrayButton}
+                        disabled={busy}
+                        onClick={() => void uploadDrafts([selectedDraft.id])}
+                      >
+                        <Upload aria-hidden="true" /> Upload this photo
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.cameraTrayDanger}
+                        disabled={busy}
+                        onClick={() => void deleteDraft(selectedDraft.id)}
+                      >
+                        <Trash2 aria-hidden="true" /> Delete photo
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {drafts.length ? (
+                      <div className={styles.cameraDraftGrid}>
+                        {orderedDrafts.map((draft, index) => (
+                          <article className={styles.cameraDraftCard} key={draft.id}>
+                            <button
+                              type="button"
+                              className={styles.cameraDraftPreviewButton}
+                              aria-label={`Preview saved photo ${index + 1}`}
+                              onClick={() => setSelectedDraftId(draft.id)}
+                            >
+                              <LocalDraftThumbnail draft={draft} />
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.cameraDraftDelete}
+                              aria-label={`Delete saved photo ${index + 1}`}
+                              disabled={busy}
+                              onClick={() => void deleteDraft(draft.id)}
+                            >
+                              <Trash2 aria-hidden="true" />
+                            </button>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className={styles.cameraDraftEmpty}>No photos saved yet. You can add one from your device or go back to the camera.</p>
+                    )}
+                    <div className={styles.cameraDraftActions}>
+                      <button
+                        type="button"
+                        className={styles.cameraTrayButton}
+                        disabled={busy || remaining <= 0}
+                        onClick={() => fileInput.current?.click()}
+                      >
+                        <GalleryIcon aria-hidden="true" /> Add from device
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.cameraTrayButtonPrimary}
+                        disabled={busy || drafts.length === 0}
+                        onClick={() => void uploadDrafts()}
+                      >
+                        <Upload aria-hidden="true" /> Upload all photos
+                      </button>
+                    </div>
+                  </>
+                )}
+                {trayError && <p className={styles.cameraTrayError} role="alert">{trayError}</p>}
+                {trayStatus && <p className={styles.cameraTrayStatus} role="status">{trayStatus}</p>}
+              </div>
+              <input
+                ref={fileInput}
+                className={styles.cameraFileInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                aria-label="Choose a photo from your device"
+                aria-hidden="true"
+                tabIndex={-1}
+                disabled={busy || remaining <= 0}
+                onChange={(event) => {
+                  void chooseFile(event.currentTarget.files?.[0]);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </section>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -721,5 +769,95 @@ function canvasToBlob(canvas: HTMLCanvasElement) {
       "image/jpeg",
       0.92
     )
+  );
+}
+
+async function createStyledPreview(
+  blob: Blob,
+  style: PhotoStyle,
+  coupleNames: string,
+  maxDimension: number
+) {
+  const objectUrl = URL.createObjectURL(blob);
+  const image = new Image();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("Could not prepare the photo preview."));
+      image.src = objectUrl;
+    });
+    return await canvasToBlob(
+      renderPhotoCanvas(image, { ...style, coupleNames, maxDimension })
+    );
+  } finally {
+    image.onload = null;
+    image.onerror = null;
+    image.src = "";
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function LocalDraftThumbnail({ draft }: { draft: LocalPhotoDraft }) {
+  const [source, setSource] = useState("");
+  const blob = draft.previewBlob ?? draft.blob;
+  useEffect(() => {
+    const url = URL.createObjectURL(blob);
+    setSource(url);
+    return () => URL.revokeObjectURL(url);
+  }, [blob]);
+  return source ? <img src={source} alt="" aria-hidden="true" /> : null;
+}
+
+function DraftPhotoPreview({
+  draft,
+  coupleNames,
+}: {
+  draft: LocalPhotoDraft;
+  coupleNames: string;
+}) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(draft.blob);
+    image.onload = () => {
+      if (!active || !canvas.current) return;
+      try {
+        const rendered = renderPhotoCanvas(image, {
+          ...(draft.photoStyle ?? {
+            film: "none",
+            stamp: MEMORY_HASHTAG,
+            capturedAt: draft.createdAt,
+          }),
+          coupleNames,
+          maxDimension: 1600,
+        });
+        canvas.current.width = rendered.width;
+        canvas.current.height = rendered.height;
+        const context = canvas.current.getContext("2d");
+        if (!context) throw new Error("The preview canvas is unavailable.");
+        context.drawImage(rendered, 0, 0);
+      } catch (reason) {
+        setError((reason as Error).message);
+      }
+    };
+    image.onerror = () => {
+      if (active) setError("Could not open this saved photo.");
+    };
+    image.src = objectUrl;
+    return () => {
+      active = false;
+      image.onload = null;
+      image.onerror = null;
+      image.src = "";
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [draft.blob, draft.createdAt, draft.photoStyle, coupleNames]);
+  return (
+    <div className={styles.cameraDraftFullPreview}>
+      <canvas ref={canvas} aria-label="Stamped photo preview" />
+      {error && <p role="alert">{error}</p>}
+    </div>
   );
 }

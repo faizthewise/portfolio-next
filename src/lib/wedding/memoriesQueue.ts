@@ -13,23 +13,33 @@ export type UploadJob = {
   uid?: string;
   slot?: number;
   photoStyle?: PhotoStyle;
+  previewBlob?: Blob;
   isPrivate?: boolean;
   metadataSaved?: boolean;
   bytesUploaded?: boolean;
   status: string;
   error?: string;
 };
+export type LocalPhotoDraft = UploadJob & {
+  kind: "photo";
+  uid: string;
+  previewBlob?: Blob;
+};
 
 const DATABASE = "wedding-memories-queue-v2";
 const STORE = "jobs";
+const PHOTO_DRAFTS_STORE = "photoDrafts";
 const writeChains = new Map<string, Promise<unknown>>();
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DATABASE, 1);
+    const request = indexedDB.open(DATABASE, 2);
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains(STORE)) {
         request.result.createObjectStore(STORE, { keyPath: "id" });
+      }
+      if (!request.result.objectStoreNames.contains(PHOTO_DRAFTS_STORE)) {
+        request.result.createObjectStore(PHOTO_DRAFTS_STORE, { keyPath: "id" });
       }
     };
     request.onsuccess = () => {
@@ -50,15 +60,16 @@ function openDatabase(): Promise<IDBDatabase> {
 
 function withTransaction<T>(
   mode: IDBTransactionMode,
-  action: (store: IDBObjectStore) => IDBRequest<T>
+  action: (store: IDBObjectStore) => IDBRequest<T>,
+  storeName = STORE
 ): Promise<T> {
   return openDatabase().then(
     (db) =>
       new Promise<T>((resolve, reject) => {
         let result: T;
         let settled = false;
-        const transaction = db.transaction(STORE, mode);
-        const request = action(transaction.objectStore(STORE));
+        const transaction = db.transaction(storeName, mode);
+        const request = action(transaction.objectStore(storeName));
         request.onsuccess = () => {
           result = request.result;
         };
@@ -144,7 +155,9 @@ export function createPhotoJob(
   event: UploadJob["event"],
   name: string,
   blob: Blob,
-  photoStyle?: PhotoStyle
+  photoStyle?: PhotoStyle,
+  uid?: string,
+  previewBlob?: Blob
 ): UploadJob {
   const uploadKey = crypto.randomUUID();
   return {
@@ -156,6 +169,8 @@ export function createPhotoJob(
     name: name.trim(),
     blob,
     photoStyle,
+    previewBlob,
+    uid,
     createdAt: Date.now(),
     status: "Saved on this device",
   };
@@ -196,6 +211,208 @@ export async function saveUploadJob(job: UploadJob): Promise<void> {
   }
 }
 
+export async function saveLocalPhotoDraft(
+  draft: LocalPhotoDraft,
+  serverReservedCount: number,
+  photoLimit = 20
+): Promise<void> {
+  if (!draft.uid || draft.kind !== "photo")
+    throw new Error("A local photo draft needs its guest identity.");
+  if (!Number.isInteger(serverReservedCount) || serverReservedCount < 0)
+    throw new Error("The current photo count is unavailable.");
+
+  const db = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    let resultError: Error | undefined;
+    let checkedJobs = false;
+    let checkedDrafts = false;
+    let jobs: UploadJob[] = [];
+    let drafts: LocalPhotoDraft[] = [];
+    const transaction = db.transaction([STORE, PHOTO_DRAFTS_STORE], "readwrite");
+    const jobStore = transaction.objectStore(STORE);
+    const draftStore = transaction.objectStore(PHOTO_DRAFTS_STORE);
+    const jobsRequest = jobStore.getAll();
+    const draftsRequest = draftStore.getAll();
+
+    const saveIfReady = () => {
+      if (!checkedJobs || !checkedDrafts || resultError) return;
+      const belongsToGuest = (job: UploadJob) =>
+        job.kind === "photo" &&
+        job.event === draft.event &&
+        (!job.uid || job.uid === draft.uid) &&
+        !job.slot;
+      const unreservedCount = jobs.filter(belongsToGuest).length +
+        drafts.filter(belongsToGuest).length;
+      if (serverReservedCount + unreservedCount >= photoLimit) {
+        resultError = new Error("All 20 photo slots are already in use or waiting for upload.");
+        transaction.abort();
+        return;
+      }
+      const existing = [...jobs, ...drafts].find((job) => job.id === draft.id);
+      if (existing) {
+        resultError = new Error("This local photo draft already exists.");
+        transaction.abort();
+        return;
+      }
+      draftStore.put(draft);
+    };
+    jobsRequest.onsuccess = () => {
+      jobs = jobsRequest.result as UploadJob[];
+      checkedJobs = true;
+      saveIfReady();
+    };
+    draftsRequest.onsuccess = () => {
+      drafts = draftsRequest.result as LocalPhotoDraft[];
+      checkedDrafts = true;
+      saveIfReady();
+    };
+    jobsRequest.onerror = () => {
+      resultError = jobsRequest.error ?? new Error("Could not count queued photos.");
+      transaction.abort();
+    };
+    draftsRequest.onerror = () => {
+      resultError = draftsRequest.error ?? new Error("Could not count local photo drafts.");
+      transaction.abort();
+    };
+    transaction.oncomplete = () => resolve();
+    transaction.onabort = () => {
+      db.close();
+      reject(resultError ?? transaction.error ?? new Error("Could not save the local photo draft."));
+    };
+    transaction.onerror = () => {
+      db.close();
+      reject(resultError ?? transaction.error ?? new Error("Could not save the local photo draft."));
+    };
+    transaction.addEventListener("complete", () => db.close(), { once: true });
+  });
+}
+
+export async function listLocalPhotoDrafts(
+  event?: UploadJob["event"],
+  uid?: string
+): Promise<LocalPhotoDraft[]> {
+  const rows = (await withTransaction(
+    "readonly",
+    (store) => store.getAll(),
+    PHOTO_DRAFTS_STORE
+  )) as LocalPhotoDraft[];
+  return rows.filter(
+    (draft) => (!event || draft.event === event) && (!uid || draft.uid === uid)
+  );
+}
+
+export async function getLocalPhotoDraft(
+  id: string
+): Promise<LocalPhotoDraft | undefined> {
+  return (await withTransaction(
+    "readonly",
+    (store) => store.get(id),
+    PHOTO_DRAFTS_STORE
+  )) as LocalPhotoDraft | undefined;
+}
+
+export async function deleteLocalPhotoDraft(
+  id: string,
+  event: UploadJob["event"],
+  uid: string
+): Promise<boolean> {
+  const db = await openDatabase();
+  return new Promise<boolean>((resolve, reject) => {
+    let deleted = false;
+    const transaction = db.transaction(PHOTO_DRAFTS_STORE, "readwrite");
+    const store = transaction.objectStore(PHOTO_DRAFTS_STORE);
+    const request = store.get(id);
+    request.onsuccess = () => {
+      const draft = request.result as LocalPhotoDraft | undefined;
+      if (draft?.event === event && draft.uid === uid) {
+        store.delete(id);
+        deleted = true;
+      }
+    };
+    transaction.oncomplete = () => { db.close(); resolve(deleted); };
+    transaction.onabort = () => { db.close(); reject(transaction.error ?? new Error("Could not delete this local photo.")); };
+    transaction.onerror = () => { db.close(); reject(transaction.error ?? new Error("Could not delete this local photo.")); };
+  });
+}
+
+export async function approveLocalPhotoDrafts(
+  ids: string[],
+  event: UploadJob["event"],
+  uid: string
+): Promise<UploadJob[]> {
+  const uniqueIds = Array.from(new Set(ids));
+  if (!uniqueIds.length) return [];
+  const db = await openDatabase();
+  return new Promise<UploadJob[]>((resolve, reject) => {
+    let resultError: Error | undefined;
+    let jobs: UploadJob[] = [];
+    let drafts: LocalPhotoDraft[] = [];
+    let approved: UploadJob[] = [];
+    let checkedJobs = false;
+    let checkedDrafts = false;
+    const transaction = db.transaction([STORE, PHOTO_DRAFTS_STORE], "readwrite");
+    const jobStore = transaction.objectStore(STORE);
+    const draftStore = transaction.objectStore(PHOTO_DRAFTS_STORE);
+    const jobsRequest = jobStore.getAll();
+    const draftsRequest = draftStore.getAll();
+    const commitIfReady = () => {
+      if (!checkedJobs || !checkedDrafts || resultError) return;
+      const existingJobs = new Map(jobs.map((job) => [job.id, job]));
+      const localDrafts = new Map(drafts.map((draft) => [draft.id, draft]));
+      for (const id of uniqueIds) {
+        const draft = localDrafts.get(id);
+        if (!draft) continue;
+        if (draft.event !== event || draft.uid !== uid || draft.kind !== "photo") {
+          resultError = new Error("This local photo belongs to another event or browser account.");
+          transaction.abort();
+          return;
+        }
+        const existing = existingJobs.get(id);
+        if (
+          existing &&
+          (existing.event !== event ||
+            existing.uid !== uid ||
+            existing.kind !== "photo" ||
+            existing.uploadKey !== draft.uploadKey)
+        ) {
+          resultError = new Error("This upload ID belongs to another event or browser account.");
+          transaction.abort();
+          return;
+        }
+        const approvedJob = existing ?? {
+          ...draft,
+          status: "Saved on this device",
+          error: undefined,
+        };
+        if (!existing) jobStore.put(approvedJob);
+        draftStore.delete(id);
+        approved.push(approvedJob);
+      }
+    };
+    jobsRequest.onsuccess = () => {
+      jobs = jobsRequest.result as UploadJob[];
+      checkedJobs = true;
+      commitIfReady();
+    };
+    draftsRequest.onsuccess = () => {
+      drafts = draftsRequest.result as LocalPhotoDraft[];
+      checkedDrafts = true;
+      commitIfReady();
+    };
+    jobsRequest.onerror = () => {
+      resultError = jobsRequest.error ?? new Error("Could not approve local photos.");
+      transaction.abort();
+    };
+    draftsRequest.onerror = () => {
+      resultError = draftsRequest.error ?? new Error("Could not approve local photos.");
+      transaction.abort();
+    };
+    transaction.oncomplete = () => { db.close(); resolve(approved); };
+    transaction.onabort = () => { db.close(); reject(resultError ?? transaction.error ?? new Error("Could not approve local photos.")); };
+    transaction.onerror = () => { db.close(); reject(resultError ?? transaction.error ?? new Error("Could not approve local photos.")); };
+  });
+}
+
 export async function removeUploadJob(id: string): Promise<void> {
   const previous = writeChains.get(id) ?? Promise.resolve();
   const next = previous
@@ -218,6 +435,20 @@ export async function listUploadJobs(
   ) as UploadJob[];
 }
 
+export async function getUploadJob(id: string): Promise<UploadJob | undefined> {
+  return (await withTransaction("readonly", (store) => store.get(id))) as
+    | UploadJob
+    | undefined;
+}
+
 export async function clearUploadQueueForTests(): Promise<void> {
-  await withTransaction("readwrite", (store) => store.clear());
+  const db = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction([STORE, PHOTO_DRAFTS_STORE], "readwrite");
+    transaction.objectStore(STORE).clear();
+    transaction.objectStore(PHOTO_DRAFTS_STORE).clear();
+    transaction.oncomplete = () => { db.close(); resolve(); };
+    transaction.onabort = () => { db.close(); reject(transaction.error ?? new Error("Could not clear the test upload queue.")); };
+    transaction.onerror = () => { db.close(); reject(transaction.error ?? new Error("Could not clear the test upload queue.")); };
+  });
 }

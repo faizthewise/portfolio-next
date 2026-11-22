@@ -33,9 +33,17 @@ import {
   type PhotoCursor,
 } from "@/lib/wedding/memories";
 import type { WeddingEventId } from "@/lib/wedding/invitations";
-import { listUploadJobs, type UploadJob } from "@/lib/wedding/memoriesQueue";
 import {
+  listUploadJobs,
+  type LocalPhotoDraft,
+  type UploadJob,
+} from "@/lib/wedding/memoriesQueue";
+import {
+  approveCameraPhotoDrafts,
   processUploadJob,
+  readCameraPhotoDrafts,
+  removeCameraPhotoDraft,
+  saveCameraPhotoDraft,
   saveAudioDraft,
   savePhotoDraft,
 } from "@/lib/wedding/memoriesUploads";
@@ -86,6 +94,7 @@ export function MemoryExperience({
   const [voices, setVoices] = useState<MemoryVoice[]>([]);
   const [settings, setSettings] = useState<MemorySettings>();
   const [queue, setQueue] = useState<UploadJob[]>([]);
+  const [localPhotoDrafts, setLocalPhotoDrafts] = useState<LocalPhotoDraft[]>([]);
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [cursor, setCursor] = useState<PhotoCursor>();
   const [hasMore, setHasMore] = useState(false);
@@ -105,6 +114,7 @@ export function MemoryExperience({
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [privateVoice, setPrivateVoice] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraStartInTray, setCameraStartInTray] = useState(false);
   const [guestPanel, setGuestPanel] = useState<null | "album" | "voice" | "wish" | "salam">(null);
   const [photoCount, setPhotoCount] = useState(0);
   const [guestUid, setGuestUid] = useState("");
@@ -122,6 +132,21 @@ export function MemoryExperience({
   const inFlightRef = useRef(new Set<string>());
   const activeRef = useRef(true);
   const isGallery = page === "gallery";
+  const cameraDrafts = localPhotoDrafts.filter(
+    (draft) => draft.event === eventId && draft.uid === guestUid
+  );
+  const unreservedPhotoJobs = queue.filter(
+    (job) =>
+      job.side === side &&
+      job.event === eventId &&
+      job.kind === "photo" &&
+      !job.slot &&
+      (!job.uid || job.uid === guestUid)
+  );
+  const remainingPhotos = Math.max(
+    0,
+    PHOTO_LIMIT - photoCount - unreservedPhotoJobs.length - cameraDrafts.length
+  );
   useEffect(() => {
     try {
       const storedName = window.localStorage.getItem(`memories-name-${side}`);
@@ -148,7 +173,10 @@ export function MemoryExperience({
       .then(setQueue)
       .catch((e) => setError(e.message));
     getWeddingGuest()
-      .then(setGuestUid)
+      .then(async (uid) => {
+        setGuestUid(uid);
+        setLocalPhotoDrafts(await readCameraPhotoDrafts(eventId, uid));
+      })
       .catch((e) => setError(e.message));
     readGuestPhotoCount(eventId)
       .then(setPhotoCount)
@@ -265,11 +293,21 @@ export function MemoryExperience({
     window.requestAnimationFrame(() => nameInputRef.current?.focus());
     return false;
   }
-  function openCamera() {
-    if (requireName("taking a photo")) {
-      setError("");
-      setCameraOpen(true);
-    }
+  function openCamera(reviewOnly = false) {
+    if (!requireName("taking a photo")) return;
+    setError("");
+    setMessage("");
+    void (async () => {
+      try {
+        const uid = guestUid || await getWeddingGuest();
+        setGuestUid(uid);
+        setLocalPhotoDrafts(await readCameraPhotoDrafts(eventId, uid));
+        setCameraStartInTray(reviewOnly);
+        setCameraOpen(true);
+      } catch (reason) {
+        setError(`Could not open local photo storage: ${(reason as Error).message}`);
+      }
+    })();
   }
   function openPanel(panel: "album" | "voice" | "wish" | "salam") {
     if ((panel === "voice" || panel === "wish") && !requireName(panel === "voice" ? "recording" : "writing a wish")) return;
@@ -287,18 +325,68 @@ export function MemoryExperience({
     if (recording) stopRecording();
     setGuestPanel(null);
   }
-  async function saveCapturedPhoto(raw: Blob, photoStyle: PhotoStyle) {
+  async function saveCapturedPhoto(
+    raw: Blob,
+    photoStyle: PhotoStyle,
+    previewBlob?: Blob
+  ) {
     if (!requireName("saving a photo"))
       throw new Error("Enter your name before saving this photo.");
-    const job = await savePhotoDraft(
+    const uid = guestUid || await getWeddingGuest();
+    setGuestUid(uid);
+    const draft = await saveCameraPhotoDraft(
       side,
       eventId,
+      uid,
       name.trim(),
       raw,
-      photoStyle
+      photoStyle,
+      previewBlob,
+      photoCount
     );
-    setQueue((rows) => [...rows, job]);
-    void uploadJob(job);
+    setLocalPhotoDrafts((rows) => [...rows.filter((row) => row.id !== draft.id), draft]);
+  }
+  async function saveCameraGalleryPhoto(
+    file: File,
+    photoStyle: PhotoStyle,
+    previewBlob?: Blob
+  ) {
+    if (!requireName("saving a photo"))
+      throw new Error("Enter your name before saving this photo.");
+    const uid = guestUid || await getWeddingGuest();
+    setGuestUid(uid);
+    const draft = await saveCameraPhotoDraft(
+      side,
+      eventId,
+      uid,
+      name.trim(),
+      file,
+      photoStyle,
+      previewBlob,
+      photoCount
+    );
+    setLocalPhotoDrafts((rows) => [...rows.filter((row) => row.id !== draft.id), draft]);
+  }
+  async function deleteCameraDraft(id: string) {
+    const uid = guestUid || await getWeddingGuest();
+    const removed = await removeCameraPhotoDraft(id, eventId, uid);
+    if (removed) setLocalPhotoDrafts(await readCameraPhotoDrafts(eventId, uid));
+  }
+  async function uploadCameraDrafts(ids?: string[]) {
+    const uid = guestUid || await getWeddingGuest();
+    const approved = await approveCameraPhotoDrafts(
+      ids ?? cameraDrafts.map((draft) => draft.id),
+      eventId,
+      uid
+    );
+    setLocalPhotoDrafts(await readCameraPhotoDrafts(eventId, uid));
+    if (!approved.length) return;
+    setQueue((rows) => [
+      ...rows.filter((row) => !approved.some((job) => job.id === row.id)),
+      ...approved,
+    ]);
+    setMessage("Queued for upload. My album shows progress.");
+    approved.forEach((job) => void uploadJob(job));
   }
   async function processFile(file: File | Blob) {
     setError("");
@@ -718,14 +806,10 @@ export function MemoryExperience({
             venue={wedding.venue}
             welcome={settings?.welcome || "Share the moments you captured with us."}
             cover={settings?.cover}
-            remaining={Math.max(
-              0,
-              PHOTO_LIMIT - photoCount -
-                queue.filter(
-                  (job) => job.side === side && job.kind === "photo" && !job.slot
-                ).length
-            )}
-            used={photoCount}
+            remaining={remainingPhotos}
+            used={PHOTO_LIMIT - remainingPhotos}
+            canReviewDrafts={cameraDrafts.length > 0}
+            draftCount={cameraDrafts.length}
             name={name}
             nameRef={nameInputRef}
             onNameChange={setName}
@@ -735,8 +819,8 @@ export function MemoryExperience({
             onWish={() => openPanel("wish")}
             onSalamKaut={() => openPanel("salam")}
             galleryHref={memoryPath(side, "gallery")}
-            queueSummary={queue.filter((job) => job.side === side).length
-              ? `${queue.filter((job) => job.side === side).length} saved upload${queue.filter((job) => job.side === side).length === 1 ? "" : "s"}. Open My album for status or retry.`
+            queueSummary={queue.filter((job) => job.side === side && job.event === eventId).length
+              ? `${queue.filter((job) => job.side === side && job.event === eventId).length} upload${queue.filter((job) => job.side === side && job.event === eventId).length === 1 ? "" : "s"} in progress or ready to retry. Open My album for status.`
               : ""}
             status={message}
             namesClassName={memoryNames.className}
@@ -788,8 +872,24 @@ export function MemoryExperience({
                     {loadingMore ? "Loading…" : "Load more of your photos"}
                   </button>
                 )}
+                {cameraDrafts.length > 0 && (
+                  <div className={styles.queue}>
+                    <strong>{cameraDrafts.length} photo{cameraDrafts.length === 1 ? "" : "s"} saved on this device</strong>
+                    <p>Review these photos before uploading them.</p>
+                    <button
+                      type="button"
+                      className={styles.secondary}
+                      onClick={() => {
+                        setGuestPanel(null);
+                        openCamera(true);
+                      }}
+                    >
+                      Review photos
+                    </button>
+                  </div>
+                )}
                 {queue
-                  .filter((job) => job.side === side && job.kind === "photo")
+                  .filter((job) => job.side === side && job.event === eventId && job.kind === "photo")
                   .map((job) => (
                     <div className={styles.queue} key={job.id}>
                       <span>
@@ -922,17 +1022,18 @@ export function MemoryExperience({
               coupleNames={MEMORY_PUBLIC_ALBUMS[side].coupleNames}
               date={displayDate}
               guestName={name.trim()}
-              remaining={Math.max(
-                0,
-                PHOTO_LIMIT - photoCount -
-                  queue.filter(
-                    (job) => job.side === side && job.kind === "photo" && !job.slot
-                  ).length
-              )}
+              remaining={remainingPhotos}
+              drafts={cameraDrafts}
+              startInTray={cameraStartInTray}
               defaults={settings}
-              onClose={() => setCameraOpen(false)}
+              onClose={() => {
+                setCameraOpen(false);
+                setCameraStartInTray(false);
+              }}
               onSave={saveCapturedPhoto}
-              onUpload={processFile}
+              onUpload={saveCameraGalleryPhoto}
+              onDeleteDraft={deleteCameraDraft}
+              onUploadDrafts={uploadCameraDrafts}
             />
           )}
         </>

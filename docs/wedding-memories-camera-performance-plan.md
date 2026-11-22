@@ -106,6 +106,19 @@ Browser API references:
   healthy callback delivery, plus teardown races. The user-device failure cause
   remains unverified.
 
+## Current camera draft workflow
+
+The live camera view no longer draws or reserves space for the wedding imprint.
+Shutter captures the current viewport crop and stores it in the local-only
+`photoDrafts` IndexedDB object store. Device-picked photos use the same staging
+flow. These held drafts are invisible to the approved `jobs` upload queue and
+cannot upload or reserve a Firebase slot until the guest explicitly approves
+them in Photos. Approval moves a draft and its stable upload identity into the
+existing retryable queue in one IndexedDB transaction. The stamp remains on
+still previews, gallery photos, and exports. Historical live-imprint repaint
+measurements above describe the earlier implementation, not current behavior.
+
+
 The old 8.3 fps timer ceiling and normal-path CPU readbacks are removed. Actual
 frame rate still depends on the phone, browser, lighting and GPU availability.
 The 360-pixel CPU fallback prioritizes compatibility and may be less smooth.

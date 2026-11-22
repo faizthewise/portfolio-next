@@ -4,9 +4,16 @@ import { recordVoice, reservePhoto, uploadPhoto } from "@/lib/wedding/memories";
 import {
   createAudioJob,
   createPhotoJob,
+  getUploadJob,
+  approveLocalPhotoDrafts as moveLocalPhotoDrafts,
+  deleteLocalPhotoDraft,
+  getLocalPhotoDraft,
+  listLocalPhotoDrafts,
   removeUploadJob,
+  saveLocalPhotoDraft as persistLocalPhotoDraft,
   saveUploadJob,
   validatePhotoBytes,
+  type LocalPhotoDraft,
   type UploadJob,
   type WeddingMemorySide,
 } from "@/lib/wedding/memoriesQueue";
@@ -30,6 +37,57 @@ export async function savePhotoDraft(
   const job = createPhotoJob(side, event, name, blob, photoStyle);
   await saveUploadJob(job);
   return job;
+}
+
+export async function saveCameraPhotoDraft(
+  side: WeddingMemorySide,
+  event: UploadJob["event"],
+  uid: string,
+  name: string,
+  blob: Blob,
+  photoStyle: PhotoStyle,
+  previewBlob: Blob | undefined,
+  serverReservedCount: number
+): Promise<LocalPhotoDraft> {
+  if (!name.trim() || name.trim().length > 100)
+    throw new Error("Enter your name before saving photos.");
+  const invalid = await validatePhotoBytes(blob);
+  if (invalid) throw new Error(invalid);
+  const draft = createPhotoJob(
+    side,
+    event,
+    name,
+    blob,
+    photoStyle,
+    uid,
+    previewBlob
+  ) as LocalPhotoDraft;
+  await persistLocalPhotoDraft(draft, serverReservedCount);
+  return draft;
+}
+
+export async function readCameraPhotoDrafts(
+  event: UploadJob["event"],
+  uid: string
+) {
+  if (!uid) return [];
+  return listLocalPhotoDrafts(event, uid);
+}
+
+export function removeCameraPhotoDraft(
+  id: string,
+  event: UploadJob["event"],
+  uid: string
+) {
+  return deleteLocalPhotoDraft(id, event, uid);
+}
+
+export function approveCameraPhotoDrafts(
+  ids: string[],
+  event: UploadJob["event"],
+  uid: string
+) {
+  return moveLocalPhotoDrafts(ids, event, uid);
 }
 
 export async function saveAudioDraft(
@@ -72,6 +130,15 @@ async function processUploadJobOnce(
   handlers: UploadHandlers
 ): Promise<void> {
   let current = job;
+  if (job.kind === "photo") {
+    const heldDraft = await getLocalPhotoDraft(job.id);
+    if (heldDraft)
+      throw new Error("This photo is still waiting for your approval to upload.");
+    const approvedJob = await getUploadJob(job.id);
+    if (!approvedJob)
+      throw new Error("This photo is not in the approved upload queue.");
+    current = approvedJob;
+  }
   try {
     if (current.kind === "photo") {
       const invalid = await validatePhotoBytes(current.blob);
