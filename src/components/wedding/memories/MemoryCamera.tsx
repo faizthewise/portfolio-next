@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Camera as CameraIcon, SwitchCamera, Check, RefreshCw, Upload, X } from "lucide-react";
+import { Camera as CameraIcon, SwitchCamera, Check, RefreshCw, Image as GalleryIcon, Info, X } from "lucide-react";
 import { MEMORY_HASHTAG } from "@/lib/wedding/memories";
 import {
   PHOTO_FILM_PRESETS,
@@ -27,7 +27,6 @@ export function MemoryCamera({
   side,
   coupleNames,
   date,
-  guestName,
   remaining,
   defaults,
   onClose,
@@ -54,7 +53,6 @@ export function MemoryCamera({
       side={side}
       coupleNames={coupleNames}
       date={date}
-      guestName={guestName}
       remaining={remaining}
       defaults={defaults}
       onClose={() => onCloseRef.current()}
@@ -69,7 +67,6 @@ function CameraSurface({
   side,
   coupleNames,
   date,
-  guestName,
   remaining,
   defaults,
   onClose,
@@ -79,7 +76,6 @@ function CameraSurface({
   side: "bride" | "groom";
   coupleNames: string;
   date: string;
-  guestName: string;
   remaining: number;
   defaults?: MemorySettings;
   onClose: () => void;
@@ -117,7 +113,9 @@ function CameraSurface({
   const gpuRenderer = useRef<CameraWebGLPreview | null>(null);
   const fallbackActiveRef = useRef(false);
   const dialog = useRef<HTMLElement>(null);
-  const presetButtons = useRef(new Map<string, HTMLButtonElement>());
+  const lookDetails = useRef<HTMLDetailsElement>(null);
+  const lookSummary = useRef<HTMLElement | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const reviewImage = useRef<{
     raw: Blob;
     image: HTMLImageElement;
@@ -151,13 +149,6 @@ function CameraSurface({
     fallbackActiveRef.current = active;
     setFallbackActive(active);
   }, []);
-
-  useEffect(() => {
-    presetButtons.current.get(film)?.scrollIntoView({
-      block: "nearest",
-      inline: "nearest",
-    });
-  }, [film]);
 
   useEffect(() => {
     const node = gpuCanvas.current;
@@ -211,14 +202,24 @@ function CameraSurface({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        if (lookDetails.current?.open) {
+          lookDetails.current.open = false;
+          lookSummary.current?.focus();
+          return;
+        }
         onCloseRef.current();
         return;
       }
       if (event.key !== "Tab") return;
       const nodes = Array.from(
         dialog.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          'button:not(:disabled), a[href], input:not(:disabled):not([tabindex="-1"]), summary, [tabindex]:not([tabindex="-1"])'
         ) ?? []
+      ).filter(
+        (node) =>
+          node.tabIndex >= 0 &&
+          !node.hidden &&
+          node.getAttribute("aria-hidden") !== "true"
       );
       if (!nodes.length) return;
       if (event.shiftKey && document.activeElement === nodes[0]) {
@@ -537,14 +538,18 @@ function CameraSurface({
         tabIndex={-1}
       >
         <header className={styles.cameraHeader}>
-          <div>
+          <div className={styles.cameraHeading}>
             <h1 id="camera-title">{coupleNames}</h1>
-            <p>{date} · {guestName}</p>
-            <p>{remaining} shots left</p>
+            <p>{date}</p>
+            <span className={styles.cameraRemaining} aria-live="polite">
+              {remaining} {remaining === 1 ? "photo" : "photos"} left
+            </span>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close camera">
-            <X aria-hidden="true" />
-          </button>
+          <div className={styles.cameraHeaderActions}>
+            <button type="button" onClick={onClose} aria-label="Close camera">
+              <X aria-hidden="true" />
+            </button>
+          </div>
         </header>
         <div className={styles.cameraStage} ref={stage}>
           <video
@@ -605,15 +610,18 @@ function CameraSurface({
           )}
         </div>
         <div className={styles.cameraControls}>
+          <details ref={lookDetails} className={styles.cameraLookInfo}>
+            <summary ref={(node) => { lookSummary.current = node; }}>
+              <span>Film looks</span>
+              <Info size={16} aria-hidden="true" />
+            </summary>
+            <p>{PHOTO_FILM_PRESETS.find((preset) => preset.id === film)?.description}</p>
+          </details>
           <div className={styles.cameraFilters} role="group" aria-label="Photo look">
             {PHOTO_FILM_PRESETS.map((preset) => (
               <button
                 type="button"
                 key={preset.id}
-                ref={(node) => {
-                  if (node) presetButtons.current.set(preset.id, node);
-                  else presetButtons.current.delete(preset.id);
-                }}
                 aria-pressed={film === preset.id}
                 aria-label={preset.name}
                 disabled={busy}
@@ -623,11 +631,11 @@ function CameraSurface({
               </button>
             ))}
           </div>
-          <p className={styles.cameraLookDescription} aria-live="polite">
-            {PHOTO_FILM_PRESETS.find((preset) => preset.id === film)?.description}
-          </p>
-          {error && <p className={styles.cameraError} role="alert">{error}</p>}
-          {status && <p className={styles.cameraStatus} role="status">{status}</p>}
+          {error ? (
+            <p className={styles.cameraError} role="alert">{error}</p>
+          ) : status ? (
+            <p className={styles.cameraStatus} role="status">{status}</p>
+          ) : null}
           {review ? (
             <div className={styles.cameraReviewActions}>
               <button type="button" className={styles.cameraSecondary} disabled={busy} onClick={() => setReview(null)}>
@@ -639,27 +647,37 @@ function CameraSurface({
             </div>
           ) : (
             <div className={styles.cameraCaptureActions}>
-              <label className={styles.cameraUpload}>
-                <Upload aria-hidden="true" />
-                <span>Choose photo</span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={(event) => {
-                    void chooseFile(event.currentTarget.files?.[0]);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </label>
               <button
                 type="button"
-                className={styles.cameraShutter}
-                aria-label="Take photo"
-                disabled={!ready || pending || busy || remaining <= 0}
-                onClick={() => void shutter()}
+                className={styles.cameraSideAction}
+                aria-label="Choose photo from gallery"
+                disabled={busy || remaining <= 0}
+                onClick={() => fileInput.current?.click()}
               >
-                <CameraIcon aria-hidden="true" />
+                <GalleryIcon aria-hidden="true" />
+                <span>Gallery</span>
               </button>
+              {!ready && !pending ? (
+                <button
+                  type="button"
+                  className={`${styles.cameraShutter} ${styles.cameraReopen}`}
+                  aria-label="Reopen camera"
+                  onClick={() => setRetry((value) => value + 1)}
+                >
+                  <RefreshCw aria-hidden="true" />
+                  <span>Reopen</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.cameraShutter}
+                  aria-label="Take photo"
+                  disabled={!ready || pending || busy || remaining <= 0}
+                  onClick={() => void shutter()}
+                >
+                  <CameraIcon aria-hidden="true" />
+                </button>
+              )}
               <button
                 type="button"
                 className={styles.cameraFlip}
@@ -675,11 +693,19 @@ function CameraSurface({
               </button>
             </div>
           )}
-          {!review && !ready && !pending && (
-            <button type="button" className={styles.cameraSecondary} onClick={() => setRetry((value) => value + 1)}>
-              Reopen camera
-            </button>
-          )}
+          <input
+            ref={fileInput}
+            className={styles.cameraFileInput}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            aria-label="Choose a photo from your device"
+            aria-hidden="true"
+            tabIndex={-1}
+            onChange={(event) => {
+              void chooseFile(event.currentTarget.files?.[0]);
+              event.currentTarget.value = "";
+            }}
+          />
           <p className={styles.srOnly}>Choose a JPG, PNG, or WebP photo up to 12 MB. Your selected look and wedding stamp are applied to the saved photo.</p>
         </div>
       </section>
