@@ -47,6 +47,8 @@ import {
   saveAudioDraft,
   savePhotoDraft,
 } from "@/lib/wedding/memoriesUploads";
+import type { UploadAttemptResult, UploadBatchResult } from "@/lib/wedding/memoriesUploadStatus";
+import { getUploadFailure } from "@/lib/wedding/memoriesUploadStatus";
 import {
   appendMemoryRows,
   applyMemoryHead,
@@ -96,6 +98,7 @@ export function MemoryExperience({
   const [queue, setQueue] = useState<UploadJob[]>([]);
   const [localPhotoDrafts, setLocalPhotoDrafts] = useState<LocalPhotoDraft[]>([]);
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [activeUploadIds, setActiveUploadIds] = useState<string[]>([]);
   const [cursor, setCursor] = useState<PhotoCursor>();
   const [hasMore, setHasMore] = useState(false);
   const [myCursor, setMyCursor] = useState<PhotoCursor>();
@@ -106,6 +109,7 @@ export function MemoryExperience({
   const [guestFilter, setGuestFilter] = useState("all");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [cameraUploadError, setCameraUploadError] = useState("");
   const [storageNotice, setStorageNotice] = useState("");
   const [wish, setWish] = useState("");
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -135,6 +139,15 @@ export function MemoryExperience({
   const cameraDrafts = localPhotoDrafts.filter(
     (draft) => draft.event === eventId && draft.uid === guestUid
   );
+  const cameraPhotoUploads = guestUid
+    ? queue.filter(
+        (job) =>
+          job.side === side &&
+          job.event === eventId &&
+          job.kind === "photo" &&
+          job.uid === guestUid
+      )
+    : [];
   const unreservedPhotoJobs = queue.filter(
     (job) =>
       job.side === side &&
@@ -296,6 +309,7 @@ export function MemoryExperience({
   function openCamera(reviewOnly = false) {
     if (!requireName("taking a photo")) return;
     setError("");
+    setCameraUploadError("");
     setMessage("");
     void (async () => {
       try {
@@ -372,7 +386,8 @@ export function MemoryExperience({
     const removed = await removeCameraPhotoDraft(id, eventId, uid);
     if (removed) setLocalPhotoDrafts(await readCameraPhotoDrafts(eventId, uid));
   }
-  async function uploadCameraDrafts(ids?: string[]) {
+  async function uploadCameraDrafts(ids?: string[]): Promise<UploadBatchResult> {
+    setCameraUploadError("");
     const uid = guestUid || await getWeddingGuest();
     const approved = await approveCameraPhotoDrafts(
       ids ?? cameraDrafts.map((draft) => draft.id),
@@ -380,13 +395,18 @@ export function MemoryExperience({
       uid
     );
     setLocalPhotoDrafts(await readCameraPhotoDrafts(eventId, uid));
-    if (!approved.length) return;
+    if (!approved.length)
+      return { uploaded: 0, failed: 0, alreadyActive: 0 };
     setQueue((rows) => [
       ...rows.filter((row) => !approved.some((job) => job.id === row.id)),
       ...approved,
     ]);
-    setMessage("Queued for upload. My album shows progress.");
-    approved.forEach((job) => void uploadJob(job));
+    const results = await Promise.all(approved.map((job) => uploadJob(job)));
+    return {
+      uploaded: results.filter((result) => result === "uploaded").length,
+      failed: results.filter((result) => result === "failed").length,
+      alreadyActive: results.filter((result) => result === "active").length,
+    };
   }
   async function processFile(file: File | Blob) {
     setError("");
@@ -409,9 +429,13 @@ export function MemoryExperience({
       activeRef.current = false;
     };
   }, []);
-  async function uploadJob(job: UploadJob) {
-    if (inFlightRef.current.has(job.id)) return;
+  async function uploadJob(job: UploadJob): Promise<UploadAttemptResult> {
+    if (inFlightRef.current.has(job.id)) return "active";
+    if (job.kind === "photo") setCameraUploadError("");
     inFlightRef.current.add(job.id);
+    setActiveUploadIds((ids) => ids.includes(job.id) ? ids : [...ids, job.id]);
+    setProgress((values) => ({ ...values, [job.id]: 0 }));
+    let result: UploadAttemptResult = "uploaded";
     try {
       await processUploadJob(job, {
         onJob: (next) => {
@@ -438,7 +462,12 @@ export function MemoryExperience({
           return next;
         });
         if (job.kind === "photo") {
-          setPhotoCount(await readGuestPhotoCount(eventId));
+          void readGuestPhotoCount(eventId)
+            .then((count) => {
+              if (activeRef.current)
+                setPhotoCount((current) => Math.max(current, count));
+            })
+            .catch(() => undefined);
           setMessage("Your photo is uploaded and saved.");
         } else
           setMessage(
@@ -448,10 +477,24 @@ export function MemoryExperience({
           );
       }
     } catch (e) {
-      if (activeRef.current) setError((e as Error).message || "Upload failed.");
+      result = "failed";
+      const failure = getUploadFailure(e);
+      if (activeRef.current) {
+        setError(failure.message || "Upload failed.");
+        if (job.kind === "photo" && job.side === side && job.event === eventId)
+          setCameraUploadError(failure.code ? "" : failure.message);
+      }
     } finally {
       inFlightRef.current.delete(job.id);
+      if (activeRef.current)
+        setActiveUploadIds((ids) => ids.filter((id) => id !== job.id));
     }
+    return result;
+  }
+  async function retryCameraUpload(id: string): Promise<UploadAttemptResult> {
+    const job = cameraPhotoUploads.find((candidate) => candidate.id === id);
+    if (!job) return "failed";
+    return uploadJob(job);
   }
   useEffect(() => {
     const resume = () => {
@@ -808,7 +851,7 @@ export function MemoryExperience({
             cover={settings?.cover}
             remaining={remainingPhotos}
             used={PHOTO_LIMIT - remainingPhotos}
-            canReviewDrafts={cameraDrafts.length > 0}
+            canReviewDrafts={cameraDrafts.length > 0 || cameraPhotoUploads.length > 0}
             draftCount={cameraDrafts.length}
             name={name}
             nameRef={nameInputRef}
@@ -889,7 +932,12 @@ export function MemoryExperience({
                   </div>
                 )}
                 {queue
-                  .filter((job) => job.side === side && job.event === eventId && job.kind === "photo")
+                  .filter((job) =>
+                    job.side === side &&
+                    job.event === eventId &&
+                    job.kind === "photo" &&
+                    (!job.uid || job.uid === guestUid)
+                  )
                   .map((job) => (
                     <div className={styles.queue} key={job.id}>
                       <span>
@@ -898,14 +946,18 @@ export function MemoryExperience({
                       {progress[job.id] !== undefined && (
                         <progress value={progress[job.id]} max="100" />
                       )}
-                      {job.error && <p className={styles.error}>{job.error}</p>}
+                      {job.error && (
+                        <p className={styles.error}>
+                          {job.errorCode ? `${job.errorCode}: ` : ""}{job.error}
+                        </p>
+                      )}
                       <button
                         type="button"
                         className={styles.secondary}
-                        disabled={job.status === "Uploading"}
+                        disabled={activeUploadIds.includes(job.id)}
                         onClick={() => void uploadJob(job)}
                       >
-                        Retry upload
+                        {activeUploadIds.includes(job.id) ? "Uploading…" : "Retry upload"}
                       </button>
                     </div>
                   ))}
@@ -1024,6 +1076,9 @@ export function MemoryExperience({
               guestName={name.trim()}
               remaining={remainingPhotos}
               drafts={cameraDrafts}
+              approvedUploads={cameraPhotoUploads}
+              uploadProgress={progress}
+              activeUploadIds={activeUploadIds}
               startInTray={cameraStartInTray}
               defaults={settings}
               onClose={() => {
@@ -1034,6 +1089,8 @@ export function MemoryExperience({
               onUpload={saveCameraGalleryPhoto}
               onDeleteDraft={deleteCameraDraft}
               onUploadDrafts={uploadCameraDrafts}
+              onRetryUpload={retryCameraUpload}
+              uploadError={cameraUploadError}
             />
           )}
         </>
@@ -1123,6 +1180,12 @@ function PhotoCard({
     let active = true;
     let source = "";
     const image = new Image();
+    const loadingNotice = window.setTimeout(() => {
+      if (active)
+        setLoadError(
+          "This photo is taking longer to load. Check your connection, then retry."
+        );
+    }, 12000);
     getBlob(ref(getWeddingStorage(), photo.originalPath))
       .then((blob) => {
         if (!active) return;
@@ -1144,20 +1207,27 @@ function PhotoCard({
               }
             );
             setPreview(canvas.toDataURL("image/jpeg", 0.86));
+            setLoadError("");
           } catch (error) {
             setLoadError(
               `Could not prepare the photo preview: ${(error as Error).message}`
             );
           }
+          window.clearTimeout(loadingNotice);
+          image.onload = null;
+          image.onerror = null;
           image.src = "";
           URL.revokeObjectURL(source);
           source = "";
         };
         image.onerror = () => {
+          window.clearTimeout(loadingNotice);
           if (active)
             setLoadError(
               "Could not load this photo. Check the Storage CORS setup or retry later."
             );
+          image.onload = null;
+          image.onerror = null;
           image.src = "";
           if (source) URL.revokeObjectURL(source);
           source = "";
@@ -1165,6 +1235,7 @@ function PhotoCard({
         image.src = source;
       })
       .catch((error) => {
+        window.clearTimeout(loadingNotice);
         if (active)
           setLoadError(
             `Could not fetch this photo: ${(error as Error).message}`
@@ -1172,6 +1243,9 @@ function PhotoCard({
       });
     return () => {
       active = false;
+      window.clearTimeout(loadingNotice);
+      image.onload = null;
+      image.onerror = null;
       image.src = "";
       if (source) URL.revokeObjectURL(source);
     };

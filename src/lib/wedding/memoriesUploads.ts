@@ -1,5 +1,6 @@
 import { getWeddingGuest } from "@/lib/wedding/firebase";
 import type { PhotoStyle } from "@/lib/wedding/memoriesRender";
+import { getUploadFailure } from "@/lib/wedding/memoriesUploadStatus";
 import { recordVoice, reservePhoto, uploadPhoto } from "@/lib/wedding/memories";
 import {
   createAudioJob,
@@ -140,10 +141,17 @@ async function processUploadJobOnce(
     current = approvedJob;
   }
   try {
+    const persistPhase = async (status: string) => {
+      current = { ...current, status, error: undefined, errorCode: undefined };
+      await saveUploadJob(current);
+      handlers.onJob?.(current);
+    };
+    await persistPhase(current.kind === "photo" ? "Checking photo" : "Checking voice note");
     if (current.kind === "photo") {
       const invalid = await validatePhotoBytes(current.blob);
       if (invalid) throw new Error(invalid);
     }
+    await persistPhase("Checking account");
     const uid = await getWeddingGuest();
     if (current.uid && current.uid !== uid) {
       throw new Error(
@@ -157,6 +165,7 @@ async function processUploadJobOnce(
     }
     if (current.kind === "photo") {
       if (!current.slot) {
+        await persistPhase("Reserving photo slot");
         const reserved = await reservePhoto(
           current.event,
           current.name,
@@ -172,9 +181,7 @@ async function processUploadJobOnce(
         await saveUploadJob(current);
         handlers.onJob?.(current);
       }
-      current = { ...current, status: "Uploading", error: undefined };
-      await saveUploadJob(current);
-      handlers.onJob?.(current);
+      await persistPhase("Uploading photo");
       await uploadPhoto(
         current.event,
         current.slot!,
@@ -194,6 +201,7 @@ async function processUploadJobOnce(
           uid,
           status: "Preparing voice note",
           error: undefined,
+          errorCode: undefined,
         };
         await saveUploadJob(current);
         handlers.onJob?.(current);
@@ -227,10 +235,12 @@ async function processUploadJobOnce(
     }
     await removeUploadJob(current.id);
   } catch (error) {
+    const failure = getUploadFailure(error);
     current = {
       ...current,
       status: "Needs retry",
-      error: (error as Error).message,
+      error: failure.message,
+      errorCode: failure.code,
     };
     await saveUploadJob(current);
     handlers.onJob?.(current);

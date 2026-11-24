@@ -554,6 +554,17 @@
 .cameraDraftFullPreview canvas { display:block; width:auto; height:auto; max-width:100%; max-height:48dvh; object-fit:contain; }
 .cameraSelectedDraft > p { margin:0; color:var(--camera-panel-ink); font-size:.8rem; }
 .cameraDraftActions { display:flex; flex-wrap:wrap; justify-content:center; gap:.5rem; margin-top:.7rem; }
+.cameraUploadQueue { display:grid; gap:.55rem; margin-top:1rem; }
+.cameraUploadQueue h3 { margin:0; color:var(--camera-panel-ink); font-size:.95rem; }
+.cameraUploadOffline { margin:0; color:var(--camera-panel-ink); font-size:.85rem; }
+.cameraUploadCard { display:grid; grid-template-columns:3.5rem minmax(0,1fr) auto; align-items:center; gap:.65rem; padding:.55rem; border:1px solid #887a5c55; border-radius:.75rem; }
+.cameraUploadCard > .cameraTrayButton { min-width:0; max-width:8rem; padding:.45rem .55rem; font-size:.78rem; white-space:normal; }
+.cameraUploadThumb { width:3.5rem; height:3.5rem; overflow:hidden; border-radius:.45rem; background:#1112; }
+.cameraUploadThumb img { display:block; width:100%; height:100%; object-fit:cover; }
+.cameraUploadDetails { display:grid; min-width:0; gap:.15rem; color:var(--camera-panel-ink); font-size:.82rem; }
+.cameraUploadDetails strong,.cameraUploadDetails span { overflow-wrap:anywhere; }
+.cameraUploadDetails progress { width:100%; height:.4rem; accent-color:var(--camera-accent); }
+.cameraUploadError { margin:.15rem 0 0; color:#9b2f25; font-size:.78rem; overflow-wrap:anywhere; }
 .cameraTrayButton,.cameraTrayButtonPrimary,.cameraTrayDanger { display:inline-flex; min-height:2.65rem; align-items:center; justify-content:center; gap:.4rem; padding:.5rem .8rem; border:1px solid #887a5c80; border-radius:99px; background:transparent; color:var(--camera-panel-ink); font:inherit; font-size:.875rem; cursor:pointer; }
 .cameraTrayButtonPrimary { border-color:var(--camera-accent); background:var(--camera-accent); color:var(--camera-selected-text); }
 .cameraTrayDanger { border-color:#a84335aa; color:#8b3028; }

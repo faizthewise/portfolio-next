@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test:firestore": "node --test tests/wedding-firestore.test.mjs",
-    "test:wedding-memories": "node --test tests/wedding-memories.test.mjs tests/wedding-memories-helpers.test.mjs tests/wedding-memories-pagination.test.mjs tests/wedding-memories-camera.test.mjs tests/wedding-memories-drafts.test.mjs",
+    "test:wedding-memories": "node --test tests/wedding-memories.test.mjs tests/wedding-memories-helpers.test.mjs tests/wedding-memories-pagination.test.mjs tests/wedding-memories-camera.test.mjs tests/wedding-memories-drafts.test.mjs tests/wedding-memories-upload-status.test.mjs",
     "lint:js": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:js:fix": "eslint . --fix --ext .js,.jsx,.ts,.tsx",
     "lint:css": "stylelint **/*.{scss,css}",

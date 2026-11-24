@@ -18,9 +18,9 @@ person identity. Publishing the routes does not activate Firebase services.
 The guest hub keeps the name, photo count, and available actions together. The
 camera opens as a full-screen view with Original, FP2, FS16, and FV5 looks in a
 horizontal strip. Each captured photo saves the selected look, capture time, and
-wedding stamp into a local draft. Photo originals remain unchanged, while gallery
-views and exports use the same
-crop, filter, and stamp renderer. The shared gallery is available from the hub.
+wedding stamp into a local draft. Photo originals remain unchanged, while
+gallery views and exports use the same crop, filter, and stamp renderer. The
+shared gallery is available from the hub.
 The three color looks are local stylistic approximations informed by the
 descriptions for [VSCO Fuji presets](https://www.vsco.co/features/film-filters/fujifilm-presets).
 They are not claims of exact proprietary filter matches; paired VSCO reference
@@ -100,10 +100,18 @@ images, and exports, but not over the live camera feed.
    gsutil cors set storage-cors.json gs://jemputan-kahwin-6bd29.firebasestorage.app
    ```
 
-   The included policy allows GET from the canonical site, `localhost`, and
-   `127.0.0.1` on development ports 3000 and 3012. Update it if the production domain changes. Browser-side blob fetches
+   The included policy allows GET from both `https://faizhasnul.com` and
+   `https://www.faizhasnul.com` (the bare domain redirects to `www`), plus
+   `localhost` and `127.0.0.1` on development ports 3000 and 3012. Update it if
+   the production domain changes. Browser-side blob fetches
    fail without CORS; ZIP exports intentionally stop with an error instead of
    silently omitting media. See Firebase's [browser download and CORS instructions](https://firebase.google.com/docs/storage/web/download-files).
+
+   If an album card is blank while its photo record exists, check that Storage
+   GET responses include `Access-Control-Allow-Origin` for the final site
+   origin, including `https://www.faizhasnul.com`. CORS is a bucket setting;
+   publishing Firebase Storage rules does not apply `storage-cors.json`. Existing
+   uploaded photos do not need to be uploaded again after correcting CORS.
 
 6. Publish the updated Firestore and Storage rules, indexes, and deploy the site
    through its existing host. The public guest albums are

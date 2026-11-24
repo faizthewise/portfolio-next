@@ -46,6 +46,8 @@ function transpile(path) {
     if (name === "@/lib/wedding/firebase") return firebase;
     if (name === "@/lib/wedding/memories") return memoryApi;
     if (name === "@/lib/wedding/memoriesRender") return {};
+    if (name === "@/lib/wedding/memoriesUploadStatus")
+      return transpile("src/lib/wedding/memoriesUploadStatus.ts");
     if (name === "@/lib/wedding/memoriesQueue")
       return transpile("src/lib/wedding/memoriesQueue.ts");
     return require(name);
@@ -246,4 +248,79 @@ test("approval atomically moves the stable job once and processor uses durable q
   assert.equal(calls.reserve, 0);
   assert.deepEqual(calls.uploadedSlots, [7]);
   assert.equal((await queue.listUploadJobs(event)).length, 0);
+});
+
+test("permission failure stays retryable with the same reservation and reports progress", async () => {
+  await queue.clearUploadQueueForTests();
+  resetCalls();
+  const held = photo();
+  await queue.saveLocalPhotoDraft(held, 0);
+  const [approved] = await queue.approveLocalPhotoDrafts([held.id], event, guestUid);
+  const originalReserve = memoryApi.reservePhoto;
+  const originalUpload = memoryApi.uploadPhoto;
+  const seenPhases = [];
+  const reportedProgress = [];
+  const uploadKeys = [];
+  try {
+    memoryApi.reservePhoto = async () => {
+      calls.reserve++;
+      throw Object.assign(new Error("The photo slot was denied."), {
+        code: "permission-denied",
+      });
+    };
+    memoryApi.uploadPhoto = async () => {
+      calls.upload++;
+    };
+    await assert.rejects(
+      uploads.processUploadJob(approved, { onJob: (job) => seenPhases.push(job.status) }),
+      /photo slot was denied/
+    );
+    let saved = (await queue.listUploadJobs(event))[0];
+    assert.equal(saved.id, approved.id);
+    assert.equal(saved.uploadKey, approved.uploadKey);
+    assert.equal(saved.status, "Needs retry");
+    assert.equal(saved.errorCode, "permission-denied");
+    assert.equal(calls.upload, 0);
+    assert.deepEqual(seenPhases.slice(0, 3), [
+      "Checking photo",
+      "Checking account",
+      "Reserving photo slot",
+    ]);
+
+    memoryApi.reservePhoto = async (_event, _name, uploadKey) => {
+      calls.reserve++;
+      uploadKeys.push(uploadKey);
+      return { uid: guestUid, slot: 4 };
+    };
+    memoryApi.uploadPhoto = async (
+      _event,
+      slot,
+      _uid,
+      _name,
+      _blob,
+      onProgress,
+      uploadKey
+    ) => {
+      calls.upload++;
+      calls.uploadedSlots.push(slot);
+      uploadKeys.push(uploadKey);
+      onProgress(40);
+      onProgress(100);
+    };
+    await uploads.processUploadJob(saved, {
+      onJob: (job) => seenPhases.push(job.status),
+      onProgress: (_id, percent) => reportedProgress.push(percent),
+    });
+    saved = await queue.getUploadJob(approved.id);
+    assert.equal(saved, undefined);
+    assert.equal(calls.reserve, 2);
+    assert.equal(calls.upload, 1);
+    assert.deepEqual(calls.uploadedSlots, [4]);
+    assert.deepEqual(uploadKeys, [approved.uploadKey, approved.uploadKey]);
+    assert.deepEqual(reportedProgress, [40, 100]);
+    assert.ok(seenPhases.includes("Uploading photo"));
+  } finally {
+    memoryApi.reservePhoto = originalReserve;
+    memoryApi.uploadPhoto = originalUpload;
+  }
 });

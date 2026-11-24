@@ -19,6 +19,7 @@ export type UploadJob = {
   bytesUploaded?: boolean;
   status: string;
   error?: string;
+  errorCode?: string;
 };
 export type LocalPhotoDraft = UploadJob & {
   kind: "photo";

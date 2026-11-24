@@ -98,6 +98,8 @@ function transpile(path) {
       return transpile("src/lib/wedding/memoriesQueue.ts");
     if (name === "@/lib/wedding/memoriesRender")
       return transpile("src/lib/wedding/memoriesRender.ts");
+    if (name === "@/lib/wedding/memoriesUploadStatus")
+      return transpile("src/lib/wedding/memoriesUploadStatus.ts");
     if (name === "@/lib/wedding/memoryRoutes")
       return transpile("src/lib/wedding/memoryRoutes.ts");
     if (name === "@/lib/wedding/memories")

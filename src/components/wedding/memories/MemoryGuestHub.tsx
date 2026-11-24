@@ -96,7 +96,7 @@ export function MemoryGuestHub({
         ) : (
           <Camera size={21} aria-hidden="true" />
         )}
-        {remaining <= 0 && canReviewDrafts ? "Review saved photos" : "Open camera"}
+        {remaining <= 0 && canReviewDrafts ? "Review photos" : "Open camera"}
       </button>
       {draftCount > 0 && (
         <p className={styles.hubQueueStatus} role="status">
