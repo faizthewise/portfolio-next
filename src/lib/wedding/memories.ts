@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDocFromServer,
   getDocs,
   limit,
   onSnapshot,
@@ -526,8 +527,8 @@ export async function readGuestPhotoCount(event: WeddingEventId) {
   const db = getWeddingFirestore();
   const checks = await Promise.all(
     Array.from({ length: PHOTO_LIMIT }, (_, index) =>
-      import("firebase/firestore").then(({ getDoc }) =>
-        getDoc(doc(db, `${root(event)}/reservations/${uid}_${index + 1}`))
+      getDocFromServer(
+        doc(db, `${root(event)}/reservations/${uid}_${index + 1}`)
       )
     )
   );

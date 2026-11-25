@@ -3,7 +3,10 @@ import fs from "node:fs";
 import { test } from "node:test";
 import ts from "typescript";
 
-const source = fs.readFileSync("src/lib/wedding/memoriesUploadStatus.ts", "utf8");
+const source = fs.readFileSync(
+  "src/lib/wedding/memoriesUploadStatus.ts",
+  "utf8"
+);
 const output = ts.transpileModule(source, {
   compilerOptions: {
     module: ts.ModuleKind.CommonJS,
@@ -12,7 +15,55 @@ const output = ts.transpileModule(source, {
 }).outputText;
 const module = { exports: {} };
 new Function("module", "exports", output)(module, module.exports);
-const { getPhotoUploadPresentation, getUploadFailure } = module.exports;
+const { getHomeUploadCounts, getPhotoUploadPresentation, getUploadFailure } =
+  module.exports;
+
+test("home status reports actual active jobs and keeps mixed failed jobs actionable", () => {
+  const counts = getHomeUploadCounts(
+    [
+      {
+        id: "retry-active",
+        kind: "photo",
+        status: "Needs retry",
+        error: "Network error",
+      },
+      { id: "retry-photo", kind: "photo", status: "Needs retry" },
+      {
+        id: "retry-audio",
+        kind: "audio",
+        status: "Preparing voice note",
+        errorCode: "storage/unknown",
+      },
+      { id: "pending", kind: "photo", status: "Uploading photo" },
+    ],
+    ["retry-active", "unlisted-job"],
+    true
+  );
+  assert.deepEqual(counts, {
+    active: { photo: 1, audio: 0 },
+    failed: { photo: 1, audio: 1 },
+    waiting: { photo: 0, audio: 0 },
+    ready: { photo: 1, audio: 0 },
+  });
+});
+
+test("home status shows in-flight uploads waiting offline alongside prior failures", () => {
+  const counts = getHomeUploadCounts(
+    [
+      { id: "pending", kind: "photo", status: "Uploading photo" },
+      { id: "retry-active", kind: "photo", status: "Needs retry" },
+      { id: "retry", kind: "audio", status: "Needs retry" },
+    ],
+    ["retry-active"],
+    false
+  );
+  assert.deepEqual(counts, {
+    active: { photo: 0, audio: 0 },
+    failed: { photo: 0, audio: 1 },
+    waiting: { photo: 2, audio: 0 },
+    ready: { photo: 0, audio: 0 },
+  });
+});
 
 test("upload presentation keeps Firebase permission codes and messages visible", () => {
   const failure = getUploadFailure(
@@ -26,7 +77,10 @@ test("upload presentation keeps Firebase permission codes and messages visible",
     false,
     true
   );
-  assert.equal(presentation.error, "storage/unauthorized: Object write was denied.");
+  assert.equal(
+    presentation.error,
+    "storage/unauthorized: Object write was denied."
+  );
   assert.equal(presentation.status, "Needs retry");
   assert.equal(presentation.retryDisabled, false);
 });
@@ -56,7 +110,10 @@ test("offline approved uploads wait for connection and retain the last error", (
     false
   );
   assert.equal(presentation.status, "Waiting for an internet connection");
-  assert.equal(presentation.error, "storage/retry-limit-exceeded: The network request failed.");
+  assert.equal(
+    presentation.error,
+    "storage/retry-limit-exceeded: The network request failed."
+  );
   assert.equal(presentation.retryDisabled, true);
   assert.equal(presentation.retryLabel, "Waiting for connection");
 });

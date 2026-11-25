@@ -495,60 +495,13 @@
   .galleryGrid { grid-template-columns:repeat(6,minmax(0,1fr)); }
 }
 
-.guestHub {
-  --hub-accent: #607a60;
-  position: relative;
-  isolation: isolate;
-  width: min(100%, 32.5rem);
-  margin: clamp(.25rem, 1.5vh, .8rem) auto 2rem;
-  padding: clamp(1.2rem, 5vw, 2rem);
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--hub-accent), transparent 50%);
-  border-radius: 1.25rem;
-  background: color-mix(in srgb, var(--paper), transparent 3%);
-  box-shadow: 0 18px 48px #30281d16;
-  text-align: center;
-}
-.hub-garden { --hub-accent: #607a60; }
-.hub-songket { --hub-accent: #8c622f; }
-.hubArtwork {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  opacity: 0.13;
-  background-image: url("/images/arched-invitation-garden-v1.webp");
-  background-size: cover;
-  background-position: center;
-  pointer-events: none;
-}
-.hub-songket .hubArtwork {
-  opacity: 0.12;
-  background-image: url("/images/songket-closed-composite-v4.webp");
-}
-.hubEyebrow { margin: 0; color: var(--hub-accent); font-size: .7rem; letter-spacing: .18em; }
-.hubNames { margin: .35rem 0 0; color: var(--hub-accent); font-size: clamp(2.5rem, 12vw, 3.6rem); line-height: 1; }
-.hubDate { margin: .3rem 0 0; font-size: 1rem; }
-.hubVenue { margin: .15rem 0 0; font-size: .9rem; opacity: .8; }
-.hubWelcome { margin: .75rem 0 1rem; font-size: .95rem; line-height: 1.45; }
-.hubNameField { display: grid; gap: .35rem; text-align: left; font-size: .85rem; font-weight: 600; }
-.hubNameField input { width:100%; min-height:2.9rem; padding:.65rem .8rem; border:1px solid #857c6870; border-radius:.65rem; background:var(--paper); color:var(--ink); font:inherit; font-weight:400; }
-.hubQuota { display:flex; justify-content:space-between; gap:.5rem; margin:.55rem 0 .7rem; color:var(--hub-accent); font-size:.78rem; }
-.hubPrimaryAction { display:flex; width:100%; min-height:3.3rem; justify-content:center; align-items:center; gap:.55rem; border:0; border-radius:.75rem; background:var(--hub-accent); color:white; font:inherit; font-size:1rem; font-weight:600; cursor:pointer; }
-.hubPrimaryAction:disabled { opacity:.5; cursor:not-allowed; }
-.hubActionGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; margin-top:.6rem; }
-.hubActionGrid button { display:flex; min-height:3.1rem; align-items:center; justify-content:center; gap:.45rem; border:1px solid color-mix(in srgb,var(--hub-accent),transparent 58%); border-radius:.7rem; background:color-mix(in srgb,var(--paper),white 35%); color:var(--ink); font:inherit; font-size:.88rem; cursor:pointer; }
-.hubActionGrid svg { width:1.05rem; height:1.05rem; color:var(--hub-accent); }
-.hubFooterActions { display:flex; justify-content:center; margin-top:.8rem; }
-.hubFooterActions a { display:flex; min-height:2.8rem; align-items:center; justify-content:center; gap:.45rem; padding:.5rem .8rem; border-radius:.7rem; color:var(--ink); font-size:.9rem; text-decoration:none; }
-.hubQueueStatus,.hubStatus { margin:.55rem 0 0; color:var(--ink); font-size:.82rem; line-height:1.4; }
-
 .guestPanelBackdrop { position:fixed; z-index:9000; inset:0; display:grid; align-items:end; background:#151511a8; }
 .guestPanel { width:min(100%,38rem); max-height:92dvh; margin:0 auto; overflow:auto; border:1px solid color-mix(in srgb,var(--accent),transparent 35%); border-radius:1.1rem 1.1rem 0 0; background:var(--paper); color:var(--ink); box-shadow:0 -14px 50px #0003; outline:none; }
 .panel-garden { --ink:#3e5949; --accent:#a48b60; --paper:#fffdf8; --soft:#eef0e8; }
 .panel-songket { --ink:#45252c; --accent:#b49155; --paper:#fff9ed; --soft:#f4ebdd; }
 .guestPanelHeader { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.85rem 1rem; border-bottom:1px solid #857c6830; background:var(--paper); }
 .guestPanelHeader h2 { margin:0; font-weight:400; font-size:1.4rem; }
-.panelClose { display:grid; width:2.5rem; height:2.5rem; place-items:center; border:1px solid #857c6860; border-radius:50%; background:transparent; color:var(--ink); font-size:1.6rem; cursor:pointer; }
+.panelClose { display:grid; width:2.75rem; height:2.75rem; flex:none; place-items:center; border:1px solid #857c6860; border-radius:50%; background:transparent; color:var(--ink); font-size:1.6rem; cursor:pointer; }
 .guestPanelContent { padding:1rem; padding-bottom:max(1.25rem,env(safe-area-inset-bottom)); }
 .guestPanelContent .section { margin:.4rem 0; padding:0; border:0; background:none; box-shadow:none; }
 

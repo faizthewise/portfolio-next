@@ -1,141 +1,201 @@
-import type { RefObject } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
-import { Camera, Heart, Mic, PenLine, ImagePlus, Gift } from "lucide-react";
-import styles from "./Memories.module.css";
+import {
+  ArrowRight,
+  Camera,
+  ChevronRight,
+  Gift,
+  ImagePlus,
+  Mic,
+  PenLine,
+} from "lucide-react";
+import styles from "./MemoryGuestHome.module.css";
 
-export function MemoryGuestHub({
-  theme,
-  coupleNames,
-  date,
-  venue,
-  welcome,
-  cover,
-  remaining,
-  used,
-  canReviewDrafts,
-  draftCount,
-  name,
-  nameRef,
-  namesClassName,
-  onNameChange,
-  onCamera,
-  onAlbum,
-  onVoice,
-  onWish,
-  onSalamKaut,
-  galleryHref,
-  queueSummary,
-  status,
-}: {
-  theme: "garden" | "songket";
+type MemoryGuestHubProps = {
   coupleNames: string;
   date: string;
-  venue: string;
-  welcome: string;
-  cover?: string;
   remaining: number;
-  used: number;
-  canReviewDrafts: boolean;
+  photoLimit: number;
+  quotaState: "loading" | "ready" | "error";
   draftCount: number;
-  name: string;
-  nameRef: RefObject<HTMLInputElement>;
-  namesClassName: string;
-  onNameChange: (value: string) => void;
+  canReviewDrafts: boolean;
   onCamera: (reviewOnly?: boolean) => void;
-  onAlbum: () => void;
+  onQuotaRetry: () => void;
+  onUpload: () => void;
   onVoice: () => void;
   onWish: () => void;
   onSalamKaut: () => void;
   galleryHref: string;
-  queueSummary: string;
-  status: string;
-}) {
-  return (
-    <section
-      className={`${styles.guestHub} ${styles[`hub-${theme}`]}`}
-      style={
-        cover
-          ? {
-              backgroundImage: `linear-gradient(0deg, #fffdf8ed, #fffdf8a8), url("${cover}")`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }
-          : undefined
-      }
-    >
-      <div className={styles.hubArtwork} aria-hidden="true" />
-      <p className={styles.hubEyebrow}>WEDDING MEMORIES</p>
-      <h1 className={`${styles.hubNames} ${namesClassName}`}>{coupleNames}</h1>
-      <p className={styles.hubDate}>{date}</p>
-      <p className={styles.hubVenue}>{venue}</p>
-      <p className={styles.hubWelcome}>{welcome}</p>
+  children?: ReactNode;
+};
 
-      <label className={styles.hubNameField}>
-        Your name
-        <input
-          ref={nameRef}
-          maxLength={100}
-          value={name}
-          onChange={(event) => onNameChange(event.target.value)}
-          autoComplete="name"
-          placeholder="Name shown with your photos and wishes"
-        />
-      </label>
-      <div className={styles.hubQuota}>
-        <span>{remaining} shots left</span>
-        <span>{used} of 20 used</span>
-      </div>
-      <button
-        type="button"
-        className={styles.hubPrimaryAction}
-        disabled={remaining <= 0 && !canReviewDrafts}
-        onClick={() => onCamera(remaining <= 0 && canReviewDrafts)}
-      >
-        {remaining <= 0 && canReviewDrafts ? (
-          <ImagePlus size={21} aria-hidden="true" />
-        ) : (
-          <Camera size={21} aria-hidden="true" />
+export function MemoryGuestHub({
+  coupleNames,
+  date,
+  remaining,
+  photoLimit,
+  quotaState,
+  draftCount,
+  canReviewDrafts,
+  onCamera,
+  onQuotaRetry,
+  onUpload,
+  onVoice,
+  onWish,
+  onSalamKaut,
+  galleryHref,
+  children,
+}: MemoryGuestHubProps) {
+  const canTakePhoto = quotaState === "ready" && remaining > 0;
+  const reviewOnly = !canTakePhoto && canReviewDrafts;
+
+  return (
+    <div className={styles.homeContent}>
+      <header className={styles.hero}>
+        <p className={styles.eyebrow}>The wedding of</p>
+        <p className={styles.coupleNames}>{coupleNames}</p>
+        <p className={styles.eventDate}>{date}</p>
+        <h1 className={styles.heroTitle}>Through your eyes</h1>
+        <p className={styles.heroMessage}>
+          Capture the little moments and make them part of our forever.
+        </p>
+      </header>
+
+      <section className={styles.cameraSection} aria-labelledby="guest-camera">
+        <div className={styles.cameraHeading}>
+          <h2 id="guest-camera" className={styles.sectionTitle}>
+            Your camera
+          </h2>
+          <p className={styles.allowance} role="status">
+            {quotaState === "ready" &&
+              `${remaining} ${remaining === 1 ? "shot" : "shots"} left`}
+            {quotaState === "loading" && "Checking shots…"}
+            {quotaState === "error" && "Shot count unavailable"}
+          </p>
+        </div>
+        <div className={styles.exposureMeter} aria-hidden="true">
+          {Array.from({ length: photoLimit }, (_, index) => (
+            <span
+              className={
+                quotaState === "ready" && index < remaining
+                  ? styles.availableExposure
+                  : styles.exposure
+              }
+              key={index}
+            />
+          ))}
+        </div>
+        <div className={styles.cameraActions}>
+          <button
+            type="button"
+            className={styles.primaryAction}
+            onClick={() => onCamera(reviewOnly)}
+            disabled={!canTakePhoto && !reviewOnly}
+          >
+            {reviewOnly ? (
+              <ImagePlus size={24} aria-hidden="true" />
+            ) : (
+              <Camera size={24} aria-hidden="true" />
+            )}
+            {reviewOnly ? "Review photos" : "Take a photo"}
+          </button>
+          <button
+            type="button"
+            className={styles.secondaryAction}
+            onClick={onUpload}
+            disabled={!canTakePhoto}
+          >
+            <ImagePlus size={20} aria-hidden="true" />
+            Upload photos
+          </button>
+        </div>
+        {quotaState === "error" && (
+          <button
+            type="button"
+            className={styles.textAction}
+            onClick={onQuotaRetry}
+          >
+            Retry shot count
+          </button>
         )}
-        {remaining <= 0 && canReviewDrafts ? "Review photos" : "Open camera"}
-      </button>
-      {draftCount > 0 && (
-        <p className={styles.hubQueueStatus} role="status">
-          {draftCount} {draftCount === 1 ? "photo" : "photos"} saved on this device · upload when ready
+        {quotaState === "ready" && !canTakePhoto && (
+          <p className={styles.cameraNote}>
+            All {photoLimit} {photoLimit === 1 ? "shot is" : "shots are"} in
+            use.
+          </p>
+        )}
+        {draftCount > 0 && (
+          <p className={styles.cameraNote} role="status">
+            {draftCount} {draftCount === 1 ? "photo" : "photos"} saved on this
+            device.
+          </p>
+        )}
+      </section>
+
+      {children}
+
+      <section className={styles.homeSection} aria-labelledby="guest-messages">
+        <h2 id="guest-messages" className={styles.sectionTitle}>
+          Leave us a little love
+        </h2>
+        <div className={styles.contributionGrid}>
+          <button
+            type="button"
+            className={styles.contributionCard}
+            onClick={onWish}
+          >
+            <PenLine size={24} aria-hidden="true" />
+            <span className={styles.cardTitle}>Write a wish</span>
+            <span className={styles.cardDescription}>
+              A few heartfelt words
+            </span>
+          </button>
+          <button
+            type="button"
+            className={styles.contributionCard}
+            onClick={onVoice}
+          >
+            <Mic size={24} aria-hidden="true" />
+            <span className={styles.cardTitle}>Record a message</span>
+            <span className={styles.cardDescription}>
+              Let us hear your voice
+            </span>
+          </button>
+        </div>
+      </section>
+
+      <section className={styles.homeSection} aria-labelledby="guest-gallery">
+        <h2 id="guest-gallery" className={styles.sectionTitle}>
+          Our day, together
+        </h2>
+        <p className={styles.galleryDescription}>
+          Memories through everyone&apos;s eyes.
         </p>
-      )}
-      <div className={styles.hubActionGrid}>
-        <button type="button" onClick={onAlbum}>
-          <ImagePlus aria-hidden="true" />
-          My album
-        </button>
-        <button type="button" onClick={onVoice}>
-          <Mic aria-hidden="true" />
-          Voice note
-        </button>
-        <button type="button" onClick={onWish}>
-          <PenLine aria-hidden="true" />
-          Write a wish
-        </button>
-        <button type="button" onClick={onSalamKaut}>
-          <Gift aria-hidden="true" />
-          Salam Kaut
-        </button>
-      </div>
-      <div className={styles.hubFooterActions}>
-        <Link href={galleryHref}>
-          <Heart size={17} aria-hidden="true" /> Shared gallery
+        <Link className={styles.textAction} href={galleryHref}>
+          Explore the gallery <ArrowRight size={16} aria-hidden="true" />
         </Link>
+      </section>
+
+      <div className={styles.giftSection}>
+        <button
+          type="button"
+          className={styles.giftAction}
+          onClick={onSalamKaut}
+        >
+          <span className={styles.giftIcon} aria-hidden="true">
+            <Gift size={22} />
+          </span>
+          <span>
+            <span className={styles.cardTitle}>Salam Kaut</span>
+            <span className={styles.cardDescription}>
+              A little blessing for our new beginning.
+            </span>
+          </span>
+          <ChevronRight size={18} aria-hidden="true" />
+        </button>
       </div>
-      {queueSummary && (
-        <p className={styles.hubQueueStatus} role="status">
-          {queueSummary}
-        </p>
-      )}
-      {status && (
-        <p className={styles.hubStatus} role="status">
-          {status}
-        </p>
-      )}
-    </section>
+
+      <footer className={styles.closing}>With love, {coupleNames}</footer>
+    </div>
   );
 }

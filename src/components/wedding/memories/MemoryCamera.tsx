@@ -296,7 +296,7 @@ function CameraSurface({
           node.getClientRects().length > 0
       );
       if (!nodes.length) return;
-      if (!focusScope?.contains(document.activeElement)) {
+      if (!nodes.includes(document.activeElement as HTMLElement)) {
         event.preventDefault();
         (event.shiftKey ? nodes.at(-1) : nodes[0])?.focus();
         return;
@@ -735,7 +735,10 @@ function CameraSurface({
                 {selectedDraft ? (
                   <div className={styles.cameraSelectedDraft}>
                     <DraftPhotoPreview draft={selectedDraft} coupleNames={coupleNames} />
-                    <p>Only on this device until you choose Upload.</p>
+                    <p>
+                      This photo stays on this device until you upload it. Anyone
+                      with the album link can then see it.
+                    </p>
                     <div className={styles.cameraDraftActions}>
                       <button
                         ref={selectedDraftBack}
@@ -792,6 +795,9 @@ function CameraSurface({
                       </div>
                     ) : (
                       <p className={styles.cameraDraftEmpty}>No local drafts to review. Add a photo from your device or go back to the camera.</p>
+                    )}
+                    {drafts.length > 0 && (
+                      <p>Anyone with the album link can see photos you upload.</p>
                     )}
                     <div className={styles.cameraDraftActions}>
                       <button
