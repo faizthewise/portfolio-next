@@ -5,11 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
 import { Mic, Upload } from "lucide-react";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
-import {
-  brideInvitation,
-  groomInvitation,
-  type WeddingEventId,
-} from "@/lib/wedding/invitations";
+import type { WeddingEventId } from "@/lib/wedding/invitations";
 import {
   MEMORY_PUBLIC_ALBUMS,
   memoryCanonicalUrl,
@@ -129,7 +125,6 @@ export function MemoryExperience({
 }) {
   const router = useRouter();
   const event = MEMORY_EVENTS[side];
-  const wedding = side === "bride" ? brideInvitation : groomInvitation;
   const eventId = event.id;
   const eventScopeRef = useRef(eventId);
   eventScopeRef.current = eventId;
@@ -1092,13 +1087,6 @@ export function MemoryExperience({
     setRecording(false);
     setSavingVoice(true);
   }
-  const displayDate = wedding.date.toLocaleDateString("en-MY", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "Asia/Kuala_Lumpur",
-  });
   const homeHref = memoryPath(side);
   const galleryHref = memoryPath(side, "gallery");
   const { coupleNames, dateLabel } = MEMORY_PUBLIC_ALBUMS[side];
@@ -1598,11 +1586,11 @@ export function MemoryExperience({
       )}
       {cameraOpen && (
         <MemoryCamera
-          side={side}
-          coupleNames={MEMORY_PUBLIC_ALBUMS[side].coupleNames}
-          date={displayDate}
-          guestName={name.trim()}
+          coupleNames={coupleNames}
           remaining={quotaState === "ready" ? remainingPhotos : 0}
+          photoLimit={PHOTO_LIMIT}
+          quotaKnown={quotaState === "ready"}
+          backgroundRef={mainRef}
           drafts={cameraDrafts}
           approvedUploads={cameraPhotoUploads}
           uploadProgress={progress}
