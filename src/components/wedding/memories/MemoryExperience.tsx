@@ -1,18 +1,21 @@
 import Head from "next/head";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Cormorant_Garamond, Great_Vibes, Lora } from "next/font/google";
-import { Heart, Mic, Upload, Image as ImageIcon } from "lucide-react";
-import { getBlob, getDownloadURL, ref } from "firebase/storage";
-import { getWeddingStorage, getWeddingGuest } from "@/lib/wedding/firebase";
-import { brideInvitation, groomInvitation } from "@/lib/wedding/invitations";
+import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
+import { Mic, Upload } from "lucide-react";
+import { getWeddingGuest } from "@/lib/wedding/firebase";
+import {
+  brideInvitation,
+  groomInvitation,
+  type WeddingEventId,
+} from "@/lib/wedding/invitations";
 import {
   MEMORY_PUBLIC_ALBUMS,
   memoryCanonicalUrl,
   memoryPath,
 } from "@/lib/wedding/memoryRoutes";
 import {
-  drawStyledPhoto,
   MEMORY_EVENTS,
   MEMORY_HASHTAG,
   PHOTO_LIMIT,
@@ -26,8 +29,6 @@ import {
   subscribeVoices,
   subscribePublicSettings,
   type MemoryPhoto,
-  type MemoryWish,
-  type MemoryVoice,
   type MemorySettings,
   type PhotoCursor,
 } from "@/lib/wedding/memories";
@@ -62,6 +63,18 @@ import {
   resetMemoryPage,
 } from "@/lib/wedding/memoriesPagination";
 import { MemoryCamera } from "./MemoryCamera";
+import {
+  MemoryGallery,
+  MemoryGalleryPhotos,
+  type GalleryFilters,
+  type GalleryStatus,
+  type GalleryTab,
+} from "./MemoryGallery";
+import { MemoryGalleryPhoto } from "./MemoryGalleryPhoto";
+import {
+  MemoryGalleryVoices,
+  MemoryGalleryWishes,
+} from "./MemoryGalleryMessages";
 import { MemoryGuestHub } from "./MemoryGuestHub";
 import { MemoryGuestNav } from "./MemoryGuestNav";
 import { MemoryHomeUploadStatus } from "./MemoryHomeUploadStatus";
@@ -69,6 +82,7 @@ import { MemoryGuestPanel } from "./MemoryGuestPanel";
 import type { PhotoStyle } from "@/lib/wedding/memoriesRender";
 import styles from "./Memories.module.css";
 import homeStyles from "./MemoryGuestHome.module.css";
+import galleryStyles from "./MemoryGallery.module.css";
 
 const memoryTitle = Cormorant_Garamond({
   subsets: ["latin"],
@@ -82,13 +96,6 @@ const memoryNames = Great_Vibes({
   variable: "--memory-signature",
   display: "swap",
 });
-const memoryText = Lora({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  display: "swap",
-  preload: false,
-});
-
 type GuestPanel = "album" | "voice" | "wish" | "salam" | "upload" | "identity";
 type IdentityIntent = "camera" | "review" | "upload" | "voice" | "wish";
 type QuotaState = "loading" | "ready" | "error";
@@ -120,6 +127,7 @@ export function MemoryExperience({
   side: "bride" | "groom";
   page?: "guest" | "gallery";
 }) {
+  const router = useRouter();
   const event = MEMORY_EVENTS[side];
   const wedding = side === "bride" ? brideInvitation : groomInvitation;
   const eventId = event.id;
@@ -128,8 +136,6 @@ export function MemoryExperience({
   const [name, setName] = useState("");
   const [photos, setPhotos] = useState<MemoryPhoto[]>([]);
   const [myPhotos, setMyPhotos] = useState<MemoryPhoto[]>([]);
-  const [wishes, setWishes] = useState<MemoryWish[]>([]);
-  const [voices, setVoices] = useState<MemoryVoice[]>([]);
   const [settings, setSettings] = useState<MemorySettings>();
   const [queue, setQueue] = useState<UploadJob[]>([]);
   const [localPhotoDrafts, setLocalPhotoDrafts] = useState<LocalPhotoDraft[]>(
@@ -142,9 +148,26 @@ export function MemoryExperience({
   const [myCursor, setMyCursor] = useState<PhotoCursor>();
   const [myHasMore, setMyHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [galleryLoading, setGalleryLoading] = useState(true);
-  const [photoView, setPhotoView] = useState<"all" | "my" | "favorites">("all");
-  const [guestFilter, setGuestFilter] = useState("all");
+  const [galleryTab, setGalleryTab] = useState<GalleryTab>("photos");
+  const [visitedTabs, setVisitedTabs] = useState<GalleryTab[]>([]);
+  const [galleryFilters, setGalleryFilters] = useState<GalleryFilters>({
+    scope: "all",
+    guest: null,
+  });
+  const [photoStatus, setPhotoStatus] = useState<GalleryStatus>("loading");
+  const [myPhotoStatus, setMyPhotoStatus] = useState<GalleryStatus>("loading");
+  const [photoAttempt, setPhotoAttempt] = useState(0);
+  const [myPhotoAttempt, setMyPhotoAttempt] = useState(0);
+  const [personalPhotosRequested, setPersonalPhotosRequested] = useState(false);
+  const [photoPageError, setPhotoPageError] = useState<"public" | "personal">();
+  const [favoriteError, setFavoriteError] = useState(false);
+  const [favoriteLoadError, setFavoriteLoadError] = useState(false);
+  const [favoriteLoadPending, setFavoriteLoadPending] = useState(false);
+  const [favoriteAttempt, setFavoriteAttempt] = useState(0);
+  const [favoritePendingIds, setFavoritePendingIds] = useState<string[]>([]);
+  const favoriteReads = useRef(new Set<string>());
+  const favoriteWrites = useRef(new Set<string>());
+  const favoriteVersions = useRef(new Map<string, number>());
   const [message, setMessage] = useState<{
     kind: "wish" | "voice";
     text: string;
@@ -219,14 +242,46 @@ export function MemoryExperience({
     0,
     PHOTO_LIMIT - photoCount - unreservedPhotoJobs.length - cameraDrafts.length
   );
-  const gallerySourcePhotos = photoView === "my" ? myPhotos : photos;
-  const galleryPhotos = gallerySourcePhotos
-    .filter((photo) =>
-      photoView === "favorites" ? favoriteIds.includes(photo.id) : true
-    )
-    .filter(
-      (photo) => guestFilter === "all" || photo.guestName === guestFilter
-    );
+  const wantsPublicPhotos = isGallery && visitedTabs.includes("photos");
+  const wantsPersonalPhotos = !isGallery || personalPhotosRequested;
+  const wishesFeed = useGalleryCollection(
+    eventId,
+    isGallery && visitedTabs.includes("wishes"),
+    subscribeWishes
+  );
+  const voicesFeed = useGalleryCollection(
+    eventId,
+    isGallery && visitedTabs.includes("voice-notes"),
+    subscribeVoices
+  );
+  const showPersonalPhotos = galleryFilters.scope === "my";
+  const showFavorites = galleryFilters.scope === "favorites";
+  const gallerySourcePhotos = showPersonalPhotos ? myPhotos : photos;
+  const galleryGuests = Array.from(
+    new Set([
+      ...gallerySourcePhotos.map((photo) => photo.guestName),
+      ...(galleryFilters.guest ? [galleryFilters.guest] : []),
+    ])
+  ).sort((a, b) => a.localeCompare(b));
+  const galleryPhotos = gallerySourcePhotos.filter(
+    (photo) =>
+      (!showFavorites || favoriteIds.includes(photo.id)) &&
+      (galleryFilters.guest === null ||
+        photo.guestName === galleryFilters.guest)
+  );
+  const hasUnreadFavorites =
+    showFavorites &&
+    photos.some((photo) => !favoriteReads.current.has(photo.id));
+  const personalPhotoStatus =
+    !guestUid && quotaState === "error" ? "error" : myPhotoStatus;
+  const galleryPhotoStatus = showPersonalPhotos
+    ? personalPhotoStatus
+    : showFavorites &&
+      (favoriteLoadError || (!guestUid && quotaState === "error"))
+    ? "error"
+    : showFavorites && (!guestUid || favoriteLoadPending || hasUnreadFavorites)
+    ? "loading"
+    : photoStatus;
   useEffect(() => {
     try {
       const storedName = window.localStorage.getItem(`memories-name-${side}`);
@@ -240,8 +295,6 @@ export function MemoryExperience({
     }
     setPhotos([]);
     setMyPhotos([]);
-    setWishes([]);
-    setVoices([]);
     setFavoriteIds([]);
     setCursor(undefined);
     setHasMore(false);
@@ -249,8 +302,13 @@ export function MemoryExperience({
     setMyCursor(undefined);
     setMyHasMore(false);
     myPageCursorRef.current = resetMemoryPage();
-    setPhotoView("all");
-    setGuestFilter("all");
+    favoriteReads.current.clear();
+    favoriteWrites.current.clear();
+    favoriteVersions.current.clear();
+    setFavoritePendingIds([]);
+    setFavoriteLoadError(false);
+    setFavoriteError(false);
+    setGalleryFilters({ scope: "all", guest: null });
     setQueue([]);
     setProgress({});
     setActiveUploadIds([]);
@@ -327,73 +385,66 @@ export function MemoryExperience({
     };
   }, []);
   useEffect(() => {
-    let active = true;
-    const unsubs: (() => void)[] = [];
-    const track = (promise: Promise<() => void>) =>
-      promise
-        .then((stop) => {
-          if (active) unsubs.push(stop);
-          else stop();
-        })
-        .catch((e) => {
-          if (active) {
-            if (page === "gallery") setGalleryLoading(false);
-            setError((e as Error).message);
-          }
-        });
-    track(
-      subscribePublicSettings(eventId, setSettings, (e) =>
-        setError(`Could not load couple settings: ${e.message}`)
-      )
-    );
-    if (page === "gallery") {
-      setGalleryLoading(true);
-      track(
-        subscribePhotos(
-          eventId,
-          (rows, nextCursor, more) => {
-            setPhotos((current) => mergeMemoryRows(current, rows));
-            pageCursorRef.current = applyMemoryHead(
-              pageCursorRef.current,
-              nextCursor,
-              more ?? false
-            );
-            setCursor(pageCursorRef.current.cursor);
-            setHasMore(pageCursorRef.current.hasMore);
-            setGalleryLoading(false);
-          },
-          (e) => {
-            setGalleryLoading(false);
-            setError(`Could not load the public gallery: ${e.message}`);
-          }
-        )
-      );
-      track(subscribeWishes(eventId, setWishes, (e) => setError(e.message)));
-      track(subscribeVoices(eventId, setVoices, (e) => setError(e.message)));
-    }
-    if (guestUid)
-      track(
-        subscribePhotos(
-          eventId,
-          (rows, nextCursor, more) => {
-            setMyPhotos((current) => mergeMemoryRows(current, rows));
-            myPageCursorRef.current = applyMemoryHead(
-              myPageCursorRef.current,
-              nextCursor,
-              more ?? false
-            );
-            setMyCursor(myPageCursorRef.current.cursor);
-            setMyHasMore(myPageCursorRef.current.hasMore);
-          },
-          (e) => setError(`Could not load your photos: ${e.message}`),
-          guestUid
-        )
-      );
-    return () => {
-      active = false;
-      unsubs.forEach((u) => u());
+    if (!isGallery) return;
+    const selectFromLocation = () => {
+      const hash = window.location.hash;
+      const next =
+        hash === "#wishes"
+          ? "wishes"
+          : hash === "#voice-notes"
+          ? "voice-notes"
+          : "photos";
+      setGalleryTab(next);
+      setVisitedTabs((tabs) => (tabs.includes(next) ? tabs : [...tabs, next]));
     };
-  }, [eventId, guestUid, page]);
+    selectFromLocation();
+    router.events.on("hashChangeComplete", selectFromLocation);
+    window.addEventListener("hashchange", selectFromLocation);
+    return () => {
+      router.events.off("hashChangeComplete", selectFromLocation);
+      window.removeEventListener("hashchange", selectFromLocation);
+    };
+  }, [isGallery, router.events]);
+
+  useEffect(() => {
+    return observeGalleryFeed(
+      (onSettings, onError) =>
+        subscribePublicSettings(eventId, onSettings, onError),
+      setSettings,
+      (reason) => {
+        console.warn("Could not load Wedding Memories settings", reason);
+        if (!isGallery) setError("Could not load the couple’s settings.");
+      }
+    );
+  }, [eventId, isGallery]);
+
+  useEffect(() => {
+    if (!wantsPublicPhotos) return;
+    setPhotoStatus("loading");
+    return watchPhotos(
+      eventId,
+      undefined,
+      pageCursorRef,
+      setPhotos,
+      setCursor,
+      setHasMore,
+      setPhotoStatus
+    );
+  }, [eventId, wantsPublicPhotos, photoAttempt]);
+
+  useEffect(() => {
+    if (!guestUid || !wantsPersonalPhotos) return;
+    setMyPhotoStatus("loading");
+    return watchPhotos(
+      eventId,
+      guestUid,
+      myPageCursorRef,
+      setMyPhotos,
+      setMyCursor,
+      setMyHasMore,
+      setMyPhotoStatus
+    );
+  }, [eventId, guestUid, wantsPersonalPhotos, myPhotoAttempt]);
   useEffect(
     () => () => {
       window.clearTimeout(timerRef.current);
@@ -412,14 +463,85 @@ export function MemoryExperience({
     []
   );
   useEffect(() => {
-    if (photos.length || myPhotos.length)
-      readFavoriteIds(
-        eventId,
-        [...photos, ...myPhotos].map((p) => p.id)
-      )
-        .then(setFavoriteIds)
-        .catch(() => undefined);
-  }, [photos, myPhotos, eventId]);
+    if (!guestUid) return;
+    const reads = favoriteReads.current;
+    const ids = Array.from(
+      new Set([...photos, ...myPhotos].map((photo) => photo.id))
+    ).filter((id) => !reads.has(id));
+    if (!ids.length) return;
+    let active = true;
+    const versions = ids.map((id) => favoriteVersions.current.get(id));
+    setFavoriteLoadPending(true);
+    setFavoriteLoadError(false);
+    void readFavoriteIds(eventId, ids)
+      .then((favorites) => {
+        if (!active) return;
+        const loaded = new Set(favorites);
+        ids.forEach((id) => reads.add(id));
+        setFavoriteIds((current) => {
+          const next = new Set(current);
+          ids.forEach((id, index) => {
+            if (
+              favoriteWrites.current.has(id) ||
+              favoriteVersions.current.get(id) !== versions[index]
+            )
+              return;
+            if (loaded.has(id)) next.add(id);
+            else next.delete(id);
+          });
+          return Array.from(next);
+        });
+      })
+      .catch((reason) => {
+        if (!active) return;
+        console.warn("Could not read Wedding Memories favourites", reason);
+        setFavoriteLoadError(true);
+      })
+      .finally(() => {
+        if (active) setFavoriteLoadPending(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [photos, myPhotos, eventId, guestUid, favoriteAttempt]);
+
+  function changeGalleryTab(tab: GalleryTab) {
+    if (tab === galleryTab) return;
+    const tabs = document.getElementById("memory-gallery-tabs");
+    if (tabs && window.scrollY > 0) {
+      const top = tabs.getBoundingClientRect().top;
+      // Once the old panel is scrolled, start the new one just beneath its tabs.
+      if (top <= parseFloat(getComputedStyle(tabs).top || "0")) {
+        const header = tabs.previousElementSibling;
+        if (header)
+          window.scrollTo(
+            0,
+            header.getBoundingClientRect().bottom + window.scrollY - top
+          );
+      }
+    }
+    setGalleryTab(tab);
+    setVisitedTabs((tabs) => (tabs.includes(tab) ? tabs : [...tabs, tab]));
+    void router.push(`#${tab}`, undefined, { shallow: true, scroll: false });
+  }
+
+  function contributeFromGallery() {
+    if (quotaState === "ready" && remainingPhotos > 0) openCamera();
+    else void router.push(memoryPath(side));
+  }
+
+  function retryPersonalPhotos() {
+    if (!guestUid) setQuotaAttempt((attempt) => attempt + 1);
+    setMyPhotoAttempt((attempt) => attempt + 1);
+  }
+
+  function retryGalleryPhotos() {
+    if (!guestUid && showFavorites) setQuotaAttempt((attempt) => attempt + 1);
+    else if (showPersonalPhotos) retryPersonalPhotos();
+    else if (showFavorites && favoriteLoadError)
+      setFavoriteAttempt((attempt) => attempt + 1);
+    else setPhotoAttempt((attempt) => attempt + 1);
+  }
   function clearPhotoSuccess() {
     window.clearTimeout(photoSuccessTimer.current);
     setConfirmedPhotoCount(0);
@@ -450,6 +572,7 @@ export function MemoryExperience({
     setCameraOpen(true);
   }
   function openPanel(panel: Exclude<GuestPanel, "identity">) {
+    if (panel === "album") setPersonalPhotosRequested(true);
     rememberSurfaceTrigger();
     setError("");
     setMessage(undefined);
@@ -787,56 +910,81 @@ export function MemoryExperience({
     }
   }
   async function toggleFavorite(id: string) {
+    const writes = favoriteWrites.current;
+    if (writes.has(id) || !guestUid) return false;
+    const enabled = !favoriteIds.includes(id);
+    favoriteVersions.current.set(
+      id,
+      (favoriteVersions.current.get(id) ?? 0) + 1
+    );
+    writes.add(id);
+    setFavoritePendingIds(Array.from(writes));
+    setFavoriteError(false);
     try {
-      const enabled = !favoriteIds.includes(id);
       await saveFavorite(eventId, id, enabled);
+      if (!activeRef.current || eventScopeRef.current !== eventId) return;
       setFavoriteIds((ids) =>
-        enabled ? [...ids, id] : ids.filter((x) => x !== id)
+        enabled
+          ? Array.from(new Set([...ids, id]))
+          : ids.filter((favoriteId) => favoriteId !== id)
       );
-    } catch (e) {
-      setError((e as Error).message);
+      return true;
+    } catch (reason) {
+      console.warn("Could not save Wedding Memories favourite", reason);
+      if (activeRef.current && eventScopeRef.current === eventId) {
+        setFavoriteError(true);
+        if (guestPanelRef.current === "album")
+          setError("Could not update this favourite. Try again.");
+      }
+      return false;
+    } finally {
+      writes.delete(id);
+      if (activeRef.current && eventScopeRef.current === eventId)
+        setFavoritePendingIds(Array.from(writes));
     }
   }
-  async function loadMore() {
-    if (!cursor || !hasMore || loadingMore) return;
+
+  async function loadMorePhotos(personal = false) {
+    const nextCursor = personal ? myCursor : cursor;
+    if (
+      !nextCursor ||
+      loadingMore ||
+      !(personal ? myHasMore && guestUid : hasMore)
+    )
+      return;
+    const scope = personal ? "personal" : "public";
+    const tracker = personal ? myPageCursorRef : pageCursorRef;
+    const setRows = personal ? setMyPhotos : setPhotos;
+    const setNextCursor = personal ? setMyCursor : setCursor;
+    const setMore = personal ? setMyHasMore : setHasMore;
     setLoadingMore(true);
-    pageCursorRef.current = beginMemoryPage(pageCursorRef.current);
+    setPhotoPageError(undefined);
+    tracker.current = beginMemoryPage(tracker.current);
     try {
-      const result = await readMorePhotos(eventId, cursor);
-      setPhotos((current) => appendMemoryRows(current, result.rows));
-      pageCursorRef.current = applyMemoryTail(
-        pageCursorRef.current,
+      const result = await readMorePhotos(
+        eventId,
+        nextCursor,
+        personal ? guestUid : undefined
+      );
+      if (!activeRef.current || eventScopeRef.current !== eventId) return;
+      setRows((current) => appendMemoryRows(current, result.rows));
+      tracker.current = applyMemoryTail(
+        tracker.current,
         result.cursor,
         result.hasMore
       );
-      setCursor(pageCursorRef.current.cursor);
-      setHasMore(pageCursorRef.current.hasMore);
-    } catch (e) {
-      setError(`Could not load more photos: ${(e as Error).message}`);
+      setNextCursor(tracker.current.cursor);
+      setMore(tracker.current.hasMore);
+    } catch (reason) {
+      console.warn("Could not load more Wedding Memories photos", reason);
+      if (activeRef.current && eventScopeRef.current === eventId)
+        setPhotoPageError(scope);
     } finally {
-      setLoadingMore(false);
+      if (activeRef.current && eventScopeRef.current === eventId)
+        setLoadingMore(false);
     }
   }
-  async function loadMoreMyPhotos() {
-    if (!myCursor || !myHasMore || loadingMore || !guestUid) return;
-    setLoadingMore(true);
-    myPageCursorRef.current = beginMemoryPage(myPageCursorRef.current);
-    try {
-      const result = await readMorePhotos(eventId, myCursor, guestUid);
-      setMyPhotos((current) => appendMemoryRows(current, result.rows));
-      myPageCursorRef.current = applyMemoryTail(
-        myPageCursorRef.current,
-        result.cursor,
-        result.hasMore
-      );
-      setMyCursor(myPageCursorRef.current.cursor);
-      setMyHasMore(myPageCursorRef.current.hasMore);
-    } catch (e) {
-      setError(`Could not load more of your photos: ${(e as Error).message}`);
-    } finally {
-      setLoadingMore(false);
-    }
-  }
+
   async function startRecording() {
     if (microphoneRequestRef.current || recording || recorderRef.current)
       return;
@@ -968,9 +1116,7 @@ export function MemoryExperience({
       tabIndex={-1}
       className={`${
         isGallery
-          ? `${styles.page} ${styles[event.theme]} ${homeStyles.galleryPage} ${
-              memoryText.className
-            }`
+          ? `${homeStyles.galleryPage} ${galleryStyles.page}`
           : homeStyles.homePage
       } ${memoryTitle.variable} ${memoryNames.variable}`}
     >
@@ -990,145 +1136,78 @@ export function MemoryExperience({
           href={memoryCanonicalUrl(side, isGallery ? "gallery" : "")}
         />
       </Head>
-      {isGallery && (
-        <section
-          className={`${styles.hero} ${styles.galleryHero}`}
-          style={
-            settings?.cover
-              ? {
-                  backgroundImage: `linear-gradient(0deg, #fffdf8e8, #fffdf8b3), url("${settings.cover}")`,
-                }
-              : undefined
-          }
-        >
-          <p className={styles.eyebrow}>{MEMORY_HASHTAG}</p>
-          <p className={`${styles.couple} ${memoryNames.className}`}>
-            {MEMORY_PUBLIC_ALBUMS[side].coupleNames}
-          </p>
-          <h1 className={memoryTitle.className}>Shared memories</h1>
-          <p className={`${styles.eventDetails} ${memoryTitle.className}`}>
-            {MEMORY_PUBLIC_ALBUMS[side].dateLabel}
-          </p>
-          <p className={styles.galleryWelcome}>
-            {settings?.welcome || "Share the moments you captured with us."}
-          </p>
-        </section>
-      )}
       {isGallery ? (
-        <>
-          <nav className={styles.gallerySectionNav} aria-label="Gallery sections">
-            <a href="#photos">Photos</a>
-            <a href="#wishes">Wishes</a>
-            <a href="#voice-notes">Voice notes</a>
-          </nav>
-          <section className={`${styles.section} ${styles.gallerySection}`} id="photos">
-            <h2 className={styles.srOnly}>Photos</h2>
-            <div className={styles.galleryFilters}>
-              <div className={styles.galleryFilterPills} role="group" aria-label="Filter photos">
-                {([
-                  ["all", "All photos"],
-                  ["my", "My photos"],
-                  ["favorites", "Favourites"],
-                ] as const).map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={photoView === value}
-                    onClick={() => {
-                      setPhotoView(value);
-                      setGuestFilter("all");
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <label>
-                Guest
-                <select
-                  value={guestFilter}
-                  onChange={(e) => setGuestFilter(e.target.value)}
-                >
-                  <option value="all">All guests</option>
-                  {Array.from(new Set(gallerySourcePhotos.map((photo) => photo.guestName)))
-                    .sort()
-                    .map((guest) => (
-                      <option key={guest} value={guest}>
-                        {guest}
-                      </option>
-                    ))}
-                </select>
-              </label>
-            </div>
-            {galleryLoading ? (
-              <p role="status" className={styles.muted}>
-                Loading photos…
-              </p>
-            ) : galleryPhotos.length ? (
-              <div className={styles.galleryGrid}>
-                {galleryPhotos.map((photo) => (
-                    <PhotoCard
-                      key={photo.id}
-                      photo={photo}
-                      side={side}
-                      settings={settings}
-                      onFavorite={toggleFavorite}
-                      favorite={favoriteIds.includes(photo.id)}
-                      compact
-                    />
-                  ))}
-              </div>
-            ) : (
-              <p className={styles.muted}>
-                {photos.length === 0 &&
-                photoView === "all" &&
-                guestFilter === "all"
-                  ? "No photos yet. Be the first to share one."
-                  : "No photos match these filters yet."}
-              </p>
-            )}
-            {(photoView === "my" ? myHasMore : hasMore) && (
-              <button
-                className={styles.secondary}
-                disabled={loadingMore}
-                onClick={() =>
-                  void (photoView === "my" ? loadMoreMyPhotos() : loadMore())
-                }
-              >
-                {loadingMore ? "Loading…" : "Load more photos"}
-              </button>
-            )}
-          </section>
-          <section
-            className={`${styles.section} ${styles.gallerySection}`}
-            id="wishes"
-          >
-            <h2>Written wishes</h2>
-            {wishes.length ? (
-              wishes.map((entry) => (
-                <article className={styles.wish} key={entry.id}>
-                  <strong>{entry.guestName}</strong>
-                  <p>{entry.message}</p>
-                </article>
-              ))
-            ) : (
-              <p className={styles.muted}>No written wishes yet.</p>
-            )}
-          </section>
-          <section
-            className={`${styles.section} ${styles.gallerySection}`}
-            id="voice-notes"
-          >
-            <h2>Voice notes</h2>
-            {voices.length ? (
-              voices.map((voice) => (
-                <VoicePlayer key={voice.id} voice={voice} />
-              ))
-            ) : (
-              <p className={styles.muted}>No public voice notes yet.</p>
-            )}
-          </section>
-        </>
+        <MemoryGallery
+          coupleNames={coupleNames}
+          hashtag={MEMORY_HASHTAG}
+          cover={settings?.cover}
+          welcome={settings?.welcome}
+          tab={galleryTab}
+          onTabChange={changeGalleryTab}
+          theme={event.theme}
+          backgroundRef={mainRef}
+        >
+          {galleryTab === "photos" && (
+            <MemoryGalleryPhotos
+              filters={galleryFilters}
+              onFiltersChange={(next) => {
+                if (next.scope === "my") setPersonalPhotosRequested(true);
+                setGalleryFilters(next);
+              }}
+              guests={galleryGuests}
+              count={galleryPhotos.length}
+              status={galleryPhotoStatus}
+              hasMore={showPersonalPhotos ? myHasMore : hasMore}
+              loadingMore={loadingMore}
+              loadMoreFailed={
+                photoPageError === (showPersonalPhotos ? "personal" : "public")
+              }
+              favoriteError={favoriteError}
+              theme={event.theme}
+              backgroundRef={mainRef}
+              fontClassName={memoryTitle.variable}
+              onRetry={retryGalleryPhotos}
+              onLoadMore={() => void loadMorePhotos(showPersonalPhotos)}
+              onContribute={contributeFromGallery}
+            >
+              {galleryPhotos.map((photo) => (
+                <MemoryGalleryPhoto
+                  key={photo.id}
+                  photo={photo}
+                  side={side}
+                  settings={settings}
+                  onFavorite={toggleFavorite}
+                  favorite={favoriteIds.includes(photo.id)}
+                  allowViewerFavorite={!showFavorites}
+                  favoritePending={
+                    !guestUid ||
+                    (!favoriteLoadError &&
+                      !favoriteReads.current.has(photo.id)) ||
+                    favoritePendingIds.includes(photo.id)
+                  }
+                  backgroundRef={mainRef}
+                />
+              ))}
+            </MemoryGalleryPhotos>
+          )}
+          {galleryTab === "wishes" && (
+            <MemoryGalleryWishes
+              wishes={wishesFeed.rows}
+              status={wishesFeed.status}
+              onRetry={wishesFeed.retry}
+              onContribute={() => openPanel("wish")}
+            />
+          )}
+          {galleryTab === "voice-notes" && (
+            <MemoryGalleryVoices
+              voices={voicesFeed.rows}
+              status={voicesFeed.status}
+              suspendPlayback={Boolean(guestPanel) || cameraOpen}
+              onRetry={voicesFeed.retry}
+              onContribute={() => openPanel("voice")}
+            />
+          )}
+        </MemoryGallery>
       ) : (
         <MemoryGuestHub
           coupleNames={coupleNames}
@@ -1184,7 +1263,7 @@ export function MemoryExperience({
               ? message.text
               : undefined
           }
-          error={error}
+          error={isGallery ? guestFacingGalleryError(error) : error}
           onClose={closeGuestPanel}
         >
           {guestPanel === "identity" && identityIntent && (
@@ -1298,30 +1377,53 @@ export function MemoryExperience({
               {myPhotos.length ? (
                 <div className={styles.galleryGrid}>
                   {myPhotos.map((photo) => (
-                    <PhotoCard
+                    <MemoryGalleryPhoto
                       key={photo.id}
                       photo={photo}
                       side={side}
                       settings={settings}
                       onFavorite={toggleFavorite}
                       favorite={favoriteIds.includes(photo.id)}
-                      compact
+                      variant="album"
+                      favoritePending={
+                        !guestUid ||
+                        (!favoriteLoadError &&
+                          !favoriteReads.current.has(photo.id)) ||
+                        favoritePendingIds.includes(photo.id)
+                      }
+                      backgroundRef={mainRef}
                     />
                   ))}
                 </div>
-              ) : (
+              ) : personalPhotoStatus === "loading" ? (
+                <p role="status" className={styles.muted}>
+                  Loading your photos…
+                </p>
+              ) : personalPhotoStatus === "ready" ? (
                 <p className={styles.muted}>
                   Your saved photos will appear here.
                 </p>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={retryPersonalPhotos}
+                >
+                  Could not load your photos. Try again
+                </button>
               )}
               {myHasMore && (
                 <button
                   type="button"
                   className={styles.secondary}
                   disabled={loadingMore}
-                  onClick={() => void loadMoreMyPhotos()}
+                  onClick={() => void loadMorePhotos(true)}
                 >
-                  {loadingMore ? "Loading…" : "Load more of your photos"}
+                  {loadingMore
+                    ? "Loading…"
+                    : photoPageError === "personal"
+                    ? "Retry loading your photos"
+                    : "Load more of your photos"}
                 </button>
               )}
               {cameraDrafts.length > 0 && (
@@ -1540,458 +1642,123 @@ export function MemoryExperience({
         </p>
       )}
       {error && !guestPanel && !cameraOpen && (
-        <p role="alert" title={error} className={styles.error}>
-          {error.includes("permission") || error.includes("insufficient")
+        <p role="alert" className={styles.error}>
+          {isGallery
+            ? guestFacingGalleryError(error)
+            : error.includes("permission") || error.includes("insufficient")
             ? "Memories are not active yet. The couple needs to publish Firebase setup first."
             : error}
         </p>
-      )}
-      {isGallery && (
-        <footer>
-          {MEMORY_HASHTAG} · Photos, wishes and shared voice notes are available
-          to anyone with the album link.
-        </footer>
       )}
     </main>
   );
 }
 
-function VoicePlayer({ voice }: { voice: MemoryVoice }) {
-  const [url, setUrl] = useState("");
-  const [error, setError] = useState("");
+type GallerySubscription<T> = (
+  eventId: WeddingEventId,
+  onRows: (rows: T[]) => void,
+  onError: (reason: Error) => void
+) => Promise<() => void>;
+
+function observeGalleryFeed<T>(
+  subscribe: (
+    onRows: (rows: T) => void,
+    onError: (reason: Error) => void
+  ) => Promise<() => void>,
+  onRows: (rows: T) => void,
+  onError: (reason: Error) => void
+) {
+  let active = true;
+  let stop: (() => void) | undefined;
+  const fail = (reason: Error) => {
+    if (active) onError(reason);
+  };
+  void subscribe((rows) => {
+    if (active) onRows(rows);
+  }, fail)
+    .then((unsubscribe) => {
+      if (active) stop = unsubscribe;
+      else unsubscribe();
+    })
+    .catch(fail);
+  return () => {
+    active = false;
+    stop?.();
+  };
+}
+
+function useGalleryCollection<T>(
+  eventId: WeddingEventId,
+  enabled: boolean,
+  subscribe: GallerySubscription<T>
+) {
+  const [rows, setRows] = useState<T[]>([]);
+  const [status, setStatus] = useState<GalleryStatus>("loading");
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    let active = true;
-    getDownloadURL(ref(getWeddingStorage(), voice.path))
-      .then((value) => {
-        if (active) { setUrl(value); setError(""); }
-      })
-      .catch((reason) => {
-        if (active) setError(`Could not load this voice note: ${(reason as Error).message}`);
-      });
-    return () => {
-      active = false;
-    };
-  }, [voice.path, attempt]);
-  return (
-    <article className={styles.wish}>
-      <strong>{voice.guestName}</strong>
-      {url && <audio controls preload="none" src={url} onError={() => setError("Audio could not play in this browser. Try downloading the note from the couple.")}/>} 
-      {error && <p role="alert" className={styles.error}>{error} <button className={styles.secondary} onClick={() => setAttempt((value) => value + 1)}>Retry</button></p>}
-    </article>
-  );
-}
-
-function PhotoCard({
-  photo,
-  side,
-  settings,
-  onFavorite,
-  favorite,
-  compact = false,
-}: {
-  photo: MemoryPhoto;
-  side: "bride" | "groom";
-  settings?: MemorySettings;
-  onFavorite: (id: string) => void;
-  favorite: boolean;
-  compact?: boolean;
-}) {
-  const card = useRef<HTMLElement>(null);
-  const [nearViewport, setNearViewport] = useState(false);
-  const [preview, setPreview] = useState("");
-  const [loadError, setLoadError] = useState("");
-  const [retryToken, setRetryToken] = useState(0);
-  const [open, setOpen] = useState(false);
-  const photoCreatedAtMillis = photo.createdAt?.toDate().getTime() ?? 0;
-  const photoStyleFilm = photo.photoStyle?.film;
-  const photoStyleStamp = photo.photoStyle?.stamp;
-  const photoStyleCapturedAt = photo.photoStyle?.capturedAt;
-  useEffect(() => {
-    const node = card.current;
-    if (!node) return;
-    if (!("IntersectionObserver" in window)) {
-      setNearViewport(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setNearViewport(true);
-        else if (!compact) setNearViewport(false);
+    if (!enabled) return;
+    setStatus("loading");
+    return observeGalleryFeed(
+      (onRows, onError) => subscribe(eventId, onRows, onError),
+      (next: T[]) => {
+        setRows(next);
+        setStatus("ready");
       },
-      { rootMargin: "250px" }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [photo.id, compact]);
-  useEffect(() => {
-    setPreview("");
-    setLoadError("");
-    if (!nearViewport) return;
-    let active = true;
-    let source = "";
-    const image = new Image();
-    const loadingNotice = window.setTimeout(() => {
-      if (active)
-        setLoadError(
-          "This photo is taking longer to load. Check your connection, then retry."
+      (reason) => {
+        console.warn(
+          "Could not retrieve a Wedding Memories collection",
+          reason
         );
-    }, 12000);
-    getBlob(ref(getWeddingStorage(), photo.originalPath))
-      .then((blob) => {
-        if (!active) return;
-        source = URL.createObjectURL(blob);
-        image.decoding = "async";
-        image.onload = () => {
-          if (!active) return;
-          try {
-            const canvas = drawStyledPhoto(
-              image,
-              settings?.film ?? "none",
-              settings?.stamp ?? MEMORY_HASHTAG,
-              {
-                maxDimension: compact ? 640 : 960,
-                photoDate: photo.createdAt?.toDate(),
-                coupleNames:
-                  MEMORY_PUBLIC_ALBUMS[side].coupleNames,
-                photoStyle: photo.photoStyle,
-              }
-            );
-            setPreview(canvas.toDataURL("image/jpeg", 0.86));
-            setLoadError("");
-          } catch (error) {
-            setLoadError(
-              `Could not prepare the photo preview: ${(error as Error).message}`
-            );
-          }
-          window.clearTimeout(loadingNotice);
-          image.onload = null;
-          image.onerror = null;
-          image.src = "";
-          URL.revokeObjectURL(source);
-          source = "";
-        };
-        image.onerror = () => {
-          window.clearTimeout(loadingNotice);
-          if (active)
-            setLoadError(
-              "Could not load this photo. Check the Storage CORS setup or retry later."
-            );
-          image.onload = null;
-          image.onerror = null;
-          image.src = "";
-          if (source) URL.revokeObjectURL(source);
-          source = "";
-        };
-        image.src = source;
-      })
-      .catch((error) => {
-        window.clearTimeout(loadingNotice);
-        if (active)
-          setLoadError(
-            `Could not fetch this photo: ${(error as Error).message}`
-          );
-      });
-    return () => {
-      active = false;
-      window.clearTimeout(loadingNotice);
-      image.onload = null;
-      image.onerror = null;
-      image.src = "";
-      if (source) URL.revokeObjectURL(source);
-    };
-  }, [
-    nearViewport,
-    retryToken,
-    photo.id,
-    photo.originalPath,
-    photoCreatedAtMillis,
-    photoStyleFilm,
-    photoStyleStamp,
-    photoStyleCapturedAt,
-    settings?.film,
-    settings?.stamp,
-    side,
-    compact,
-  ]);
-  const photoTime = photo.createdAt?.toDate();
-  return (
-    <article
-      ref={card}
-      className={`${styles.photoCard} ${compact ? styles.galleryPhotoCard : ""}`}
-    >
-      {preview ? (
-        <button
-          className={`${styles.photoOpen} ${compact ? styles.galleryPhotoOpen : ""}`}
-          onClick={() => setOpen(true)}
-          aria-label={`Open photo shared by ${photo.guestName}`}
-        >
-          <img
-            src={preview}
-            alt={`Photo shared by ${photo.guestName}`}
-            loading="lazy"
-          />
-        </button>
-      ) : (
-        <div
-          className={`${styles.placeholder} ${compact ? styles.galleryPhotoPlaceholder : ""}`}
-          aria-live="polite"
-        >
-          {loadError ? (
-            compact ? (
-              <>
-                <span title={loadError}>Preview unavailable.</span>
-                <span className={styles.srOnly}>{loadError}</span>
-                <button
-                  className={styles.secondary}
-                  onClick={() => setRetryToken((value) => value + 1)}
-                  aria-label={`Retry loading photo shared by ${photo.guestName}`}
-                >
-                  Retry photo
-                </button>
-              </>
-            ) : (
-              <>
-                <span>{loadError}</span>
-                <button
-                  className={styles.secondary}
-                  onClick={() => setRetryToken((value) => value + 1)}
-                >
-                  Retry photo
-                </button>
-              </>
-            )
-          ) : (
-            <>
-              <span className={styles.srOnly}>Loading photo preview</span>
-              <ImageIcon aria-hidden="true" />
-            </>
-          )}
-        </div>
-      )}
-      {(!compact || Boolean(preview)) && (
-        <div className={`${styles.photoInfo} ${compact ? styles.galleryPhotoInfo : ""}`}>
-          <strong>{photo.guestName}</strong>
-          <button
-            aria-label={`${favorite ? "Remove from" : "Add to"} favourites`}
-            aria-pressed={favorite}
-            onClick={() => onFavorite(photo.id)}
-          >
-            <Heart fill={favorite ? "currentColor" : "none"} />
-          </button>
-        </div>
-      )}
-      {!compact && photoTime && (
-        <time className={styles.photoTime} dateTime={photoTime.toISOString()}>
-          {new Intl.DateTimeFormat("en-MY", {
-            dateStyle: "medium",
-            timeZone: "Asia/Kuala_Lumpur",
-          }).format(photoTime)}
-        </time>
-      )}
-      {open && (
-        <PhotoLightbox
-          photo={photo}
-          side={side}
-          settings={settings}
-          onClose={() => setOpen(false)}
-        />
-      )}
-    </article>
+        setStatus("error");
+      }
+    );
+  }, [eventId, enabled, subscribe, attempt]);
+  return { rows, status, retry: () => setAttempt((value) => value + 1) };
+}
+
+function watchPhotos(
+  eventId: WeddingEventId,
+  uid: string | undefined,
+  tracker: { current: ReturnType<typeof resetMemoryPage<PhotoCursor>> },
+  setRows: React.Dispatch<React.SetStateAction<MemoryPhoto[]>>,
+  setCursor: (cursor: PhotoCursor | undefined) => void,
+  setMore: (more: boolean) => void,
+  setStatus: (status: GalleryStatus) => void
+) {
+  return observeGalleryFeed(
+    (onRows, onError) =>
+      subscribePhotos(
+        eventId,
+        (rows, cursor, more) => onRows({ rows, cursor, more }),
+        onError,
+        uid
+      ),
+    ({
+      rows,
+      cursor,
+      more,
+    }: {
+      rows: MemoryPhoto[];
+      cursor?: PhotoCursor;
+      more?: boolean;
+    }) => {
+      setRows((current) => mergeMemoryRows(current, rows));
+      tracker.current = applyMemoryHead(tracker.current, cursor, more ?? false);
+      setCursor(tracker.current.cursor);
+      setMore(tracker.current.hasMore);
+      setStatus("ready");
+    },
+    (reason) => {
+      console.warn("Could not retrieve Wedding Memories photos", reason);
+      setStatus("error");
+    }
   );
 }
 
-function PhotoLightbox({
-  photo,
-  side,
-  settings,
-  onClose,
-}: {
-  photo: MemoryPhoto;
-  side: "bride" | "groom";
-  settings?: MemorySettings;
-  onClose: () => void;
-}) {
-  const [url, setUrl] = useState("");
-  const [error, setError] = useState("");
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
-  const titleId = `photo-title-${photo.id}`;
-  const photoTime = photo.createdAt?.toDate();
-  const photoDateLabel = photoTime
-    ? new Intl.DateTimeFormat("en-MY", {
-        dateStyle: "medium",
-        timeZone: "Asia/Kuala_Lumpur",
-      }).format(photoTime)
-    : "";
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    const dialog = dialogRef.current;
-    const focusables = () =>
-      dialog?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
-      );
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const nodes = Array.from(focusables() ?? []);
-      if (!nodes.length) return;
-      const first = nodes[0];
-      const last = nodes[nodes.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    closeRef.current?.focus();
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      previous?.focus();
-    };
-  }, [photo.id]);
-  useEffect(() => {
-    let active = true;
-    let objectUrl = "";
-    getBlob(ref(getWeddingStorage(), photo.originalPath))
-      .then((blob) => {
-        objectUrl = URL.createObjectURL(blob);
-        if (active) setUrl(objectUrl);
-        else URL.revokeObjectURL(objectUrl);
-      })
-      .catch((reason) => {
-        if (active)
-          setError(`Could not load this photo: ${(reason as Error).message}`);
-      });
-    return () => {
-      active = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [photo.originalPath]);
-  async function downloadOriginal() {
-    try {
-      const blob = await getBlob(ref(getWeddingStorage(), photo.originalPath));
-      saveBlob(blob, `${photo.id}-original.${extensionFor(photo.contentType)}`);
-    } catch (reason) {
-      setError(`Original download failed: ${(reason as Error).message}`);
-    }
-  }
-  async function downloadStyled() {
-    let objectUrl = "";
-    try {
-      const blob = await getBlob(ref(getWeddingStorage(), photo.originalPath));
-      objectUrl = URL.createObjectURL(blob);
-      const image = new Image();
-      image.src = objectUrl;
-      await image.decode();
-      const photoDate = photo.createdAt?.toDate();
-      const canvas = drawStyledPhoto(
-        image,
-        settings?.film ?? "none",
-        settings?.stamp ?? MEMORY_HASHTAG,
-        {
-          photoDate,
-          coupleNames: MEMORY_PUBLIC_ALBUMS[side].coupleNames,
-          photoStyle: photo.photoStyle,
-        }
-      );
-      const styled = await new Promise<Blob>((resolve, reject) =>
-        canvas.toBlob(
-          (value) =>
-            value
-              ? resolve(value)
-              : reject(new Error("Could not render styled image.")),
-          "image/jpeg",
-          0.92
-        )
-      );
-      saveBlob(styled, `${photo.id}-styled.jpg`);
-    } catch (reason) {
-      setError(`Styled download failed: ${(reason as Error).message}`);
-    } finally {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    }
-  }
-  return (
-    <div
-      className={styles.lightbox}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className={styles.lightboxDialog}
-        data-overlay-layer="photo-lightbox"
-        tabIndex={-1}
-      >
-        <h2 id={titleId} className={styles.srOnly}>
-          Photo shared by {photo.guestName}
-        </h2>
-        <button
-          ref={closeRef}
-          className={styles.lightboxClose}
-          onClick={onClose}
-          aria-label="Close photo preview"
-        >
-          ×
-        </button>
-        {error && (
-          <p role="alert" className={styles.error}>
-            {error}
-          </p>
-        )}
-        {url ? (
-          <img src={url} alt={`Full-size photo shared by ${photo.guestName}`} />
-        ) : (
-          !error && <p role="status">Loading full photo…</p>
-        )}
-        <p className={styles.lightboxMetadata}>
-          {photo.guestName}{photoDateLabel ? ` · ${photoDateLabel}` : ""}
-        </p>
-        <div className={styles.lightboxActions}>
-          <button
-            className={styles.button}
-            onClick={() => void downloadOriginal()}
-          >
-            Download original
-          </button>
-          <button
-            className={styles.secondary}
-            onClick={() => void downloadStyled()}
-          >
-            Download styled photo
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-function extensionFor(contentType: string) {
-  return contentType === "image/png"
-    ? "png"
-    : contentType === "image/webp"
-    ? "webp"
-    : "jpg";
+function guestFacingGalleryError(error: string) {
+  if (/blob\/file|object store|indexeddb/i.test(error))
+    return "Could not save this contribution on your device. Try again.";
+  if (/firebase|storage\/|firestore|insufficient permissions/i.test(error))
+    return "Could not complete that action. Check your connection and try again.";
+  return error;
 }

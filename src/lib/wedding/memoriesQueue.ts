@@ -26,6 +26,46 @@ export type LocalPhotoDraft = UploadJob & {
   uid: string;
   previewBlob?: Blob;
 };
+type StoredAudioJob = Omit<UploadJob, "blob" | "previewBlob"> & {
+  kind: "audio";
+  audioBytes: ArrayBuffer;
+  audioType: string;
+};
+type StoredJob = UploadJob | StoredAudioJob;
+
+// IndexedDB in some WebKit contexts cannot serialize a Blob. Keep the public
+// queue API unchanged and restore legacy Blob rows as they are read.
+const audioBytesByBlob = new WeakMap<Blob, Promise<ArrayBuffer>>();
+
+async function serializeJob(job: UploadJob): Promise<StoredJob> {
+  if (job.kind !== "audio") return job;
+  const { blob, ...fields } = job;
+  delete fields.previewBlob;
+  let bytes = audioBytesByBlob.get(blob);
+  if (!bytes) {
+    bytes = blob.arrayBuffer();
+    audioBytesByBlob.set(blob, bytes);
+  }
+  try {
+    return {
+      ...fields,
+      kind: "audio",
+      audioBytes: await bytes,
+      audioType: blob.type,
+    };
+  } catch (error) {
+    audioBytesByBlob.delete(blob);
+    throw error;
+  }
+}
+
+function restoreJob(row: StoredJob): UploadJob {
+  if (!("audioBytes" in row)) return row;
+  const { audioBytes, audioType, ...fields } = row;
+  const blob = new Blob([audioBytes], { type: audioType });
+  audioBytesByBlob.set(blob, Promise.resolve(audioBytes));
+  return { ...fields, blob };
+}
 
 const DATABASE = "wedding-memories-queue-v2";
 const STORE = "jobs";
@@ -70,7 +110,15 @@ function withTransaction<T>(
         let result: T;
         let settled = false;
         const transaction = db.transaction(storeName, mode);
-        const request = action(transaction.objectStore(storeName));
+        let request: IDBRequest<T>;
+        try {
+          request = action(transaction.objectStore(storeName));
+        } catch (error) {
+          transaction.abort();
+          db.close();
+          reject(error);
+          return;
+        }
         request.onsuccess = () => {
           result = request.result;
         };
@@ -203,7 +251,10 @@ export async function saveUploadJob(job: UploadJob): Promise<void> {
   const previous = writeChains.get(job.id) ?? Promise.resolve();
   const next = previous
     .catch(() => undefined)
-    .then(() => withTransaction("readwrite", (store) => store.put(job)));
+    .then(async () => {
+      const row = await serializeJob(job);
+      await withTransaction("readwrite", (store) => store.put(row));
+    });
   writeChains.set(job.id, next);
   try {
     await next;
@@ -227,7 +278,7 @@ export async function saveLocalPhotoDraft(
     let resultError: Error | undefined;
     let checkedJobs = false;
     let checkedDrafts = false;
-    let jobs: UploadJob[] = [];
+    let jobs: StoredJob[] = [];
     let drafts: LocalPhotoDraft[] = [];
     const transaction = db.transaction([STORE, PHOTO_DRAFTS_STORE], "readwrite");
     const jobStore = transaction.objectStore(STORE);
@@ -237,7 +288,7 @@ export async function saveLocalPhotoDraft(
 
     const saveIfReady = () => {
       if (!checkedJobs || !checkedDrafts || resultError) return;
-      const belongsToGuest = (job: UploadJob) =>
+      const belongsToGuest = (job: StoredJob) =>
         job.kind === "photo" &&
         job.event === draft.event &&
         (!job.uid || job.uid === draft.uid) &&
@@ -258,7 +309,7 @@ export async function saveLocalPhotoDraft(
       draftStore.put(draft);
     };
     jobsRequest.onsuccess = () => {
-      jobs = jobsRequest.result as UploadJob[];
+      jobs = jobsRequest.result as StoredJob[];
       checkedJobs = true;
       saveIfReady();
     };
@@ -346,7 +397,7 @@ export async function approveLocalPhotoDrafts(
   const db = await openDatabase();
   return new Promise<UploadJob[]>((resolve, reject) => {
     let resultError: Error | undefined;
-    let jobs: UploadJob[] = [];
+    let jobs: StoredJob[] = [];
     let drafts: LocalPhotoDraft[] = [];
     let approved: UploadJob[] = [];
     let checkedJobs = false;
@@ -380,18 +431,20 @@ export async function approveLocalPhotoDrafts(
           transaction.abort();
           return;
         }
-        const approvedJob = existing ?? {
-          ...draft,
-          status: "Saved on this device",
-          error: undefined,
-        };
+        const approvedJob = existing
+          ? restoreJob(existing)
+          : {
+              ...draft,
+              status: "Saved on this device",
+              error: undefined,
+            };
         if (!existing) jobStore.put(approvedJob);
         draftStore.delete(id);
         approved.push(approvedJob);
       }
     };
     jobsRequest.onsuccess = () => {
-      jobs = jobsRequest.result as UploadJob[];
+      jobs = jobsRequest.result as StoredJob[];
       checkedJobs = true;
       commitIfReady();
     };
@@ -430,16 +483,20 @@ export async function removeUploadJob(id: string): Promise<void> {
 export async function listUploadJobs(
   event?: UploadJob["event"]
 ): Promise<UploadJob[]> {
-  const rows = await withTransaction("readonly", (store) => store.getAll());
-  return (
-    event ? rows.filter((job) => job.event === event) : rows
-  ) as UploadJob[];
+  const rows: StoredJob[] = await withTransaction("readonly", (store) =>
+    store.getAll()
+  );
+  return (event ? rows.filter((job) => job.event === event) : rows).map(
+    restoreJob
+  );
 }
 
 export async function getUploadJob(id: string): Promise<UploadJob | undefined> {
-  return (await withTransaction("readonly", (store) => store.get(id))) as
-    | UploadJob
-    | undefined;
+  const row: StoredJob | undefined = await withTransaction(
+    "readonly",
+    (store) => store.get(id)
+  );
+  return row && restoreJob(row);
 }
 
 export async function clearUploadQueueForTests(): Promise<void> {

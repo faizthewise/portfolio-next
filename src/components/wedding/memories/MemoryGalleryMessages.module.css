@@ -1,0 +1,243 @@
+/* stylelint-disable selector-class-pattern -- CSS Modules use camelCase alongside JSX. */
+
+.section {
+  min-width: 0;
+  padding-block: 20px 0;
+  color: var(--memory-ink);
+  font-family: var(--memory-sans);
+}
+
+.intro {
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.intro h2,
+.state h3 {
+  margin: 0;
+  font-family: var(--memory-serif);
+  font-weight: 500;
+  line-height: 1.12;
+}
+
+.intro h2 {
+  font-size: clamp(1.75rem, 7vw, 2.125rem);
+}
+
+.intro p,
+.state p,
+.loading {
+  margin: 7px 0 0;
+  color: var(--memory-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.cards {
+  display: grid;
+  gap: 12px;
+}
+
+.wish,
+.voice,
+.state {
+  margin: 0;
+  border-radius: 16px;
+  overflow-wrap: anywhere;
+}
+
+.wish {
+  padding: 20px;
+  background: var(--memory-linen);
+}
+
+.wish blockquote {
+  margin: 0 0 16px;
+  font-family: var(--memory-serif);
+  font-size: 1.25rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.quote {
+  display: block;
+  height: 25px;
+  color: var(--memory-gold);
+  font-family: var(--memory-serif);
+  font-size: 3.125rem;
+  line-height: 0.98;
+}
+
+.attribution {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.attribution time {
+  display: block;
+  margin-top: 2px;
+  color: var(--memory-muted);
+  font-size: 0.75rem;
+}
+
+.wish time {
+  color: var(--memory-ink);
+}
+
+.initials {
+  display: grid;
+  flex: 0 0 36px;
+  place-items: center;
+  min-height: 36px;
+  border-radius: 50%;
+  background: var(--memory-ivory);
+  color: var(--memory-sage);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.voice {
+  padding: 16px;
+  background: var(--memory-soft-sage);
+}
+
+.player {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.play,
+.action,
+.contribute {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--memory-sage);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.play {
+  width: 44px;
+  padding: 0;
+  background: var(--memory-sage);
+  color: var(--memory-white);
+}
+
+.play:hover {
+  background: var(--memory-sage-hover);
+}
+
+.play:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.timeline {
+  min-width: 0;
+}
+
+.timeline input {
+  display: block;
+  width: 100%;
+  min-height: 30px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--memory-sage);
+  cursor: pointer;
+}
+
+.timeline progress,
+.track {
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin-block: 13px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--memory-border);
+  color: var(--memory-sage);
+  accent-color: var(--memory-sage);
+}
+
+.timing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--memory-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.timing [aria-label="Duration"] {
+  margin-inline-start: auto;
+}
+
+.playError {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-top: 8px;
+  font-size: 0.875rem;
+}
+
+.playError p {
+  margin: 0;
+}
+
+.playError span {
+  display: block;
+  color: var(--memory-muted);
+}
+
+.state,
+.loading {
+  padding: 20px 16px;
+  background: var(--memory-linen);
+  text-align: center;
+}
+
+.state h3 {
+  font-size: 1.4rem;
+}
+
+.action {
+  border-color: var(--memory-control-border);
+  background: var(--memory-ivory);
+  font-size: 0.875rem;
+}
+
+.state .action {
+  margin-top: 14px;
+}
+
+.contribute {
+  gap: 6px;
+  margin: 12px auto 0;
+  background: transparent;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.play:focus-visible,
+.action:focus-visible,
+.contribute:focus-visible,
+.timeline input:focus-visible {
+  outline: 2px solid var(--memory-sage);
+  outline-offset: 3px;
+}

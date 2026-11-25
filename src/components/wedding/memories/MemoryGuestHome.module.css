@@ -33,7 +33,7 @@
   background: var(--memory-ivory);
 }
 
-/* The gallery still supplies its own legacy page padding. */
+/* Keep the last gallery control above the fixed guest navigation. */
 .galleryPage.galleryPage {
   padding-bottom: calc(
     var(--memory-nav-height) + env(safe-area-inset-bottom) + 24px

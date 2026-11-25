@@ -324,3 +324,107 @@ test("permission failure stays retryable with the same reservation and reports p
     memoryApi.uploadPhoto = originalUpload;
   }
 });
+
+async function rawAudioRow(mode, operation) {
+  const db = await new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE, 2);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction("jobs", mode);
+      const request = operation(transaction.objectStore("jobs"));
+      transaction.oncomplete = () => resolve(request.result);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+test("audio saves and retries without serializing a Blob into IndexedDB", async () => {
+  await queue.clearUploadQueueForTests();
+  const mime = "audio/webm;codecs=opus";
+  const bytes = new Uint8Array([1, 3, 9, 27]);
+  const recording = new Blob([bytes], { type: mime });
+  const put = IDBObjectStore.prototype.put;
+  const recordVoice = memoryApi.recordVoice;
+  function refuseBlobRows(value, ...args) {
+    if (value.blob instanceof Blob) {
+      throw new DOMException("Error preparing Blob/File data to be stored in object store", "UnknownError");
+    }
+    return put.call(this, value, ...args);
+  }
+  IDBObjectStore.prototype.put = refuseBlobRows;
+  try {
+    const job = await uploads.saveAudioDraft("bride", event, "Local guest", recording, true);
+    const row = await rawAudioRow("readonly", (store) => store.get(job.id));
+    assert.equal("blob" in row, false);
+    assert.equal(row.audioType, mime);
+    assert.deepEqual(new Uint8Array(row.audioBytes), bytes);
+
+    const [pending] = await queue.listUploadJobs(event);
+    assert.equal(pending.blob.type, mime);
+    assert.deepEqual(new Uint8Array(await pending.blob.arrayBuffer()), bytes);
+    memoryApi.recordVoice = async (_event, _name, blob, isPrivate, id, onPhase) => {
+      assert.equal(id, `${guestUid}_${job.uploadKey}`);
+      assert.equal(isPrivate, true);
+      assert.equal(blob.type, mime);
+      assert.deepEqual(new Uint8Array(await blob.arrayBuffer()), bytes);
+      await onPhase("metadata");
+      throw new Error("Upload disconnected");
+    };
+    await assert.rejects(uploads.processUploadJob(pending), /Upload disconnected/);
+    const retry = await queue.getUploadJob(job.id);
+    assert.equal(retry.status, "Needs retry");
+    assert.equal(retry.metadataSaved, true);
+    assert.equal(retry.uploadKey, job.uploadKey);
+    assert.equal(retry.uid, guestUid);
+
+    memoryApi.recordVoice = async (_event, _name, blob, _isPrivate, id, onPhase) => {
+      assert.equal(id, `${guestUid}_${job.uploadKey}`);
+      assert.deepEqual(new Uint8Array(await blob.arrayBuffer()), bytes);
+      await onPhase("bytes");
+      await onPhase("complete");
+    };
+    await uploads.processUploadJob(retry);
+    assert.equal(await queue.getUploadJob(job.id), undefined);
+  } finally {
+    IDBObjectStore.prototype.put = put;
+    memoryApi.recordVoice = recordVoice;
+  }
+});
+
+test("a legacy audio Blob row keeps its bytes, MIME and existing upload ID when replayed", async () => {
+  await queue.clearUploadQueueForTests();
+  const mime = "audio/mp4";
+  const bytes = new Uint8Array([1, 2, 3]);
+  const legacy = {
+    ...queue.createAudioJob("bride", event, "Legacy guest", new Blob([bytes], { type: mime }), false),
+    uid: guestUid,
+    metadataSaved: true,
+  };
+  await rawAudioRow("readwrite", (store) => store.put(legacy));
+  const recordVoice = memoryApi.recordVoice;
+  try {
+    const [pending] = await queue.listUploadJobs(event);
+    assert.equal(pending.metadataSaved, true);
+    memoryApi.recordVoice = async (_event, _name, blob, isPrivate, id, onPhase) => {
+      assert.equal(id, `${guestUid}_${legacy.uploadKey}`);
+      assert.equal(isPrivate, false);
+      assert.equal(blob.type, mime);
+      assert.deepEqual(new Uint8Array(await blob.arrayBuffer()), bytes);
+      await onPhase("metadata");
+      const row = await rawAudioRow("readonly", (store) => store.get(legacy.id));
+      assert.equal("blob" in row, false);
+      assert.equal(row.audioType, mime);
+      await onPhase("bytes");
+      await onPhase("complete");
+    };
+    await uploads.processUploadJob(pending);
+    assert.equal(await queue.getUploadJob(legacy.id), undefined);
+  } finally {
+    memoryApi.recordVoice = recordVoice;
+  }
+});

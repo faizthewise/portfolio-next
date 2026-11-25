@@ -1,0 +1,484 @@
+/* stylelint-disable selector-class-pattern -- Keep CSS Module names consistent with the guest components. */
+
+.page.page {
+  --gallery-reading-width: 520px;
+  --gallery-photo-width: 520px;
+  --gallery-gutter: clamp(16px, 6.15vw, 24px);
+  --gallery-tab-height: 48px;
+
+  min-height: 100svh;
+  padding-block-start: env(safe-area-inset-top);
+  padding-inline: max(var(--gallery-gutter), env(safe-area-inset-left))
+    max(var(--gallery-gutter), env(safe-area-inset-right));
+  background: var(--memory-ivory);
+  color: var(--memory-ink);
+  font-family: var(--memory-sans);
+}
+
+.header {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, var(--gallery-reading-width));
+  margin-inline: auto;
+  padding: 14px 6px 12px;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.header::before,
+.header::after {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  width: min(23%, 112px);
+  height: 112px;
+  background: url("/images/wedding-page-garden-v1.webp") no-repeat;
+  background-size: 390px auto;
+  opacity: 0.5;
+  pointer-events: none;
+  content: "";
+}
+
+.header::before {
+  left: 0;
+  background-position: left top;
+  mask-image: linear-gradient(145deg, currentcolor 5%, transparent 72%);
+}
+
+.header::after {
+  right: 0;
+  background-position: right top;
+  mask-image: linear-gradient(215deg, currentcolor 5%, transparent 72%);
+}
+
+.cover {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto auto;
+  width: min(24%, 136px);
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.72;
+  mask-image: linear-gradient(225deg, currentcolor 8%, transparent 74%);
+  pointer-events: none;
+}
+
+.header:has(.cover:not([hidden]))::after {
+  display: none;
+}
+
+.coupleNames {
+  margin: 5px 0 0;
+  color: var(--memory-sage);
+  font-family: var(--memory-script);
+  font-size: clamp(2.25rem, 9vw, 2.75rem);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--memory-serif);
+  font-size: 1.875rem;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.title::before {
+  display: block;
+  width: 34px;
+  height: 1px;
+  margin: 4px auto 6px;
+  background: var(--memory-gold);
+  content: "";
+}
+
+.description,
+.welcome {
+  max-width: 42ch;
+  margin: 3px auto 0;
+  color: var(--memory-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.welcome {
+  margin-top: 6px;
+}
+
+.tabBar {
+  position: sticky;
+  z-index: 10;
+  top: env(safe-area-inset-top);
+  display: grid;
+  width: min(100%, var(--gallery-reading-width));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-inline: auto;
+  border-block: 1px solid var(--memory-border);
+  background: var(--memory-ivory);
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  min-height: var(--gallery-tab-height);
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 3px;
+  color: var(--memory-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.tab svg {
+  flex-shrink: 0;
+}
+
+.tab[aria-selected="true"] {
+  color: var(--memory-sage);
+  font-weight: 700;
+}
+
+.tab[aria-selected="true"]::after {
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  background: var(--memory-sage);
+  content: "";
+}
+
+.tabBar .tab:focus-visible {
+  z-index: 1;
+  outline-offset: -4px;
+  border-radius: 5px;
+}
+
+.tabPanel {
+  width: min(100%, var(--gallery-reading-width));
+  margin-inline: auto;
+}
+
+.tabPanel[data-content="photos"] {
+  width: min(100%, var(--gallery-photo-width));
+}
+
+.tabPanel,
+.tabPanel :is(button, a, input, [tabindex]) {
+  scroll-margin-top: calc(
+    var(--gallery-tab-height) + env(safe-area-inset-top) + 10px
+  );
+}
+
+.tabPanel:focus-visible {
+  outline: 2px solid var(--memory-sage);
+  outline-offset: 4px;
+}
+
+.photos {
+  width: 100%;
+}
+
+.toolbar,
+.activeFilters {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.toolbar {
+  padding-block: 10px;
+}
+
+.toolbarSummary {
+  min-width: 0;
+}
+
+.toolbar h2,
+.toolbar p,
+.activeFilters p,
+.feedback {
+  margin: 0;
+}
+
+.toolbar h2 {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.toolbar p,
+.activeFilters p,
+.feedback {
+  color: var(--memory-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.filterButton {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 4px 11px;
+  border: 1px solid var(--memory-control-border);
+  border-radius: 10px;
+  color: var(--memory-sage);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.filterButton svg {
+  flex-shrink: 0;
+}
+
+.filterButton[aria-expanded="true"] {
+  background: var(--memory-soft-sage);
+}
+
+.activeFilters {
+  min-height: 44px;
+  margin-block: -3px 10px;
+  padding-inline: 12px;
+  border-radius: 8px;
+  background: var(--memory-soft-sage);
+}
+
+.activeFilters button {
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.skeleton {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: var(--memory-linen);
+}
+
+.state {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 23px 16px 15px;
+  border-radius: 16px;
+  background: var(--memory-linen);
+  text-align: center;
+}
+
+.state h3 {
+  margin: 0;
+  font-family: var(--memory-serif);
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.state p {
+  margin: 4px 0 0;
+  color: var(--memory-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.state button {
+  justify-content: center;
+}
+
+.feedback {
+  margin-block: 0 10px;
+}
+
+.pagination,
+.contribution {
+  display: grid;
+  justify-items: center;
+  margin-top: 14px;
+  text-align: center;
+}
+
+.pagination .loadMore {
+  width: auto;
+  max-width: 100%;
+}
+
+.loadMore[aria-disabled="true"] {
+  cursor: default;
+}
+
+.visibility {
+  width: min(100%, var(--gallery-reading-width));
+  margin: 20px auto 0;
+  padding: 14px 12px 0;
+  border-top: 1px solid var(--memory-border);
+  color: var(--memory-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.filterForm {
+  display: grid;
+  gap: 18px;
+}
+
+.scopeOptions {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.scopeOptions legend,
+.guestSelect {
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.scopeOptions legend {
+  margin-bottom: 4px;
+}
+
+.scopeOption {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.scopeOption:has(input:checked) {
+  background: var(--memory-soft-sage);
+}
+
+.scopeOption input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--memory-sage);
+  accent-color: var(--memory-sage);
+}
+
+.scopeOption input[type="radio"]:not(:checked) {
+  border-color: var(--memory-control-border);
+}
+
+.scopeOption input[type="radio"]:focus {
+  box-shadow: none;
+}
+
+.scopeOption input[type="radio"]:focus-visible {
+  outline: 2px solid var(--memory-sage);
+  outline-offset: 3px;
+}
+
+.guestSelect {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.guestSelect select {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 36px 8px 12px;
+  border: 1px solid var(--memory-control-border);
+  border-radius: 10px;
+  background-color: var(--memory-white);
+  color: var(--memory-ink);
+  font-size: 1rem;
+  font-weight: 400;
+  text-overflow: ellipsis;
+}
+
+.guestSelect select:focus-visible {
+  outline: 2px solid var(--memory-sage);
+  outline-offset: 3px;
+}
+
+.sheetActions {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 8px;
+}
+
+.sheetActions button {
+  min-height: 48px;
+  overflow-wrap: anywhere;
+}
+
+.filterSheet header button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .tab:hover,
+  .filterButton:hover,
+  .scopeOption:hover {
+    background: var(--memory-soft-sage);
+  }
+}
+
+@media (max-width: 359px) {
+  .tab svg {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .page.page {
+    --gallery-photo-width: 700px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .page.page {
+    --gallery-photo-width: 820px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+}
