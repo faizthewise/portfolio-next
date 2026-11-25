@@ -47,8 +47,10 @@ import type {
   UploadBatchResult,
 } from "@/lib/wedding/memoriesUploadStatus";
 import {
-  getPhotoUploadPresentation,
+  canResumePhotoUpload,
+  getPhotoUploadState,
   getUploadFailure,
+  hasLocalPhotoMedia,
 } from "@/lib/wedding/memoriesUploadStatus";
 import {
   appendMemoryRows,
@@ -59,6 +61,12 @@ import {
   resetMemoryPage,
 } from "@/lib/wedding/memoriesPagination";
 import { MemoryCamera } from "./MemoryCamera";
+import { MemoryAlbum, type AlbumTab } from "./MemoryAlbum";
+import {
+  MemoryAlbumUploads,
+  MemoryAlbumUploadSummary,
+  type AlbumUploadItem,
+} from "./MemoryAlbumUploads";
 import {
   MemoryGallery,
   MemoryGalleryPhotos,
@@ -92,12 +100,11 @@ const memoryNames = Great_Vibes({
   variable: "--memory-signature",
   display: "swap",
 });
-type GuestPanel = "album" | "voice" | "wish" | "salam" | "upload" | "identity";
+type GuestPanel = "voice" | "wish" | "salam" | "upload" | "identity";
 type IdentityIntent = "camera" | "review" | "upload" | "voice" | "wish";
 type QuotaState = "loading" | "ready" | "error";
 
 const panelTitles: Record<GuestPanel, string> = {
-  album: "My album",
   voice: "Voice note",
   wish: "Write a wish",
   salam: "Salam Kaut",
@@ -121,7 +128,7 @@ export function MemoryExperience({
   page = "guest",
 }: {
   side: "bride" | "groom";
-  page?: "guest" | "gallery";
+  page?: "guest" | "gallery" | "my-album";
 }) {
   const router = useRouter();
   const event = MEMORY_EVENTS[side];
@@ -179,10 +186,10 @@ export function MemoryExperience({
   const [privateVoice, setPrivateVoice] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraStartInTray, setCameraStartInTray] = useState(false);
+  const [cameraStartDraftId, setCameraStartDraftId] = useState<string>();
   const [guestPanel, setGuestPanel] = useState<GuestPanel | null>(null);
   const [identityIntent, setIdentityIntent] = useState<IdentityIntent>();
   const [nameDraft, setNameDraft] = useState("");
-  const [uploadFromAlbum, setUploadFromAlbum] = useState(false);
   const [addingFiles, setAddingFiles] = useState(false);
   const [sendingWish, setSendingWish] = useState(false);
   const [online, setOnline] = useState(true);
@@ -194,6 +201,8 @@ export function MemoryExperience({
   const [quotaAttempt, setQuotaAttempt] = useState(0);
   const [photoCount, setPhotoCount] = useState(0);
   const [guestUid, setGuestUid] = useState("");
+  const [uploadStorageStatus, setUploadStorageStatus] =
+    useState<GalleryStatus>("loading");
   const guestPanelRef = useRef(guestPanel);
   guestPanelRef.current = guestPanel;
   const microphoneGenerationRef = useRef(0);
@@ -212,8 +221,14 @@ export function MemoryExperience({
   const recordingTickRef = useRef<number>();
   const microphoneRequestRef = useRef(false);
   const inFlightRef = useRef(new Set<string>());
+  const completedUploads = useRef(new Set<string>());
   const activeRef = useRef(true);
+  const previousPage = useRef(page);
   const isGallery = page === "gallery";
+  const isAlbum = page === "my-album";
+  const albumTab: AlbumTab =
+    router.query.tab === "uploads" ? "uploads" : "photos";
+  const albumHref = memoryPath(side, "my-album");
   const cameraDrafts = localPhotoDrafts.filter(
     (draft) => draft.event === eventId && draft.uid === guestUid
   );
@@ -222,12 +237,16 @@ export function MemoryExperience({
         (job) =>
           job.side === side &&
           job.event === eventId &&
-          (!job.uid || job.uid === guestUid)
+          belongsToGuest(job, guestUid, name)
       )
     : [];
-  const cameraPhotoUploads = guestJobs.filter(
-    (job) => job.kind === "photo" && job.uid === guestUid
+  const sharedPhotoKeys = new Set(
+    myPhotos.map((photo) => photo.uploadKey).filter(Boolean)
   );
+  const photoJobs = guestJobs.filter(
+    (job) => job.kind === "photo" && !sharedPhotoKeys.has(job.uploadKey)
+  );
+  const cameraPhotoUploads = photoJobs.filter((job) => job.uid === guestUid);
   const unreservedPhotoJobs = guestJobs.filter(
     (job) => job.kind === "photo" && !job.slot
   );
@@ -238,7 +257,7 @@ export function MemoryExperience({
     PHOTO_LIMIT - photoCount - unreservedPhotoJobs.length - cameraDrafts.length
   );
   const wantsPublicPhotos = isGallery && visitedTabs.includes("photos");
-  const wantsPersonalPhotos = !isGallery || personalPhotosRequested;
+  const wantsPersonalPhotos = isAlbum || personalPhotosRequested;
   const wishesFeed = useGalleryCollection(
     eventId,
     isGallery && visitedTabs.includes("wishes"),
@@ -268,7 +287,10 @@ export function MemoryExperience({
     showFavorites &&
     photos.some((photo) => !favoriteReads.current.has(photo.id));
   const personalPhotoStatus =
-    !guestUid && quotaState === "error" ? "error" : myPhotoStatus;
+    (!guestUid && quotaState === "error") ||
+    (!online && myPhotoStatus === "ready" && myPhotos.length === 0)
+      ? "error"
+      : myPhotoStatus;
   const galleryPhotoStatus = showPersonalPhotos
     ? personalPhotoStatus
     : showFavorites &&
@@ -305,6 +327,7 @@ export function MemoryExperience({
     setFavoriteError(false);
     setGalleryFilters({ scope: "all", guest: null });
     setQueue([]);
+    completedUploads.current.clear();
     setProgress({});
     setActiveUploadIds([]);
     setLocalPhotoDrafts([]);
@@ -318,6 +341,7 @@ export function MemoryExperience({
   useEffect(() => {
     let cancelled = false;
     setQuotaSnapshot({ eventId, state: "loading" });
+    setUploadStorageStatus("loading");
 
     const loadQueue = async () => {
       if (loadedQueueRef.current === eventId) return;
@@ -325,7 +349,11 @@ export function MemoryExperience({
       if (cancelled) return;
       loadedQueueRef.current = eventId;
       setQueue((rows) => [
-        ...jobs.filter((job) => !rows.some((row) => row.id === job.id)),
+        ...jobs.filter(
+          (job) =>
+            !completedUploads.current.has(job.id) &&
+            !rows.some((row) => row.id === job.id)
+        ),
         ...rows,
       ]);
     };
@@ -353,21 +381,50 @@ export function MemoryExperience({
         );
       if (!cancelled) setPhotoCount((current) => Math.max(current, count));
     };
-    void Promise.allSettled([loadQueue(), loadDrafts(), loadCount()]).then(
-      (results) => {
-        if (!cancelled)
-          setQuotaSnapshot({
-            eventId,
-            state: results.every((result) => result.status === "fulfilled")
+    const localData = Promise.allSettled([loadQueue(), loadDrafts()]);
+    void localData.then((results) => {
+      if (!cancelled)
+        setUploadStorageStatus(
+          results.every((result) => result.status === "fulfilled")
+            ? "ready"
+            : "error"
+        );
+    });
+    void Promise.allSettled([localData, loadCount()]).then((results) => {
+      if (!cancelled)
+        setQuotaSnapshot({
+          eventId,
+          state:
+            results[0].status === "fulfilled" &&
+            results[0].value.every((result) => result.status === "fulfilled") &&
+            results[1].status === "fulfilled"
               ? "ready"
               : "error",
-          });
-      }
-    );
+        });
+    });
     return () => {
       cancelled = true;
     };
   }, [eventId, quotaAttempt]);
+
+  useEffect(() => {
+    if (isAlbum) setPersonalPhotosRequested(true);
+  }, [isAlbum]);
+
+  useEffect(() => {
+    if (previousPage.current === page) return;
+    previousPage.current = page;
+    setGuestPanel(null);
+    setCameraOpen(false);
+    microphoneGenerationRef.current += 1;
+    microphoneRequestRef.current = false;
+    setMicrophonePending(false);
+    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    const focus = window.requestAnimationFrame(() =>
+      mainRef.current?.focus({ preventScroll: true })
+    );
+    return () => window.cancelAnimationFrame(focus);
+  }, [page]);
 
   useEffect(() => {
     const updateConnection = () => setOnline(navigator.onLine);
@@ -408,10 +465,11 @@ export function MemoryExperience({
       setSettings,
       (reason) => {
         console.warn("Could not load Wedding Memories settings", reason);
-        if (!isGallery) setError("Could not load the couple’s settings.");
+        if (previousPage.current !== "gallery")
+          setError("Could not load the couple’s settings.");
       }
     );
-  }, [eventId, isGallery]);
+  }, [eventId]);
 
   useEffect(() => {
     if (!wantsPublicPhotos) return;
@@ -552,7 +610,7 @@ export function MemoryExperience({
     setGuestPanel("identity");
     return false;
   }
-  function openCamera(reviewOnly = false) {
+  function openCamera(reviewOnly = false, draftId?: string) {
     if (!reviewOnly && (quotaState !== "ready" || !remainingPhotos)) return;
     if (reviewOnly && !cameraDrafts.length && !cameraPhotoUploads.length)
       return;
@@ -561,20 +619,37 @@ export function MemoryExperience({
     setCameraUploadError("");
     setMessage(undefined);
     clearPhotoSuccess();
+    setCameraStartDraftId(draftId);
     if (!requireIdentity(reviewOnly ? "review" : "camera")) return;
     setGuestPanel(null);
     setCameraStartInTray(reviewOnly);
     setCameraOpen(true);
   }
+  function openAlbumUploads() {
+    setGuestPanel(null);
+    setError("");
+    void router.push(`${albumHref}?tab=uploads`);
+  }
+
+  function changeAlbumTab(tab: AlbumTab) {
+    if (tab === albumTab) return;
+    void router.replace(
+      tab === "uploads" ? `${albumHref}?tab=uploads` : albumHref,
+      undefined,
+      {
+        shallow: true,
+        scroll: false,
+      }
+    );
+  }
+
   function openPanel(panel: Exclude<GuestPanel, "identity">) {
-    if (panel === "album") setPersonalPhotosRequested(true);
     rememberSurfaceTrigger();
     setError("");
     setMessage(undefined);
     if (panel === "upload") {
       if (quotaState !== "ready" || !remainingPhotos || photoBatchRef.current)
         return;
-      setUploadFromAlbum(guestPanelRef.current === "album");
       clearPhotoSuccess();
       if (!requireIdentity("upload")) return;
     }
@@ -586,15 +661,6 @@ export function MemoryExperience({
     setMessage(undefined);
     if (guestPanelRef.current === "identity" && identityIntent === "wish") {
       setGuestPanel("wish");
-      return;
-    }
-    if (
-      (guestPanelRef.current === "upload" ||
-        (guestPanelRef.current === "identity" &&
-          identityIntent === "upload")) &&
-      uploadFromAlbum
-    ) {
-      setGuestPanel("album");
       return;
     }
     if (microphonePending || microphoneRequestRef.current) {
@@ -669,7 +735,7 @@ export function MemoryExperience({
     ids?: string[]
   ): Promise<UploadBatchResult> {
     const selected = cameraDrafts.filter(
-      (draft) => !ids || ids.includes(draft.id)
+      (draft) => (!ids || ids.includes(draft.id)) && hasLocalPhotoMedia(draft)
     );
     if (!selected.length) return { uploaded: 0, failed: 0, alreadyActive: 0 };
     if (photoBatchRef.current)
@@ -762,6 +828,7 @@ export function MemoryExperience({
     async (job: UploadJob): Promise<UploadAttemptResult> => {
       const isCurrentEvent = () =>
         activeRef.current && eventScopeRef.current === job.event;
+      if (completedUploads.current.has(job.id)) return "uploaded";
       if (inFlightRef.current.has(job.id)) return "active";
       inFlightRef.current.add(job.id);
       if (isCurrentEvent()) {
@@ -769,7 +836,6 @@ export function MemoryExperience({
         setActiveUploadIds((ids) =>
           ids.includes(job.id) ? ids : [...ids, job.id]
         );
-        setProgress((values) => ({ ...values, [job.id]: 0 }));
       }
       let result: UploadAttemptResult = "uploaded";
       let failureRecorded = false;
@@ -778,6 +844,14 @@ export function MemoryExperience({
           onJob: (next) => {
             failureRecorded = Boolean(next.error);
             if (isCurrentEvent()) {
+              if (next.kind === "photo" && next.status !== "Uploading photo") {
+                setProgress((values) => {
+                  if (values[next.id] === undefined) return values;
+                  const nextProgress = { ...values };
+                  delete nextProgress[next.id];
+                  return nextProgress;
+                });
+              }
               setQueue((rows) =>
                 rows.some((row) => row.id === next.id)
                   ? rows.map((row) => (row.id === next.id ? next : row))
@@ -793,6 +867,7 @@ export function MemoryExperience({
               setProgress((values) => ({ ...values, [id]: percent }));
           },
         });
+        completedUploads.current.add(job.id);
         if (isCurrentEvent()) {
           setQueue((rows) => rows.filter((row) => row.id !== job.id));
           setProgress((values) => {
@@ -826,7 +901,12 @@ export function MemoryExperience({
         result = "failed";
         const failure = getUploadFailure(e);
         if (isCurrentEvent()) {
-          if (!failureRecorded) setError(failure.message);
+          if (!failureRecorded)
+            setError(
+              job.kind === "photo"
+                ? "Couldn’t upload this photo. Open My album to try again."
+                : failure.message
+            );
           else if (job.kind === "photo" && guestPanelRef.current === "upload")
             setError(
               "Some photos could not upload. Open My album to retry them."
@@ -848,8 +928,19 @@ export function MemoryExperience({
     [side, eventId]
   );
   async function retryCameraUpload(id: string): Promise<UploadAttemptResult> {
-    const job = cameraPhotoUploads.find((candidate) => candidate.id === id);
-    if (!job) return "failed";
+    const job = guestJobs.find(
+      (candidate) => candidate.id === id && candidate.kind === "photo"
+    );
+    if (
+      !job ||
+      !getPhotoUploadState(
+        job,
+        undefined,
+        inFlightRef.current.has(id),
+        navigator.onLine
+      ).canRetry
+    )
+      return inFlightRef.current.has(id) ? "active" : "failed";
     return uploadJob(job);
   }
   useEffect(() => {
@@ -858,16 +949,28 @@ export function MemoryExperience({
     const resume = () => {
       if (!navigator.onLine) return;
       void listUploadJobs(eventId)
-        .then((all) => {
+        .then(async (all) => {
           if (cancelled) return;
-          all
-            .filter(
-              (job) =>
-                job.side === side &&
-                (!job.uid || job.uid === guestUid) &&
-                !(job.kind === "photo" && photoBatchRef.current)
-            )
-            .forEach((job) => void uploadJob(job));
+          const resumable = all.filter(
+            (job) =>
+              job.side === side &&
+              belongsToGuest(job, guestUid, name) &&
+              !completedUploads.current.has(job.id) &&
+              (job.kind === "audio" || canResumePhotoUpload(job))
+          );
+          let next = 0;
+          await Promise.all(
+            Array.from({ length: Math.min(3, resumable.length) }, async () => {
+              while (
+                !cancelled &&
+                navigator.onLine &&
+                next < resumable.length
+              ) {
+                const job = resumable[next++];
+                await uploadJob(job);
+              }
+            })
+          );
         })
         .catch(() => {
           if (!cancelled && loadedQueueRef.current === eventId)
@@ -877,12 +980,16 @@ export function MemoryExperience({
         });
     };
     resume();
-    window.addEventListener("online", resume);
+    const reconnect = () => {
+      if (quotaState === "error") setQuotaAttempt((attempt) => attempt + 1);
+      resume();
+    };
+    window.addEventListener("online", reconnect);
     return () => {
       cancelled = true;
-      window.removeEventListener("online", resume);
+      window.removeEventListener("online", reconnect);
     };
-  }, [side, eventId, guestUid, quotaState, uploadJob]);
+  }, [side, eventId, guestUid, name, quotaState, uploadJob]);
   async function sendWish(savedName?: string) {
     if (sendWishRef.current) return;
     setError("");
@@ -928,8 +1035,6 @@ export function MemoryExperience({
       console.warn("Could not save Wedding Memories favourite", reason);
       if (activeRef.current && eventScopeRef.current === eventId) {
         setFavoriteError(true);
-        if (guestPanelRef.current === "album")
-          setError("Could not update this favourite. Try again.");
       }
       return false;
     } finally {
@@ -1096,8 +1201,49 @@ export function MemoryExperience({
       } shared in the gallery.`
     : "";
   const pageTitle = `${
-    isGallery ? "Wedding memories gallery" : "Share your wedding memories"
+    isAlbum
+      ? "My album"
+      : isGallery
+      ? "Wedding memories gallery"
+      : "Share your wedding memories"
   } · ${event.name} · ${event.dateLabel}`;
+  const albumUploads: AlbumUploadItem[] = isAlbum
+    ? [
+        ...cameraDrafts.map((draft): AlbumUploadItem => {
+          const detail = hasLocalPhotoMedia(draft)
+            ? {
+                group: "draft" as const,
+                status: "Saved on this device",
+                detail: "Review this photo before sharing it.",
+              }
+            : getPhotoUploadState(draft, undefined, false, online);
+          return {
+            ...detail,
+            id: draft.id,
+            createdAt: draft.createdAt,
+            preview: getUploadThumbnail(draft),
+            canReview: true,
+          };
+        }),
+        ...photoJobs.map(
+          (job): AlbumUploadItem => ({
+            ...getPhotoUploadState(
+              job,
+              progress[job.id],
+              activeUploadIds.includes(job.id),
+              online
+            ),
+            id: job.id,
+            createdAt: job.createdAt,
+            preview: getUploadThumbnail(job),
+            fileName:
+              typeof File !== "undefined" && job.blob instanceof File
+                ? job.blob.name
+                : undefined,
+          })
+        ),
+      ]
+    : [];
   return (
     <main
       ref={mainRef}
@@ -1121,10 +1267,70 @@ export function MemoryExperience({
         />
         <link
           rel="canonical"
-          href={memoryCanonicalUrl(side, isGallery ? "gallery" : "")}
+          href={memoryCanonicalUrl(side, page === "guest" ? "" : page)}
         />
       </Head>
-      {isGallery ? (
+      {isAlbum ? (
+        <MemoryAlbum
+          name={name}
+          remaining={remainingPhotos}
+          photoLimit={PHOTO_LIMIT}
+          quotaState={quotaState}
+          addingFiles={addingFiles}
+          tab={albumTab}
+          uploadCount={albumUploads.length}
+          photoStatus={personalPhotoStatus}
+          photoCount={myPhotos.length}
+          hasMore={myHasMore}
+          loadingMore={loadingMore}
+          loadMoreFailed={photoPageError === "personal"}
+          favoriteError={favoriteError}
+          onTabChange={changeAlbumTab}
+          onCamera={() => openCamera()}
+          onAdd={() => openPanel("upload")}
+          onQuotaRetry={() => setQuotaAttempt((attempt) => attempt + 1)}
+          onPhotoRetry={retryPersonalPhotos}
+          onLoadMore={() => void loadMorePhotos(true)}
+          uploadSummary={
+            <MemoryAlbumUploadSummary
+              items={albumUploads}
+              current={albumTab === "uploads"}
+              onOpen={() => changeAlbumTab("uploads")}
+            />
+          }
+          uploads={
+            <MemoryAlbumUploads
+              items={albumUploads}
+              loading={uploadStorageStatus === "loading"}
+              loadFailed={uploadStorageStatus === "error"}
+              onLoadRetry={() => setQuotaAttempt((attempt) => attempt + 1)}
+              onReview={(id) => openCamera(true, id)}
+              onRetry={(id) => void retryCameraUpload(id)}
+              onViewPhotos={() => changeAlbumTab("photos")}
+            />
+          }
+          success={photoSuccess}
+          qrHref={memoryPath(side, "qr")}
+        >
+          {myPhotos.map((photo) => (
+            <MemoryGalleryPhoto
+              key={photo.id}
+              photo={photo}
+              side={side}
+              settings={settings}
+              onFavorite={toggleFavorite}
+              favorite={favoriteIds.includes(photo.id)}
+              variant="album"
+              favoritePending={
+                !guestUid ||
+                (!favoriteLoadError && !favoriteReads.current.has(photo.id)) ||
+                favoritePendingIds.includes(photo.id)
+              }
+              backgroundRef={mainRef}
+            />
+          ))}
+        </MemoryAlbum>
+      ) : isGallery ? (
         <MemoryGallery
           coupleNames={coupleNames}
           hashtag={MEMORY_HASHTAG}
@@ -1221,7 +1427,7 @@ export function MemoryExperience({
             online={online}
             confirmedPhotoCount={confirmedPhotoCount}
             message={message?.kind === "voice" ? message.text : undefined}
-            onAlbum={() => openPanel("album")}
+            onAlbum={openAlbumUploads}
             onVoice={() => openPanel("voice")}
           />
         </MemoryGuestHub>
@@ -1230,9 +1436,9 @@ export function MemoryExperience({
         homeHref={homeHref}
         galleryHref={galleryHref}
         isGallery={isGallery}
-        albumOpen={guestPanel === "album"}
-        hidden={cameraOpen || Boolean(guestPanel && guestPanel !== "album")}
-        onAlbum={() => openPanel("album")}
+        albumHref={albumHref}
+        isAlbum={isAlbum}
+        hidden={cameraOpen || Boolean(guestPanel)}
       />
       {guestPanel && (
         <MemoryGuestPanel
@@ -1245,7 +1451,7 @@ export function MemoryExperience({
               : undefined
           }
           message={
-            guestPanel === "album" || guestPanel === "upload"
+            guestPanel === "upload"
               ? photoSuccess
               : guestPanel === message?.kind
               ? message.text
@@ -1325,153 +1531,10 @@ export function MemoryExperience({
               <button
                 type="button"
                 className={styles.secondary}
-                onClick={() => openPanel("album")}
+                onClick={openAlbumUploads}
               >
                 View My album
               </button>
-            </section>
-          )}
-          {guestPanel === "album" && (
-            <section className={styles.section}>
-              <p className={styles.small}>{photoVisibility}</p>
-              {quotaState === "ready" ? (
-                <p className={styles.small}>
-                  {remainingPhotos} {remainingPhotos === 1 ? "photo" : "photos"}{" "}
-                  left
-                </p>
-              ) : quotaState === "error" ? (
-                <button
-                  type="button"
-                  className={styles.secondary}
-                  onClick={() => setQuotaAttempt((attempt) => attempt + 1)}
-                >
-                  Retry photo allowance
-                </button>
-              ) : (
-                <p role="status" className={styles.small}>
-                  Checking photo allowance…
-                </p>
-              )}
-              <button
-                type="button"
-                className={styles.button}
-                disabled={
-                  addingFiles || quotaState !== "ready" || !remainingPhotos
-                }
-                onClick={() => openPanel("upload")}
-              >
-                <Upload size={17} aria-hidden="true" /> Add existing photos
-              </button>
-              {myPhotos.length ? (
-                <div className={styles.galleryGrid}>
-                  {myPhotos.map((photo) => (
-                    <MemoryGalleryPhoto
-                      key={photo.id}
-                      photo={photo}
-                      side={side}
-                      settings={settings}
-                      onFavorite={toggleFavorite}
-                      favorite={favoriteIds.includes(photo.id)}
-                      variant="album"
-                      favoritePending={
-                        !guestUid ||
-                        (!favoriteLoadError &&
-                          !favoriteReads.current.has(photo.id)) ||
-                        favoritePendingIds.includes(photo.id)
-                      }
-                      backgroundRef={mainRef}
-                    />
-                  ))}
-                </div>
-              ) : personalPhotoStatus === "loading" ? (
-                <p role="status" className={styles.muted}>
-                  Loading your photos…
-                </p>
-              ) : personalPhotoStatus === "ready" ? (
-                <p className={styles.muted}>
-                  Your saved photos will appear here.
-                </p>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.secondary}
-                  onClick={retryPersonalPhotos}
-                >
-                  Could not load your photos. Try again
-                </button>
-              )}
-              {myHasMore && (
-                <button
-                  type="button"
-                  className={styles.secondary}
-                  disabled={loadingMore}
-                  onClick={() => void loadMorePhotos(true)}
-                >
-                  {loadingMore
-                    ? "Loading…"
-                    : photoPageError === "personal"
-                    ? "Retry loading your photos"
-                    : "Load more of your photos"}
-                </button>
-              )}
-              {cameraDrafts.length > 0 && (
-                <div className={styles.queue}>
-                  <strong>
-                    {cameraDrafts.length} photo
-                    {cameraDrafts.length === 1 ? "" : "s"} saved on this device
-                  </strong>
-                  <p>Review these photos before uploading them.</p>
-                  <button
-                    type="button"
-                    className={styles.secondary}
-                    onClick={() => openCamera(true)}
-                  >
-                    Review photos
-                  </button>
-                </div>
-              )}
-              {guestJobs
-                .filter((job) => job.kind === "photo")
-                .map((job) => {
-                  const presentation = getPhotoUploadPresentation(
-                    job,
-                    progress[job.id],
-                    activeUploadIds.includes(job.id),
-                    online
-                  );
-                  const photoLabel = job.slot
-                    ? `Photo ${job.slot}`
-                    : "Photo upload";
-                  return (
-                    <div className={styles.queue} key={job.id}>
-                      <span>
-                        {photoLabel} · {presentation.status}
-                      </span>
-                      {presentation.progress !== undefined && (
-                        <progress
-                          aria-label={`${photoLabel} progress`}
-                          value={presentation.progress}
-                          max="100"
-                        />
-                      )}
-                      {presentation.error && (
-                        <p className={styles.error}>{presentation.error}</p>
-                      )}
-                      <button
-                        type="button"
-                        className={styles.secondary}
-                        disabled={presentation.retryDisabled}
-                        onClick={() => void uploadJob(job)}
-                      >
-                        {presentation.retryLabel}
-                      </button>
-                    </div>
-                  );
-                })}
-              <nav className={homeStyles.albumUtility} aria-label="Album links">
-                <Link href="/wedding-memories">All albums</Link>
-                <Link href={memoryPath(side, "qr")}>QR card</Link>
-              </nav>
             </section>
           )}
           {guestPanel === "voice" && (
@@ -1596,6 +1659,7 @@ export function MemoryExperience({
           uploadProgress={progress}
           activeUploadIds={activeUploadIds}
           startInTray={cameraStartInTray}
+          startDraftId={cameraStartDraftId}
           defaults={settings}
           onClose={() => {
             setCameraOpen(false);
@@ -1741,6 +1805,21 @@ function watchPhotos(
       setStatus("error");
     }
   );
+}
+
+function belongsToGuest(job: UploadJob, guestUid: string, name: string) {
+  return job.uid
+    ? job.uid === guestUid
+    : Boolean(name.trim() && job.name === name.trim());
+}
+
+function getUploadThumbnail(job: UploadJob) {
+  if (job.previewBlob instanceof Blob && job.previewBlob.size > 0)
+    return job.previewBlob;
+  // Older records can lack a thumbnail. Avoid decoding large originals in rows.
+  return hasLocalPhotoMedia(job) && job.blob.size <= 512 * 1024
+    ? job.blob
+    : undefined;
 }
 
 function guestFacingGalleryError(error: string) {

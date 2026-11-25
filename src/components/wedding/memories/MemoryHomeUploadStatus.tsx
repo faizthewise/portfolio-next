@@ -55,7 +55,9 @@ export function MemoryHomeUploadStatus({
           tone: styles[state],
           title: `${countLabel(kind, count)} ${label}.`,
           detail:
-            state === "failed" && !online ? "Reconnect to retry." : undefined,
+            state === "failed" && kind === "audio" && !online
+              ? "Reconnect to retry."
+              : undefined,
           action: kind === "photo" ? "My album" : "Voice notes",
           onAction: kind === "photo" ? onAlbum : onVoice,
         },

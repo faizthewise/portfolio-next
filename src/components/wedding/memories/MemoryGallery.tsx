@@ -1,6 +1,7 @@
 import { Camera, Images, Mic, PenLine, SlidersHorizontal } from "lucide-react";
 import Image from "next/image";
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useRef, useState } from "react";
+import { MemoryContentTabs } from "./MemoryContentTabs";
 import { MemoryGuestPanel } from "./MemoryGuestPanel";
 import homeStyles from "./MemoryGuestHome.module.css";
 import styles from "./MemoryGallery.module.css";
@@ -28,7 +29,6 @@ const photoScopes = [
 ] as const;
 
 const defaultFilters: GalleryFilters = { scope: "all", guest: null };
-const tabPanelId = "memory-gallery-content";
 
 export function MemoryGallery({
   coupleNames,
@@ -47,40 +47,7 @@ export function MemoryGallery({
   onTabChange: (tab: GalleryTab) => void;
   children: React.ReactNode;
 }) {
-  const [focusedTab, setFocusedTab] = useState<GalleryTab | null>(null);
-  const tabButtons = useRef<Array<HTMLButtonElement | null>>([]);
   const customWelcome = welcome?.trim();
-
-  function handleTabKeyDown(
-    event: KeyboardEvent<HTMLButtonElement>,
-    index: number
-  ) {
-    const { length } = contentTabs;
-    let next: number;
-    switch (event.key) {
-      case "ArrowLeft":
-        next = (index + length - 1) % length;
-        break;
-      case "ArrowRight":
-        next = (index + 1) % length;
-        break;
-      case "Home":
-        next = 0;
-        break;
-      case "End":
-        next = length - 1;
-        break;
-      case "Enter":
-      case " ":
-        event.preventDefault();
-        if (!event.repeat) onTabChange(contentTabs[index].id);
-        return;
-      default:
-        return;
-    }
-    event.preventDefault();
-    tabButtons.current[next]?.focus();
-  }
 
   return (
     <>
@@ -110,48 +77,15 @@ export function MemoryGallery({
             <p className={styles.welcome}>{customWelcome}</p>
           )}
       </header>
-      <div
-        className={styles.tabBar}
-        id="memory-gallery-tabs"
-        role="tablist"
-        aria-label="Gallery content"
-        onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget))
-            setFocusedTab(null);
-        }}
-      >
-        {contentTabs.map(({ id, label, Icon }, index) => (
-          <button
-            type="button"
-            key={id}
-            ref={(button) => {
-              tabButtons.current[index] = button;
-            }}
-            id={`memory-gallery-tab-${id}`}
-            role="tab"
-            aria-selected={tab === id}
-            aria-controls={tabPanelId}
-            tabIndex={(focusedTab ?? tab) === id ? 0 : -1}
-            className={styles.tab}
-            onFocus={() => setFocusedTab(id)}
-            onKeyDown={(event) => handleTabKeyDown(event, index)}
-            onClick={() => onTabChange(id)}
-          >
-            <Icon size={16} strokeWidth={1.6} aria-hidden="true" />
-            {label}
-          </button>
-        ))}
-      </div>
-      <div
-        className={styles.tabPanel}
-        data-content={tab}
-        id={tabPanelId}
-        role="tabpanel"
-        aria-labelledby={`memory-gallery-tab-${tab}`}
-        tabIndex={0}
+      <MemoryContentTabs
+        id="memory-gallery"
+        label="Gallery content"
+        tabs={contentTabs}
+        active={tab}
+        onChange={onTabChange}
       >
         {children}
-      </div>
+      </MemoryContentTabs>
       <footer className={styles.visibility}>
         Photos, wishes and shared voice notes are available to anyone with the
         album link.

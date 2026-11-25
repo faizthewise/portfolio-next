@@ -109,21 +109,25 @@
 }
 
 .tabBar {
-  position: sticky;
-  z-index: 10;
-  top: env(safe-area-inset-top);
   display: grid;
-  width: min(100%, var(--gallery-reading-width));
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(100%, var(--gallery-reading-width, 100%));
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
   margin-inline: auto;
   border-block: 1px solid var(--memory-border);
   background: var(--memory-ivory);
 }
 
+.tabBar[data-sticky] {
+  position: sticky;
+  z-index: 10;
+  top: env(safe-area-inset-top);
+}
+
 .tab {
   position: relative;
   display: flex;
-  min-height: var(--gallery-tab-height);
+  min-height: var(--gallery-tab-height, 48px);
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -159,19 +163,33 @@
   border-radius: 5px;
 }
 
+.tabBadge {
+  min-width: 20px;
+  padding: 2px 5px;
+  border-radius: 10px;
+  background: var(--memory-soft-sage);
+  color: var(--memory-sage);
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
 .tabPanel {
-  width: min(100%, var(--gallery-reading-width));
+  width: min(100%, var(--gallery-reading-width, 100%));
   margin-inline: auto;
 }
 
 .tabPanel[data-content="photos"] {
-  width: min(100%, var(--gallery-photo-width));
+  width: min(
+    100%,
+    var(--gallery-photo-width, var(--gallery-reading-width, 100%))
+  );
 }
 
-.tabPanel,
-.tabPanel :is(button, a, input, [tabindex]) {
+.tabPanel[data-sticky],
+.tabPanel[data-sticky] :is(button, a, input, [tabindex]) {
   scroll-margin-top: calc(
-    var(--gallery-tab-height) + env(safe-area-inset-top) + 10px
+    var(--gallery-tab-height, 48px) + env(safe-area-inset-top) + 10px
   );
 }
 

@@ -48,6 +48,7 @@ type CameraProps = {
   uploadProgress: Record<string, number>;
   activeUploadIds: string[];
   startInTray?: boolean;
+  startDraftId?: string;
   defaults?: MemorySettings;
   backgroundRef: React.RefObject<HTMLElement>;
   onClose: () => void;
@@ -88,6 +89,7 @@ function CameraSurface({
   uploadProgress,
   activeUploadIds,
   startInTray = false,
+  startDraftId,
   defaults,
   backgroundRef,
   onClose,
@@ -113,7 +115,9 @@ function CameraSurface({
   const [uploading, setUploading] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(!startInTray);
   const [draftTrayOpen, setDraftTrayOpen] = useState(startInTray);
-  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(
+    startDraftId ?? null
+  );
   const [filmOpen, setFilmOpen] = useState(false);
   const [trayError, setTrayError] = useState("");
   const [trayStatus, setTrayStatus] = useState("");
@@ -664,6 +668,7 @@ function CameraSurface({
   }
 
   async function deleteDraft(id: string) {
+    if (!window.confirm("Delete this unshared photo from this device?")) return;
     setTrayError("");
     setTrayStatus("");
     setBusy(true);

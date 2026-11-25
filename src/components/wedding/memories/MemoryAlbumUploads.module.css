@@ -1,0 +1,239 @@
+/* stylelint-disable selector-class-pattern -- Keep CSS Module names consistent with the guest components. */
+
+.summary,
+.uploads {
+  font-family: var(--memory-sans);
+  color: var(--memory-ink);
+  overflow-wrap: anywhere;
+}
+
+.summary {
+  display: grid;
+  width: 100%;
+  min-height: 56px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--memory-linen);
+  color: var(--memory-sage);
+  text-align: start;
+}
+
+.summaryButton {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  cursor: pointer;
+}
+
+.summaryCopy {
+  display: grid;
+  gap: 2px;
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.summaryCopy strong {
+  color: var(--memory-ink);
+  font-weight: 650;
+}
+
+.uploads {
+  display: grid;
+  gap: 18px;
+  padding-top: 12px;
+  container: album-uploads / inline-size;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.header h2,
+.header p,
+.group h3,
+.row p,
+.message p,
+.empty h3,
+.empty p {
+  margin: 0;
+}
+
+.header h2 {
+  font-size: 1.0625rem;
+  font-weight: 650;
+}
+
+.header p,
+.detail,
+.empty p {
+  color: var(--memory-muted);
+}
+
+.header p {
+  margin-top: 3px;
+}
+
+.group h3,
+.empty h3 {
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.list {
+  padding: 0;
+  margin: 6px 0 0;
+  list-style: none;
+}
+
+.row,
+.message {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  gap: 10px;
+  padding-block: 10px;
+  border-top: 1px solid var(--memory-border);
+}
+
+.thumbnail {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--memory-soft-sage);
+  color: var(--memory-botanical);
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rowCopy,
+.message p {
+  min-width: 0;
+  flex: 1;
+}
+
+.identifier {
+  font-weight: 650;
+}
+
+.rowStatus {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--memory-sage);
+}
+
+.detail {
+  font-size: 0.8125rem;
+}
+
+.actions {
+  display: grid;
+  max-width: 38%;
+  justify-items: stretch;
+}
+
+.action {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--memory-sage);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.summary:focus-visible,
+.action:focus-visible {
+  outline: 2px solid var(--memory-sage);
+  outline-offset: 2px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  border: 1.5px solid var(--memory-control-border);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 850ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+.progress {
+  display: block;
+  width: min(100%, 220px);
+  height: 6px;
+  margin-top: 6px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 4px;
+  appearance: none;
+  background: var(--memory-border);
+  accent-color: var(--memory-sage);
+}
+
+.progress::-webkit-progress-bar {
+  background: var(--memory-border);
+}
+
+.progress::-webkit-progress-value {
+  background: var(--memory-sage);
+}
+
+.progress::-moz-progress-bar {
+  background: var(--memory-sage);
+}
+
+.empty {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--memory-soft-sage);
+}
+
+.empty p {
+  margin-top: 3px;
+}
+
+.empty .action {
+  margin-top: 4px;
+  margin-inline-start: -4px;
+}
+
+@container album-uploads (max-width: 16rem) {
+  .row {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr);
+    row-gap: 0;
+  }
+
+  .actions {
+    max-width: none;
+    grid-column: 2;
+    justify-items: start;
+  }
+}

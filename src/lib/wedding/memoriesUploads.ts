@@ -1,6 +1,10 @@
 import { getWeddingGuest } from "@/lib/wedding/firebase";
 import type { PhotoStyle } from "@/lib/wedding/memoriesRender";
-import { getUploadFailure } from "@/lib/wedding/memoriesUploadStatus";
+import {
+  getUploadFailure,
+  hasLocalPhotoMedia,
+  missingPhotoMediaCode,
+} from "@/lib/wedding/memoriesUploadStatus";
 import { recordVoice, reservePhoto, uploadPhoto } from "@/lib/wedding/memories";
 import {
   createAudioJob,
@@ -35,7 +39,8 @@ export async function savePhotoDraft(
     throw new Error("Enter your name before adding photos.");
   const invalid = await validatePhotoBytes(blob);
   if (invalid) throw new Error(invalid);
-  const job = createPhotoJob(side, event, name, blob, photoStyle);
+  const uid = await getWeddingGuest();
+  const job = createPhotoJob(side, event, name, blob, photoStyle, uid);
   await saveUploadJob(job);
   return job;
 }
@@ -134,7 +139,9 @@ async function processUploadJobOnce(
   if (job.kind === "photo") {
     const heldDraft = await getLocalPhotoDraft(job.id);
     if (heldDraft)
-      throw new Error("This photo is still waiting for your approval to upload.");
+      throw new Error(
+        "This photo is still waiting for your approval to upload."
+      );
     const approvedJob = await getUploadJob(job.id);
     if (!approvedJob)
       throw new Error("This photo is not in the approved upload queue.");
@@ -146,8 +153,18 @@ async function processUploadJobOnce(
       await saveUploadJob(current);
       handlers.onJob?.(current);
     };
-    await persistPhase(current.kind === "photo" ? "Checking photo" : "Checking voice note");
+    await persistPhase(
+      current.kind === "photo" ? "Checking photo" : "Checking voice note"
+    );
     if (current.kind === "photo") {
+      if (!hasLocalPhotoMedia(current)) {
+        throw Object.assign(
+          new Error("The original photo is missing from local upload storage."),
+          {
+            code: missingPhotoMediaCode,
+          }
+        );
+      }
       const invalid = await validatePhotoBytes(current.blob);
       if (invalid) throw new Error(invalid);
     }
@@ -181,18 +198,21 @@ async function processUploadJobOnce(
         await saveUploadJob(current);
         handlers.onJob?.(current);
       }
-      await persistPhase("Uploading photo");
+      const { slot, uid: owner } = current;
+      if (!slot || !owner)
+        throw new Error("The queued photo has no reservation owner.");
       await uploadPhoto(
         current.event,
-        current.slot!,
-        current.uid!,
+        slot,
+        owner,
         current.name,
         current.blob,
         (percent) => {
           handlers.onProgress?.(current.id, percent);
         },
         current.uploadKey,
-        current.photoStyle
+        current.photoStyle,
+        persistPhase
       );
     } else {
       if (!current.uid) {
@@ -233,7 +253,6 @@ async function processUploadJobOnce(
         }
       );
     }
-    await removeUploadJob(current.id);
   } catch (error) {
     const failure = getUploadFailure(error);
     current = {
@@ -242,9 +261,26 @@ async function processUploadJobOnce(
       error: failure.message,
       errorCode: failure.code,
     };
-    await saveUploadJob(current);
+    try {
+      await saveUploadJob(current);
+    } catch (storageError) {
+      console.warn(
+        "Could not record the Wedding Memories upload failure locally",
+        storageError
+      );
+    }
     handlers.onJob?.(current);
     throw error;
+  }
+  // The publication has already succeeded. A failed local cleanup leaves a
+  // durable record that the next session can safely reconcile by upload key.
+  try {
+    await removeUploadJob(current.id);
+  } catch (error) {
+    console.warn(
+      "Could not remove a confirmed Wedding Memories upload locally",
+      error
+    );
   }
 }
 

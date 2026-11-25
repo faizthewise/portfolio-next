@@ -1,0 +1,123 @@
+/* stylelint-disable selector-class-pattern -- Keep CSS Module names consistent with the guest components. */
+
+.album {
+  --album-gutter: clamp(16px, 6.15vw, 24px);
+  --gallery-photo-width: 520px;
+  --gallery-reading-width: var(--gallery-photo-width);
+  --gallery-tab-height: 48px;
+
+  box-sizing: content-box;
+  width: auto;
+  max-width: var(--gallery-photo-width);
+  margin-inline: auto;
+
+  /* Reserve extra space when text scaling makes the shared navigation taller. */
+  padding-block-end: max(0px, calc(2rem - 32px));
+  padding-inline: max(var(--album-gutter), env(safe-area-inset-left))
+    max(var(--album-gutter), env(safe-area-inset-right));
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 18px 14px;
+}
+
+.header .title::before {
+  display: none;
+}
+
+.initials {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--memory-soft-sage);
+  color: var(--memory-sage);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.camera {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--memory-soft-sage);
+}
+
+.actions {
+  display: grid;
+  width: 100%;
+  max-width: 360px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.actions button {
+  min-height: 44px;
+  gap: 6px;
+  padding-inline: 6px;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.actions svg {
+  flex: none;
+}
+
+.photoHeading {
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+
+.success {
+  margin: 0 0 12px;
+  color: var(--memory-sage);
+  font-size: 0.875rem;
+}
+
+.footer {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--memory-border);
+  color: var(--memory-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.footer p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.footer nav a {
+  color: var(--memory-muted);
+  font-size: inherit;
+}
+
+@media (max-width: 349px) {
+  .camera {
+    padding-inline: 12px;
+  }
+
+  .actions svg {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .album {
+    --gallery-photo-width: 700px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .album {
+    --gallery-photo-width: 820px;
+  }
+}

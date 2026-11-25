@@ -98,7 +98,6 @@ export function MemoryGalleryPhoto({
     id: string;
   }>();
   const historyClosePending = useRef(false);
-  const isAlbum = variant === "album";
 
   const cacheKey = JSON.stringify([
     side,
@@ -134,7 +133,7 @@ export function MemoryGalleryPhoto({
 
   useEffect(() => {
     if (!nearViewport) return;
-    const cached = !isAlbum && previewCache.get(cacheKey);
+    const cached = previewCache.get(cacheKey);
     setFailed(false);
     setPreview(cached || "");
     if (cached) {
@@ -157,16 +156,14 @@ export function MemoryGalleryPhoto({
         image.src = objectUrl;
         await withTimeout(image.decode(), 4000);
         if (!active) return;
-        const result = renderPhoto(image, args, isAlbum ? 640 : 400).toDataURL(
+        const result = renderPhoto(image, args, 400).toDataURL(
           "image/jpeg",
           0.84
         );
-        if (!isAlbum) {
-          previewCache.set(cacheKey, result);
-          if (previewCache.size > previewCacheLimit) {
-            const oldest = previewCache.keys().next().value;
-            if (oldest) previewCache.delete(oldest);
-          }
+        previewCache.set(cacheKey, result);
+        if (previewCache.size > previewCacheLimit) {
+          const oldest = previewCache.keys().next().value;
+          if (oldest) previewCache.delete(oldest);
         }
         setPreview(result);
       } catch (reason) {
@@ -194,7 +191,7 @@ export function MemoryGalleryPhoto({
       active = false;
       releaseImage();
     };
-  }, [attempt, cacheKey, isAlbum, nearViewport]);
+  }, [attempt, cacheKey, nearViewport]);
 
   useEffect(() => {
     if (!historyEntry) return;
@@ -204,7 +201,7 @@ export function MemoryGalleryPhoto({
         setOpen(true);
         return;
       }
-      // Leave a same-URL dialog step without rerouting the gallery.
+      // Leave a same-URL dialog step without rerouting.
       if (open && window.location.href === historyEntry.url)
         event.stopImmediatePropagation();
       setOpen(false);
@@ -214,7 +211,7 @@ export function MemoryGalleryPhoto({
   }, [historyEntry, open]);
 
   function showPhoto() {
-    if (!isAlbum && !window.history.state?.[historyMarker]) {
+    if (!window.history.state?.[historyMarker]) {
       const url = window.location.href;
       const id = photo.id;
       try {
@@ -244,7 +241,7 @@ export function MemoryGalleryPhoto({
   const favoriteLabel = `Favourite photo shared by ${photo.guestName}`;
   return (
     <article ref={card} className={styles.card}>
-      <div className={`${styles.tile} ${isAlbum ? styles.albumTile : ""}`}>
+      <div className={styles.tile}>
         {preview ? (
           <>
             <button
@@ -258,9 +255,6 @@ export function MemoryGalleryPhoto({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={preview} alt="" decoding="async" />
             </button>
-            {isAlbum && (
-              <strong className={styles.albumName}>{photo.guestName}</strong>
-            )}
             <button
               type="button"
               className={styles.tileHeart}
@@ -304,6 +298,7 @@ export function MemoryGalleryPhoto({
           photo={photo}
           side={side}
           settings={settings}
+          variant={variant}
           opener={opener}
           backgroundRef={backgroundRef}
           photoLabel={photoLabel}
@@ -322,6 +317,7 @@ function PhotoViewer({
   photo,
   side,
   settings,
+  variant,
   opener,
   backgroundRef,
   photoLabel,
@@ -491,6 +487,7 @@ function PhotoViewer({
               {dateFormat.format(photoTime)}
             </time>
           )}
+          {variant === "album" && <p className={styles.shared}>Shared</p>}
         </div>
         {onFavorite && (
           <button

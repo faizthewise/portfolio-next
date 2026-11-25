@@ -299,13 +299,18 @@ test("permission failure stays retryable with the same reservation and reports p
       _name,
       _blob,
       onProgress,
-      uploadKey
+      uploadKey,
+      _style,
+      onPhase
     ) => {
       calls.upload++;
       calls.uploadedSlots.push(slot);
       uploadKeys.push(uploadKey);
+      await onPhase("Confirming photo upload");
+      await onPhase("Uploading photo");
       onProgress(40);
       onProgress(100);
+      await onPhase("Confirming photo upload");
     };
     await uploads.processUploadJob(saved, {
       onJob: (job) => seenPhases.push(job.status),
@@ -318,11 +323,48 @@ test("permission failure stays retryable with the same reservation and reports p
     assert.deepEqual(calls.uploadedSlots, [4]);
     assert.deepEqual(uploadKeys, [approved.uploadKey, approved.uploadKey]);
     assert.deepEqual(reportedProgress, [40, 100]);
-    assert.ok(seenPhases.includes("Uploading photo"));
+    assert.deepEqual(seenPhases.slice(-3), [
+      "Confirming photo upload",
+      "Uploading photo",
+      "Confirming photo upload",
+    ]);
   } finally {
     memoryApi.reservePhoto = originalReserve;
     memoryApi.uploadPhoto = originalUpload;
   }
+});
+
+test("a failed phase write reports the live failure even if IndexedDB keeps the old phase", async () => {
+  await queue.clearUploadQueueForTests();
+  resetCalls();
+  const held = photo();
+  await queue.saveLocalPhotoDraft(held, 0);
+  const [approved] = await queue.approveLocalPhotoDrafts([held.id], event, guestUid);
+  const put = IDBObjectStore.prototype.put;
+  const seen = [];
+  IDBObjectStore.prototype.put = function (job, ...args) {
+    const request = put.call(this, job, ...args);
+    if (this.name === "jobs" && ["Checking account", "Needs retry"].includes(job.status)) {
+      const transaction = this.transaction;
+      request.addEventListener("success", () => transaction.abort(), { once: true });
+    }
+    return request;
+  };
+  try {
+    await assert.rejects(uploads.processUploadJob(approved, { onJob: (job) => seen.push(job.status) }));
+  } finally {
+    IDBObjectStore.prototype.put = put;
+  }
+  const durable = await queue.getUploadJob(approved.id);
+  assert.deepEqual(seen, ["Checking photo", "Needs retry"]);
+  assert.equal(durable.status, "Checking photo");
+  assert.equal(durable.uploadKey, approved.uploadKey);
+  assert.deepEqual(await durable.blob.arrayBuffer(), await validPhoto.arrayBuffer());
+  assert.equal(calls.reserve, 0);
+  await uploads.processUploadJob(durable);
+  assert.equal(calls.reserve, 1);
+  assert.equal(calls.upload, 1);
+  assert.equal(await queue.getUploadJob(approved.id), undefined);
 });
 
 async function rawAudioRow(mode, operation) {

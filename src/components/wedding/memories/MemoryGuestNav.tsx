@@ -5,19 +5,19 @@ import styles from "./MemoryGuestHome.module.css";
 type MemoryGuestNavProps = {
   homeHref: string;
   galleryHref: string;
+  albumHref: string;
   isGallery: boolean;
-  albumOpen: boolean;
+  isAlbum: boolean;
   hidden: boolean;
-  onAlbum: () => void;
 };
 
 export function MemoryGuestNav({
   homeHref,
   galleryHref,
+  albumHref,
   isGallery,
-  albumOpen,
+  isAlbum,
   hidden,
-  onAlbum,
 }: MemoryGuestNavProps) {
   return (
     <nav
@@ -29,7 +29,7 @@ export function MemoryGuestNav({
         <Link
           className={styles.navAction}
           href={homeHref}
-          aria-current={!isGallery && !albumOpen ? "page" : undefined}
+          aria-current={!isGallery && !isAlbum ? "page" : undefined}
         >
           <House size={22} aria-hidden="true" />
           Home
@@ -37,21 +37,19 @@ export function MemoryGuestNav({
         <Link
           className={styles.navAction}
           href={galleryHref}
-          aria-current={isGallery && !albumOpen ? "page" : undefined}
+          aria-current={isGallery ? "page" : undefined}
         >
           <Images size={22} aria-hidden="true" />
           Gallery
         </Link>
-        <button
-          type="button"
+        <Link
           className={styles.navAction}
-          aria-haspopup="dialog"
-          aria-expanded={albumOpen}
-          onClick={onAlbum}
+          href={albumHref}
+          aria-current={isAlbum ? "page" : undefined}
         >
           <Album size={22} aria-hidden="true" />
           My album
-        </button>
+        </Link>
       </div>
     </nav>
   );

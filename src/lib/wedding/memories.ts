@@ -24,6 +24,7 @@ import {
   getBlob,
   getMetadata,
 } from "firebase/storage";
+import type { PhotoTransferPhase } from "@/lib/wedding/memoriesUploadStatus";
 import {
   getWeddingFirestore,
   getWeddingGuest,
@@ -164,7 +165,8 @@ export async function uploadPhoto(
   file: Blob,
   onProgress: (value: number) => void,
   uploadKey?: string,
-  photoStyle?: PhotoStyle
+  photoStyle?: PhotoStyle,
+  onPhase?: (phase: PhotoTransferPhase) => Promise<void>
 ) {
   if (
     slot < 1 ||
@@ -188,6 +190,7 @@ export async function uploadPhoto(
     throw new Error("This upload no longer matches its reserved photo slot.");
   const storage = getWeddingStorage();
   const fileRef = ref(storage, path);
+  await onPhase?.("Confirming photo upload");
   try {
     const existing = await getMetadata(fileRef);
     if (
@@ -204,6 +207,7 @@ export async function uploadPhoto(
   } catch (error) {
     if ((error as { code?: string }).code !== "storage/object-not-found")
       throw error;
+    await onPhase?.("Uploading photo");
     const task = uploadBytesResumable(fileRef, file, {
       contentType: file.type,
       customMetadata: {
@@ -217,11 +221,12 @@ export async function uploadPhoto(
       task.on(
         "state_changed",
         (s) =>
-          onProgress(Math.round((s.bytesTransferred / s.totalBytes) * 100)),
+          onProgress(Math.floor((s.bytesTransferred / s.totalBytes) * 100)),
         reject,
         resolve
       )
     );
+    await onPhase?.("Confirming photo upload");
   }
   const existingPhoto = await import("firebase/firestore").then(({ getDoc }) =>
     getDoc(doc(db, `${root(event)}/photos/${id}`))
@@ -276,10 +281,14 @@ export async function subscribePhotos(
       ...extra,
       limit(MEMORY_PAGE_SIZE)
     ),
+    { includeMetadataChanges: true },
     (snap) => {
+      const shared = snap.docs.filter(
+        (photo) => !photo.metadata.hasPendingWrites
+      );
       callback(
-        snap.docs.map((d) => ({ id: d.id, ...d.data() } as MemoryPhoto)),
-        snap.docs.at(-1),
+        shared.map((d) => ({ id: d.id, ...d.data() } as MemoryPhoto)),
+        shared.at(-1),
         snap.size === MEMORY_PAGE_SIZE
       );
     },
@@ -303,9 +312,10 @@ export async function readMorePhotos(
       limit(MEMORY_PAGE_SIZE)
     )
   );
+  const shared = snap.docs.filter((photo) => !photo.metadata.hasPendingWrites);
   return {
-    rows: snap.docs.map((d) => ({ id: d.id, ...d.data() } as MemoryPhoto)),
-    cursor: snap.docs.at(-1) ?? cursor,
+    rows: shared.map((d) => ({ id: d.id, ...d.data() } as MemoryPhoto)),
+    cursor: shared.at(-1) ?? cursor,
     hasMore: snap.size === MEMORY_PAGE_SIZE,
   };
 }

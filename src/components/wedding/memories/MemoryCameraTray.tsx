@@ -3,7 +3,10 @@ import { Image as GalleryIcon, Trash2, Upload, X } from "lucide-react";
 import { MEMORY_HASHTAG } from "@/lib/wedding/memories";
 import type { LocalPhotoDraft, UploadJob } from "@/lib/wedding/memoriesQueue";
 import { renderPhotoCanvas } from "@/lib/wedding/memoriesRender";
-import { getPhotoUploadPresentation } from "@/lib/wedding/memoriesUploadStatus";
+import {
+  getPhotoUploadState,
+  hasLocalPhotoMedia,
+} from "@/lib/wedding/memoriesUploadStatus";
 import styles from "./MemoryCameraTray.module.css";
 
 type MemoryCameraTrayProps = {
@@ -56,6 +59,9 @@ export function MemoryCameraTray({
   const orderedDrafts = [...drafts].sort(
     (first, second) => second.createdAt - first.createdAt
   );
+  const availableDrafts = drafts.filter(hasLocalPhotoMedia);
+  const selectedMediaAvailable =
+    selectedDraft && hasLocalPhotoMedia(selectedDraft);
   return (
     <div
       className={styles["draft-backdrop"]}
@@ -72,8 +78,8 @@ export function MemoryCameraTray({
           <div>
             <h2 id="camera-drafts-title">Photos</h2>
             <p>
-              {drafts.length} saved on this device · {approvedUploads.length} in
-              the upload queue
+              {availableDrafts.length} saved on this device ·{" "}
+              {approvedUploads.length} in the upload queue
             </p>
           </div>
           <button
@@ -94,10 +100,12 @@ export function MemoryCameraTray({
                 draft={selectedDraft}
                 coupleNames={coupleNames}
               />
-              <p>
-                This photo stays on this device until you upload it. Anyone with
-                the album link can then see it.
-              </p>
+              {selectedMediaAvailable && (
+                <p>
+                  This photo stays on this device until you upload it. Anyone
+                  with the album link can then see it.
+                </p>
+              )}
               <div className={styles["draft-actions"]}>
                 <button
                   ref={selectedBackRef}
@@ -111,7 +119,7 @@ export function MemoryCameraTray({
                 <button
                   type="button"
                   className={styles["tray-button-primary"]}
-                  disabled={busy || uploading}
+                  disabled={busy || uploading || !selectedMediaAvailable}
                   onClick={() => onUpload([selectedDraft.id])}
                 >
                   <Upload aria-hidden="true" /> Upload this photo
@@ -162,6 +170,9 @@ export function MemoryCameraTray({
               {drafts.length > 0 && (
                 <p>Anyone with the album link can see photos you upload.</p>
               )}
+              {availableDrafts.length < drafts.length && (
+                <p>Some photos are unavailable on this device.</p>
+              )}
               <div className={styles["draft-actions"]}>
                 <button
                   type="button"
@@ -174,10 +185,13 @@ export function MemoryCameraTray({
                 <button
                   type="button"
                   className={styles["tray-button-primary"]}
-                  disabled={busy || uploading || drafts.length === 0}
-                  onClick={() => onUpload()}
+                  disabled={busy || uploading || availableDrafts.length === 0}
+                  onClick={() => onUpload(availableDrafts.map(({ id }) => id))}
                 >
-                  <Upload aria-hidden="true" /> Upload all photos
+                  <Upload aria-hidden="true" />
+                  {availableDrafts.length < drafts.length
+                    ? "Upload available photos"
+                    : "Upload all photos"}
                 </button>
               </div>
             </>
@@ -190,13 +204,13 @@ export function MemoryCameraTray({
               <h3 id="camera-uploads-title">Uploads</h3>
               {!online && (
                 <p className={styles["upload-offline"]} role="status">
-                  Waiting for an internet connection. Approved photos will retry
-                  when you are online.
+                  You’re offline. Reconnect to resume waiting uploads or retry a
+                  photo.
                 </p>
               )}
               {approvedUploads.map((job) => {
                 const active = activeUploadIds.includes(job.id);
-                const presentation = getPhotoUploadPresentation(
+                const presentation = getPhotoUploadState(
                   job,
                   uploadProgress[job.id],
                   active,
@@ -212,9 +226,9 @@ export function MemoryCameraTray({
                         {job.slot ? `Photo ${job.slot}` : "Photo upload"}
                       </strong>
                       <span>{presentation.status}</span>
-                      {active && (
+                      {presentation.group === "active" && (
                         <progress
-                          value={presentation.progress ?? 0}
+                          value={presentation.progress}
                           max="100"
                           aria-label={
                             job.slot
@@ -223,22 +237,28 @@ export function MemoryCameraTray({
                           }
                         />
                       )}
-                      {presentation.error && (
-                        <p className={styles["upload-error"]} role="alert">
-                          {online
-                            ? "This photo could not upload. Use Retry upload to try again."
-                            : "This photo could not upload. You can retry once you are back online."}
+                      {presentation.detail && (
+                        <p
+                          className={
+                            presentation.group === "attention"
+                              ? styles["upload-error"]
+                              : undefined
+                          }
+                        >
+                          {presentation.detail}
                         </p>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      className={styles["tray-button"]}
-                      disabled={busy || presentation.retryDisabled}
-                      onClick={() => onRetryUpload(job.id)}
-                    >
-                      {presentation.retryLabel}
-                    </button>
+                    {presentation.canRetry && (
+                      <button
+                        type="button"
+                        className={styles["tray-button"]}
+                        disabled={busy}
+                        onClick={() => onRetryUpload(job.id)}
+                      >
+                        Retry upload
+                      </button>
+                    )}
                   </article>
                 );
               })}
@@ -261,23 +281,61 @@ export function MemoryCameraTray({
 }
 
 export function LocalDraftThumbnail({ draft }: { draft: LocalPhotoDraft }) {
-  return <PhotoBlobThumbnail blob={draft.previewBlob ?? draft.blob} />;
+  return <PhotoBlobThumbnail blob={getThumbnailBlob(draft)} />;
 }
 
 export function UploadJobThumbnail({ job }: { job: UploadJob }) {
-  return <PhotoBlobThumbnail blob={job.previewBlob ?? job.blob} />;
+  return <PhotoBlobThumbnail blob={getThumbnailBlob(job)} />;
 }
 
-function PhotoBlobThumbnail({ blob }: { blob: Blob }) {
-  const [source, setSource] = useState("");
+function getThumbnailBlob({
+  blob,
+  previewBlob,
+}: {
+  blob?: Blob;
+  previewBlob?: Blob;
+}) {
+  return hasLocalPhotoMedia({ blob: previewBlob }) ? previewBlob : blob;
+}
+
+function createPhotoUrl(blob?: Blob) {
+  if (!(blob instanceof Blob) || blob.size === 0) return;
+  try {
+    return URL.createObjectURL(blob);
+  } catch {
+    return undefined;
+  }
+}
+
+function PhotoPlaceholder() {
+  return (
+    <span className={styles["photo-placeholder"]} aria-hidden="true">
+      <GalleryIcon size={20} />
+    </span>
+  );
+}
+
+function PhotoBlobThumbnail({ blob }: { blob?: Blob }) {
+  const [source, setSource] = useState<{ blob?: Blob; url: string }>();
+  const [brokenUrl, setBrokenUrl] = useState<string>();
   useEffect(() => {
-    const url = URL.createObjectURL(blob);
-    setSource(url);
+    const url = createPhotoUrl(blob);
+    if (!url) return;
+    setSource({ blob, url });
     return () => URL.revokeObjectURL(url);
   }, [blob]);
+  const url = source?.blob === blob ? source?.url : undefined;
+  if (!url || url === brokenUrl) return <PhotoPlaceholder />;
   // Thumbnails use a temporary object URL and are already sized locally.
-  // eslint-disable-next-line @next/next/no-img-element
-  return source ? <img src={source} alt="" aria-hidden="true" /> : null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      aria-hidden="true"
+      onError={() => setBrokenUrl(url)}
+    />
+  );
 }
 
 function DraftPhotoPreview({
@@ -289,10 +347,17 @@ function DraftPhotoPreview({
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState("");
+  const mediaAvailable = hasLocalPhotoMedia(draft);
   useEffect(() => {
+    if (!mediaAvailable) return;
+    const objectUrl = createPhotoUrl(draft.blob);
+    if (!objectUrl) {
+      setError("Could not open this saved photo.");
+      return;
+    }
+    setError("");
     let active = true;
     const image = new Image();
-    const objectUrl = URL.createObjectURL(draft.blob);
     image.onload = () => {
       if (!active || !canvas.current) return;
       try {
@@ -326,11 +391,29 @@ function DraftPhotoPreview({
       image.src = "";
       URL.revokeObjectURL(objectUrl);
     };
-  }, [draft.blob, draft.createdAt, draft.photoStyle, coupleNames]);
+  }, [
+    draft.blob,
+    draft.createdAt,
+    draft.photoStyle,
+    coupleNames,
+    mediaAvailable,
+  ]);
+  const previewError = mediaAvailable
+    ? error
+    : "This photo is unavailable on this device.";
   return (
     <div className={styles["draft-full-preview"]}>
-      <canvas ref={canvas} aria-label="Stamped photo preview" />
-      {error && <p role="alert">{error}</p>}
+      <canvas
+        ref={canvas}
+        hidden={Boolean(previewError)}
+        aria-label="Stamped photo preview"
+      />
+      {previewError && (
+        <>
+          <PhotoPlaceholder />
+          <p role="alert">{previewError}</p>
+        </>
+      )}
     </div>
   );
 }
