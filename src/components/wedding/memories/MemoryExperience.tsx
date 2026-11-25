@@ -898,7 +898,7 @@ export function MemoryExperience({
                   />
                 </label>
                 {myPhotos.length ? (
-                  <div className={styles.grid}>
+                  <div className={styles.galleryGrid}>
                     {myPhotos.map((photo) => (
                       <PhotoCard
                         key={photo.id}
@@ -907,6 +907,7 @@ export function MemoryExperience({
                         settings={settings}
                         onFavorite={toggleFavorite}
                         favorite={favoriteIds.includes(photo.id)}
+                        compact
                       />
                     ))}
                   </div>
