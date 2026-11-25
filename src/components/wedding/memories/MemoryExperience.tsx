@@ -160,6 +160,12 @@ export function MemoryExperience({
     0,
     PHOTO_LIMIT - photoCount - unreservedPhotoJobs.length - cameraDrafts.length
   );
+  const gallerySourcePhotos = photoView === "my" ? myPhotos : photos;
+  const galleryPhotos = gallerySourcePhotos
+    .filter((photo) =>
+      photoView === "favorites" ? favoriteIds.includes(photo.id) : true
+    )
+    .filter((photo) => guestFilter === "all" || photo.guestName === guestFilter);
   useEffect(() => {
     try {
       const storedName = window.localStorage.getItem(`memories-name-${side}`);
@@ -713,7 +719,7 @@ export function MemoryExperience({
       )}
       {isGallery && (
         <section
-          className={styles.hero}
+          className={`${styles.hero} ${styles.galleryHero}`}
           style={
             settings?.cover
               ? {
@@ -722,39 +728,48 @@ export function MemoryExperience({
               : undefined
           }
         >
-          <p className={styles.eyebrow}>
-            {event.name.toUpperCase()} · {MEMORY_HASHTAG}
-          </p>
+          <p className={styles.eyebrow}>{MEMORY_HASHTAG}</p>
           <p className={`${styles.couple} ${memoryNames.className}`}>
             {MEMORY_PUBLIC_ALBUMS[side].coupleNames}
           </p>
           <h1 className={memoryTitle.className}>Shared memories</h1>
-          <p>{settings?.welcome || "Share the moments you captured with us."}</p>
           <p className={`${styles.eventDetails} ${memoryTitle.className}`}>
-            {displayDate}
-            <br />
-            {wedding.venue}
+            {MEMORY_PUBLIC_ALBUMS[side].dateLabel}
+          </p>
+          <p className={styles.galleryWelcome}>
+            {settings?.welcome || "Share the moments you captured with us."}
           </p>
         </section>
       )}
       {isGallery ? (
         <>
-          <section className={styles.section}>
-            <h2>Photos</h2>
+          <nav className={styles.gallerySectionNav} aria-label="Gallery sections">
+            <a href="#photos">Photos</a>
+            <a href="#wishes">Wishes</a>
+            <a href="#voice-notes">Voice notes</a>
+          </nav>
+          <section className={`${styles.section} ${styles.gallerySection}`} id="photos">
+            <h2 className={styles.srOnly}>Photos</h2>
             <div className={styles.galleryFilters}>
-              <label>
-                View
-                <select
-                  value={photoView}
-                  onChange={(e) =>
-                    setPhotoView(e.target.value as typeof photoView)
-                  }
-                >
-                  <option value="all">All photos</option>
-                  <option value="my">My photos</option>
-                  <option value="favorites">Favourites</option>
-                </select>
-              </label>
+              <div className={styles.galleryFilterPills} role="group" aria-label="Filter photos">
+                {([
+                  ["all", "All photos"],
+                  ["my", "My photos"],
+                  ["favorites", "Favourites"],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={photoView === value}
+                    onClick={() => {
+                      setPhotoView(value);
+                      setGuestFilter("all");
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <label>
                 Guest
                 <select
@@ -762,7 +777,7 @@ export function MemoryExperience({
                   onChange={(e) => setGuestFilter(e.target.value)}
                 >
                   <option value="all">All guests</option>
-                  {Array.from(new Set(photos.map((photo) => photo.guestName)))
+                  {Array.from(new Set(gallerySourcePhotos.map((photo) => photo.guestName)))
                     .sort()
                     .map((guest) => (
                       <option key={guest} value={guest}>
@@ -776,19 +791,9 @@ export function MemoryExperience({
               <p role="status" className={styles.muted}>
                 Loading photos…
               </p>
-            ) : (photoView === "my" ? myPhotos : photos).length ? (
-              <div className={styles.grid}>
-                {(photoView === "my" ? myPhotos : photos)
-                  .filter((photo) =>
-                    photoView === "favorites"
-                      ? favoriteIds.includes(photo.id)
-                      : true
-                  )
-                  .filter(
-                    (photo) =>
-                      guestFilter === "all" || photo.guestName === guestFilter
-                  )
-                  .map((photo) => (
+            ) : galleryPhotos.length ? (
+              <div className={styles.galleryGrid}>
+                {galleryPhotos.map((photo) => (
                     <PhotoCard
                       key={photo.id}
                       photo={photo}
@@ -796,12 +801,15 @@ export function MemoryExperience({
                       settings={settings}
                       onFavorite={toggleFavorite}
                       favorite={favoriteIds.includes(photo.id)}
+                      compact
                     />
                   ))}
               </div>
             ) : (
               <p className={styles.muted}>
-                No photos yet. Be the first to share one.
+                {photos.length === 0 && photoView === "all" && guestFilter === "all"
+                  ? "No photos yet. Be the first to share one."
+                  : "No photos match these filters yet."}
               </p>
             )}
             {(photoView === "my" ? myHasMore : hasMore) && (
@@ -816,7 +824,7 @@ export function MemoryExperience({
               </button>
             )}
           </section>
-          <section className={styles.section}>
+          <section className={`${styles.section} ${styles.gallerySection}`} id="wishes">
             <h2>Written wishes</h2>
             {wishes.length ? (
               wishes.map((entry) => (
@@ -829,7 +837,7 @@ export function MemoryExperience({
               <p className={styles.muted}>No written wishes yet.</p>
             )}
           </section>
-          <section className={styles.section}>
+          <section className={`${styles.section} ${styles.gallerySection}`} id="voice-notes">
             <h2>Voice notes</h2>
             {voices.length ? (
               voices.map((voice) => (
@@ -1146,12 +1154,14 @@ function PhotoCard({
   settings,
   onFavorite,
   favorite,
+  compact = false,
 }: {
   photo: MemoryPhoto;
   side: "bride" | "groom";
   settings?: MemorySettings;
   onFavorite: (id: string) => void;
   favorite: boolean;
+  compact?: boolean;
 }) {
   const card = useRef<HTMLElement>(null);
   const [nearViewport, setNearViewport] = useState(false);
@@ -1159,6 +1169,10 @@ function PhotoCard({
   const [loadError, setLoadError] = useState("");
   const [retryToken, setRetryToken] = useState(0);
   const [open, setOpen] = useState(false);
+  const photoCreatedAtMillis = photo.createdAt?.toDate().getTime() ?? 0;
+  const photoStyleFilm = photo.photoStyle?.film;
+  const photoStyleStamp = photo.photoStyle?.stamp;
+  const photoStyleCapturedAt = photo.photoStyle?.capturedAt;
   useEffect(() => {
     const node = card.current;
     if (!node) return;
@@ -1167,12 +1181,15 @@ function PhotoCard({
       return;
     }
     const observer = new IntersectionObserver(
-      ([entry]) => setNearViewport(entry.isIntersecting),
+      ([entry]) => {
+        if (entry.isIntersecting) setNearViewport(true);
+        else if (!compact) setNearViewport(false);
+      },
       { rootMargin: "250px" }
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [photo.id]);
+  }, [photo.id, compact]);
   useEffect(() => {
     setPreview("");
     setLoadError("");
@@ -1199,7 +1216,7 @@ function PhotoCard({
               settings?.film ?? "none",
               settings?.stamp ?? MEMORY_HASHTAG,
               {
-                maxDimension: 960,
+                maxDimension: compact ? 640 : 960,
                 photoDate: photo.createdAt?.toDate(),
                 coupleNames:
                   MEMORY_PUBLIC_ALBUMS[side].coupleNames,
@@ -1254,18 +1271,24 @@ function PhotoCard({
     retryToken,
     photo.id,
     photo.originalPath,
-    photo.createdAt,
-    photo.photoStyle,
+    photoCreatedAtMillis,
+    photoStyleFilm,
+    photoStyleStamp,
+    photoStyleCapturedAt,
     settings?.film,
     settings?.stamp,
     side,
+    compact,
   ]);
   const photoTime = photo.createdAt?.toDate();
   return (
-    <article ref={card} className={styles.photoCard}>
+    <article
+      ref={card}
+      className={`${styles.photoCard} ${compact ? styles.galleryPhotoCard : ""}`}
+    >
       {preview ? (
         <button
-          className={styles.photoOpen}
+          className={`${styles.photoOpen} ${compact ? styles.galleryPhotoOpen : ""}`}
           onClick={() => setOpen(true)}
           aria-label={`Open photo shared by ${photo.guestName}`}
         >
@@ -1276,25 +1299,55 @@ function PhotoCard({
           />
         </button>
       ) : (
-        <div className={styles.placeholder} aria-live="polite">
+        <div
+          className={`${styles.placeholder} ${compact ? styles.galleryPhotoPlaceholder : ""}`}
+          aria-live="polite"
+        >
           {loadError ? (
-            <><span>{loadError}</span><button className={styles.secondary} onClick={() => setRetryToken((value) => value + 1)}>Retry photo</button></>
+            compact ? (
+              <>
+                <span title={loadError}>Preview unavailable.</span>
+                <span className={styles.srOnly}>{loadError}</span>
+                <button
+                  className={styles.secondary}
+                  onClick={() => setRetryToken((value) => value + 1)}
+                  aria-label={`Retry loading photo shared by ${photo.guestName}`}
+                >
+                  Retry photo
+                </button>
+              </>
+            ) : (
+              <>
+                <span>{loadError}</span>
+                <button
+                  className={styles.secondary}
+                  onClick={() => setRetryToken((value) => value + 1)}
+                >
+                  Retry photo
+                </button>
+              </>
+            )
           ) : (
-            <ImageIcon aria-hidden="true" />
+            <>
+              <span className={styles.srOnly}>Loading photo preview</span>
+              <ImageIcon aria-hidden="true" />
+            </>
           )}
         </div>
       )}
-      <div className={styles.photoInfo}>
-        <strong>{photo.guestName}</strong>
-        <button
-          aria-label={`${favorite ? "Remove from" : "Add to"} favourites`}
-          aria-pressed={favorite}
-          onClick={() => onFavorite(photo.id)}
-        >
-          <Heart fill={favorite ? "currentColor" : "none"} />
-        </button>
-      </div>
-      {photoTime && (
+      {(!compact || Boolean(preview)) && (
+        <div className={`${styles.photoInfo} ${compact ? styles.galleryPhotoInfo : ""}`}>
+          <strong>{photo.guestName}</strong>
+          <button
+            aria-label={`${favorite ? "Remove from" : "Add to"} favourites`}
+            aria-pressed={favorite}
+            onClick={() => onFavorite(photo.id)}
+          >
+            <Heart fill={favorite ? "currentColor" : "none"} />
+          </button>
+        </div>
+      )}
+      {!compact && photoTime && (
         <time className={styles.photoTime} dateTime={photoTime.toISOString()}>
           {new Intl.DateTimeFormat("en-MY", {
             dateStyle: "medium",
@@ -1332,6 +1385,13 @@ function PhotoLightbox({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   const titleId = `photo-title-${photo.id}`;
+  const photoTime = photo.createdAt?.toDate();
+  const photoDateLabel = photoTime
+    ? new Intl.DateTimeFormat("en-MY", {
+        dateStyle: "medium",
+        timeZone: "Asia/Kuala_Lumpur",
+      }).format(photoTime)
+    : "";
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const dialog = dialogRef.current;
@@ -1464,6 +1524,9 @@ function PhotoLightbox({
         ) : (
           !error && <p role="status">Loading full photo…</p>
         )}
+        <p className={styles.lightboxMetadata}>
+          {photo.guestName}{photoDateLabel ? ` · ${photoDateLabel}` : ""}
+        </p>
         <div className={styles.lightboxActions}>
           <button
             className={styles.button}

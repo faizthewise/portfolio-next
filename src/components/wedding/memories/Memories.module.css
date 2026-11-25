@@ -61,6 +61,27 @@
   background-position: center;
   background-size: cover;
 }
+.galleryHero {
+  margin: clamp(.75rem, 2.5vw, 1.5rem) auto 1rem;
+  padding: clamp(.9rem, 3vw, 1.5rem);
+}
+.garden .galleryHero {
+  background-image: linear-gradient(0deg, #fffdf8e8, #fffdf8a0),
+    url("/images/arched-invitation-garden-v1.webp");
+  background-position: center 52%;
+  background-size: cover;
+}
+.songket .galleryHero {
+  background-image: linear-gradient(0deg, #fff9edeb, #fff9ed9c),
+    url("/images/songket-closed-composite-v4.webp");
+  background-position: center;
+  background-size: cover;
+}
+.galleryHero .eyebrow { margin:0; font-size:.7rem; }
+.hero.galleryHero p.couple { margin:.2rem 0 0; font-size:clamp(2rem,5vw,3.2rem); line-height:1.15; }
+.hero.galleryHero h1 { margin:.1rem 0 .2rem; font-size:clamp(1.2rem,2.8vw,1.6rem); line-height:1.15; }
+.hero.galleryHero p.eventDetails { margin:.25rem auto 0; font-size:clamp(1rem,2.5vw,1.25rem); line-height:1.35; }
+.hero.galleryHero p.galleryWelcome { margin:.4rem auto 0; font-size:.88rem; line-height:1.4; }
 .eyebrow {
   letter-spacing: 0.16em;
   font-size: 0.76rem;
@@ -219,11 +240,17 @@
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
   gap: 1rem;
 }
+.galleryGrid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:clamp(6px,1.8vw,10px);
+}
 .photoCard {
   min-width: 0;
   background: var(--paper);
   border: 1px solid color-mix(in srgb, var(--accent), transparent 70%);
 }
+.galleryPhotoCard { position:relative; overflow:hidden; border:0; background:transparent; }
 .photoOpen {
   width: 100%;
   display: block;
@@ -420,9 +447,30 @@
 .galleryFilters { display:flex; align-items:end; flex-wrap:wrap; gap:.8rem; margin-bottom:1rem; }
 .galleryFilters label { display:grid; gap:.35rem; font-size:.9rem; }
 .galleryFilters select { min-width:10rem; max-width:100%; padding:.55rem .7rem; border:1px solid #857c6870; background:var(--paper); color:var(--ink); font:inherit; }
+.gallerySectionNav { position:sticky; top:0; z-index:20; display:flex; max-width:64rem; justify-content:center; gap:.5rem; margin:.5rem auto 1rem; padding:.45rem .35rem; background:var(--paper); }
+.gallerySectionNav a { min-height:2.75rem; display:inline-flex; align-items:center; justify-content:center; padding:.45rem .8rem; border:1px solid color-mix(in srgb,var(--accent),transparent 45%); border-radius:99px; background:var(--soft); color:var(--ink); font-size:.88rem; }
+.gallerySection { max-width:64rem; margin:1rem auto; padding:0; border:0; background:transparent; scroll-margin-top:4.25rem; }
+.gallerySection h2 { margin-bottom:.75rem; }
+.galleryFilters { display:flex; flex-direction:column; align-items:stretch; gap:.7rem; margin-bottom:.8rem; }
+.galleryFilters > label { display:flex; align-items:center; gap:.5rem; }
+.galleryFilters select { min-width:0; flex:1; }
+.galleryFilterPills { display:flex; min-width:0; gap:.3rem; }
+.galleryFilterPills button { min-width:0; min-height:2.6rem; flex:1 1 auto; padding:.45rem .5rem; border:1px solid color-mix(in srgb,var(--accent),transparent 45%); border-radius:99px; background:var(--paper); color:var(--ink); font:inherit; font-size:.84rem; cursor:pointer; }
+.galleryFilterPills button[aria-pressed="true"] { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+.galleryFilterPills button:focus-visible,.gallerySectionNav a:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.galleryPhotoOpen { aspect-ratio:4/5; overflow:hidden; }
+.galleryPhotoCard .photoOpen img { aspect-ratio:4/5; object-fit:cover; }
+.galleryPhotoCard .galleryPhotoPlaceholder { box-sizing:border-box; aspect-ratio:4/5; overflow:hidden; padding:.3rem; gap:.3rem; font-size:.85rem; line-height:1.15; text-align:center; overflow-wrap:anywhere; opacity:1; }
+.galleryPhotoPlaceholder .secondary { min-height:2.75rem; max-width:100%; padding:.3rem; font-size:.8rem; }
+.galleryPhotoInfo { position:absolute; z-index:1; inset:0; display:block; padding:0; pointer-events:none; }
+.galleryPhotoInfo > strong { position:absolute; right:0; bottom:0; left:0; overflow:hidden; padding:1.3rem .4rem .4rem; background:linear-gradient(transparent,#111b); color:#fff; font-size:clamp(.8rem,3vw,.9rem); line-height:1.15; text-overflow:ellipsis; white-space:nowrap; }
+.galleryPhotoInfo > button { position:absolute; top:.25rem; right:.25rem; display:grid; width:44px; height:44px; place-items:center; padding:0; border:1px solid #ffffffb8; border-radius:50%; background:#171714b8; color:#fff; cursor:pointer; pointer-events:auto; }
+.galleryPhotoInfo > button:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+.galleryPhotoInfo > button svg { width:1.2rem; height:1.2rem; }
 .photoTime { display:block; padding:0 .7rem .7rem; font-size:.82rem; opacity:.72; }
 .lightboxDialog { position:relative; display:grid; justify-items:center; gap:.8rem; width:min(100%,82rem); max-height:calc(100vh - 2rem); overflow:auto; padding:2.8rem 1rem 1rem; background:#171714; color:white; }
 .lightboxDialog > img { display:block; max-width:100%; max-height:70vh; object-fit:contain; }
+.lightboxMetadata { margin:0; color:#f4efe5; font-size:.9rem; text-align:center; }
 .lightboxClose { position:absolute; top:.5rem; right:.7rem; color:white; font-size:2rem; line-height:1; background:none; border:0; cursor:pointer; }
 .lightboxActions button { position:static; inset:auto; font-size:inherit; }
 .lightboxActions { display:flex; flex-wrap:wrap; justify-content:center; gap:.6rem; }
@@ -434,6 +482,18 @@
 .qr { width:min(100%,25rem); max-width:100%; }
 .lightbox { padding:1rem; }
 @media (max-width:600px) { .qrCard { width:100%; padding:1.2rem; } .lightboxDialog { padding-inline:.5rem; } }
+@media (max-width:600px) { .hero.galleryHero { margin-top:.75rem; } }
+@media (min-width:640px) {
+  .galleryGrid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:.65rem; }
+  .galleryFilters { flex-direction:row; align-items:center; justify-content:space-between; }
+  .galleryFilters label { display:flex; align-items:center; gap:.5rem; }
+}
+@media (min-width:1024px) {
+  .galleryGrid { grid-template-columns:repeat(5,minmax(0,1fr)); gap:.75rem; }
+}
+@media (min-width:1280px) {
+  .galleryGrid { grid-template-columns:repeat(6,minmax(0,1fr)); }
+}
 
 .guestHub {
   --hub-accent: #607a60;
