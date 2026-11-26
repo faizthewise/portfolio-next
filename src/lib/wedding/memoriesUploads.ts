@@ -101,7 +101,8 @@ export async function saveAudioDraft(
   event: UploadJob["event"],
   name: string,
   blob: Blob,
-  isPrivate: boolean
+  isPrivate: boolean,
+  uid?: string
 ): Promise<UploadJob> {
   if (!name.trim() || name.trim().length > 100)
     throw new Error("Enter your name before recording.");
@@ -112,7 +113,7 @@ export async function saveAudioDraft(
   ) {
     throw new Error("This voice note format or size is not supported.");
   }
-  const job = createAudioJob(side, event, name, blob, isPrivate);
+  const job = { ...createAudioJob(side, event, name, blob, isPrivate), uid };
   await saveUploadJob(job);
   return job;
 }
@@ -248,7 +249,7 @@ async function processUploadJobOnce(
                 : "Uploading voice note",
             error: undefined,
           };
-          await saveUploadJob(current);
+          if (phase !== "complete") await saveUploadJob(current);
           handlers.onJob?.(current);
         }
       );

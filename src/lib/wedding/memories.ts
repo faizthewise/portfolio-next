@@ -387,7 +387,8 @@ export async function readSettings(
 export async function saveWish(
   event: WeddingEventId,
   name: string,
-  message: string
+  message: string,
+  submissionTime = Date.now()
 ) {
   if (
     !name.trim() ||
@@ -398,12 +399,27 @@ export async function saveWish(
     throw new Error("Add your name and a message up to 2,000 characters.");
   const uid = await getWeddingGuest();
   const db = getWeddingFirestore();
-  const id = `${uid}_${Date.now()}`;
-  await setDoc(doc(db, `${root(event)}/wishes/${id}`), {
-    uid,
-    guestName: name.trim(),
-    message: message.trim(),
-    createdAt: serverTimestamp(),
+  const target = doc(db, `${root(event)}/wishes/${uid}_${submissionTime}`);
+  const guestName = name.trim();
+  const text = message.trim();
+  await runTransaction(db, async (transaction) => {
+    const existing = await transaction.get(target);
+    if (existing.exists()) {
+      const saved = existing.data();
+      if (
+        saved.uid !== uid ||
+        saved.guestName !== guestName ||
+        saved.message !== text
+      )
+        throw new Error("A different wish already uses this submission time.");
+      return;
+    }
+    transaction.set(target, {
+      uid,
+      guestName,
+      message: text,
+      createdAt: serverTimestamp(),
+    });
   });
 }
 export async function saveFavorite(

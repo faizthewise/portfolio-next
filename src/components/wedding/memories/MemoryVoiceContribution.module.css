@@ -1,0 +1,351 @@
+/* stylelint-disable selector-class-pattern -- Keep CSS Module names consistent with the guest components. */
+
+.content {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.screenReaderOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.recorder {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.recordingStatus {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 20px;
+  margin: 0;
+  color: var(--memory-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.recordingDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a75250;
+}
+
+.timer {
+  margin: 0;
+  color: var(--memory-ink);
+  font-family: var(--memory-serif);
+  font-size: 2.375rem;
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1;
+}
+
+.waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: min(100%, 215px);
+  height: 34px;
+  margin: 4px 0 8px;
+  overflow: hidden;
+  color: var(--memory-botanical);
+}
+
+.waveform span {
+  flex: 0 1 3px;
+  border-radius: 10px;
+  background: currentcolor;
+  opacity: 0.7;
+}
+
+.recordingRing {
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  border: 1px solid var(--memory-border);
+  border-radius: 50%;
+  background: var(--memory-soft-sage);
+}
+
+.recordingButton,
+.playButton {
+  display: grid;
+  flex: none;
+  place-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--memory-white);
+  background: var(--memory-sage);
+  cursor: pointer;
+}
+
+.recordingButton {
+  width: 72px;
+  height: 72px;
+}
+
+.playButton {
+  width: 44px;
+  height: 44px;
+}
+
+.recordingButton:where(:hover, :active):enabled,
+.playButton:where(:hover, :active):enabled {
+  background: var(--memory-sage-hover);
+}
+
+.recordingButton:disabled,
+.playButton:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.recordingButton:focus-visible,
+.playButton:focus-visible {
+  outline: 2px solid var(--memory-sage);
+  outline-offset: 4px;
+}
+
+.instructions {
+  margin-top: 6px;
+  color: var(--memory-ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.instructions p {
+  margin: 0;
+}
+
+.durationInfo {
+  color: var(--memory-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.visibility {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.visibility legend {
+  margin-bottom: 7px;
+  padding: 0;
+  color: var(--memory-ink);
+  font-family: var(--memory-serif);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.visibilityOptions {
+  display: grid;
+  gap: 6px;
+}
+
+.visibilityOption {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-height: 54px;
+  padding: 7px 10px;
+  border: 1px solid var(--memory-border);
+  border-radius: 12px;
+  color: var(--memory-sage);
+  cursor: pointer;
+}
+
+.visibilityOption:has(input:checked) {
+  border-color: var(--memory-control-border);
+  background: var(--memory-soft-sage);
+}
+
+.visibilityOption:has(input:focus-visible) {
+  outline: 2px solid var(--memory-sage);
+  outline-offset: 2px;
+}
+
+.visibilityOption:has(input:disabled) {
+  cursor: default;
+}
+
+.visibilityOption input {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--memory-control-border);
+  border-radius: 50%;
+  background: var(--memory-white);
+}
+
+.visibilityOption input:checked {
+  border-color: var(--memory-sage);
+  background: radial-gradient(
+    circle,
+    var(--memory-sage) 0 4px,
+    var(--memory-white) 4.5px
+  );
+}
+
+.visibilityOption span {
+  display: block;
+  color: var(--memory-muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.visibilityOption strong {
+  display: block;
+  color: var(--memory-ink);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.reviewActions {
+  display: grid;
+  justify-items: stretch;
+  gap: 4px;
+  min-width: 0;
+}
+
+.review {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--memory-border);
+  border-radius: 14px;
+  background: var(--memory-soft-sage);
+}
+
+.reviewHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 8px;
+}
+
+.reviewHeading h3 {
+  margin: 0;
+  color: var(--memory-ink);
+  font-family: var(--memory-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.reviewHeading span {
+  color: var(--memory-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.player audio {
+  display: none;
+}
+
+.playbackProgress {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.seek,
+.progress {
+  display: block;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--memory-sage);
+}
+
+.seek {
+  height: 44px;
+  padding: 0;
+  opacity: 1;
+  cursor: pointer;
+  transform: translateY(-5px);
+}
+
+.seek:focus-visible {
+  outline: 2px solid var(--memory-sage);
+  outline-offset: 4px;
+}
+
+.progress {
+  height: 44px;
+  padding-block: 19px;
+  transform: translateY(-5px);
+}
+
+.playbackTimes {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  color: var(--memory-muted);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.playbackError {
+  margin: 0;
+  color: var(--memory-ink);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+@media (max-height: 680px) {
+  .content {
+    gap: 14px;
+  }
+
+  .waveform {
+    margin-block: 2px 4px;
+  }
+}
+
+@media (max-width: 349px) and (max-height: 619px) {
+  .waveform {
+    height: 30px;
+    margin-block: 0 2px;
+  }
+
+  .instructions {
+    margin-top: 4px;
+  }
+}
+
+@media (forced-colors: active) {
+  .visibilityOption input {
+    appearance: auto;
+  }
+}

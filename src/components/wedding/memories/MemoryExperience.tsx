@@ -2,7 +2,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import weddingFonts from "@/styles/WeddingFonts.module.css";
-import { Mic, Upload } from "lucide-react";
+import { Heart, PenLine, Upload } from "lucide-react";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
 import type { WeddingEventId } from "@/lib/wedding/invitations";
 import {
@@ -29,6 +29,7 @@ import {
 } from "@/lib/wedding/memories";
 import {
   listUploadJobs,
+  removeUploadJob,
   type LocalPhotoDraft,
   type UploadJob,
 } from "@/lib/wedding/memoriesQueue";
@@ -86,6 +87,18 @@ import { MemoryGuestHub } from "./MemoryGuestHub";
 import { MemoryGuestNav } from "./MemoryGuestNav";
 import { MemoryHomeUploadStatus } from "./MemoryHomeUploadStatus";
 import { MemoryGuestPanel } from "./MemoryGuestPanel";
+import {
+  ContributionActions,
+  ContributionPrimary,
+  ContributionSecondary,
+  MemoryContributionSheet,
+} from "./MemoryContributionSheet";
+import {
+  isMemoryWishValid,
+  MemoryWishContribution,
+} from "./MemoryWishContribution";
+import { MemoryVoiceContribution } from "./MemoryVoiceContribution";
+import { useMemoryVoiceRecorder } from "./useMemoryVoiceRecorder";
 import type { PhotoStyle } from "@/lib/wedding/memoriesRender";
 import styles from "./Memories.module.css";
 import homeStyles from "./MemoryGuestHome.module.css";
@@ -95,12 +108,7 @@ type GuestPanel = "voice" | "wish" | "upload" | "identity";
 type IdentityIntent = "camera" | "review" | "upload" | "voice" | "wish";
 type QuotaState = "loading" | "ready" | "error";
 
-const panelTitles: Record<GuestPanel, string> = {
-  voice: "Voice note",
-  wish: "Write a wish",
-  upload: "Upload photos",
-  identity: "Add your name",
-};
+type SentContribution = "wish" | "voice-shared" | "voice-private";
 
 const identityCopy: Record<IdentityIntent, string> = {
   camera: "Your name will appear with the photos you share.",
@@ -160,19 +168,21 @@ export function MemoryExperience({
   const favoriteReads = useRef(new Set<string>());
   const favoriteWrites = useRef(new Set<string>());
   const favoriteVersions = useRef(new Map<string, number>());
-  const [message, setMessage] = useState<{
-    kind: "wish" | "voice";
-    text: string;
-  }>();
+  const [voiceUploadNotice, setVoiceUploadNotice] = useState<string>();
+  const [sentContribution, setSentContribution] = useState<SentContribution>();
+  const [contributionError, setContributionError] = useState("");
+  const [contributionBusy, setContributionBusy] = useState(false);
+  const [confirmation, setConfirmation] = useState<"discard" | "rerecord">();
+  const contributionBusyRef = useRef(false);
+  const contributionSession = useRef(0);
+  const requestContributionBack = useRef<() => void>();
+  const wishAttempt = useRef<{ value: string; timestamp: number }>();
+  const voiceJob = useRef<UploadJob>();
   const [error, setError] = useState("");
   const [cameraUploadError, setCameraUploadError] = useState("");
   const [storageNotice, setStorageNotice] = useState("");
   const [wish, setWish] = useState("");
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-  const [recording, setRecording] = useState(false);
-  const [microphonePending, setMicrophonePending] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [savingVoice, setSavingVoice] = useState(false);
   const [privateVoice, setPrivateVoice] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraStartInTray, setCameraStartInTray] = useState(false);
@@ -181,7 +191,6 @@ export function MemoryExperience({
   const [identityIntent, setIdentityIntent] = useState<IdentityIntent>();
   const [nameDraft, setNameDraft] = useState("");
   const [addingFiles, setAddingFiles] = useState(false);
-  const [sendingWish, setSendingWish] = useState(false);
   const [online, setOnline] = useState(true);
   const [confirmedPhotoCount, setConfirmedPhotoCount] = useState(0);
   const [quotaSnapshot, setQuotaSnapshot] = useState<{
@@ -195,25 +204,35 @@ export function MemoryExperience({
     useState<GalleryStatus>("loading");
   const guestPanelRef = useRef(guestPanel);
   guestPanelRef.current = guestPanel;
-  const microphoneGenerationRef = useRef(0);
   const pageCursorRef = useRef(resetMemoryPage<PhotoCursor>());
   const myPageCursorRef = useRef(resetMemoryPage<PhotoCursor>());
   const mainRef = useRef<HTMLElement>(null);
   const surfaceTriggerRef = useRef<HTMLElement | null>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const photoBatchRef = useRef(false);
-  const sendWishRef = useRef(false);
   const loadedQueueRef = useRef<typeof eventId>();
   const loadedDraftsRef = useRef<typeof eventId>();
   const photoSuccessTimer = useRef<number>();
-  const recorderRef = useRef<MediaRecorder>();
-  const timerRef = useRef<number>();
-  const recordingTickRef = useRef<number>();
-  const microphoneRequestRef = useRef(false);
   const inFlightRef = useRef(new Set<string>());
   const completedUploads = useRef(new Set<string>());
   const activeRef = useRef(true);
   const previousPage = useRef(page);
+  const previousEvent = useRef(eventId);
+  const recorder = useMemoryVoiceRecorder();
+  const resetRecorder = recorder.reset;
+  const resetContribution = useCallback(() => {
+    contributionSession.current += 1;
+    contributionBusyRef.current = false;
+    wishAttempt.current = undefined;
+    voiceJob.current = undefined;
+    setContributionBusy(false);
+    setConfirmation(undefined);
+    setSentContribution(undefined);
+    setContributionError("");
+    setWish("");
+    setPrivateVoice(false);
+    resetRecorder();
+  }, [resetRecorder]);
   const isGallery = page === "gallery";
   const isAlbum = page === "my-album";
   const albumTab: AlbumTab =
@@ -402,19 +421,18 @@ export function MemoryExperience({
   }, [isAlbum]);
 
   useEffect(() => {
-    if (previousPage.current === page) return;
+    if (previousPage.current === page && previousEvent.current === eventId)
+      return;
     previousPage.current = page;
+    previousEvent.current = eventId;
     setGuestPanel(null);
     setCameraOpen(false);
-    microphoneGenerationRef.current += 1;
-    microphoneRequestRef.current = false;
-    setMicrophonePending(false);
-    if (recorderRef.current?.state === "recording") recorderRef.current.stop();
+    resetContribution();
     const focus = window.requestAnimationFrame(() =>
       mainRef.current?.focus({ preventScroll: true })
     );
     return () => window.cancelAnimationFrame(focus);
-  }, [page]);
+  }, [page, eventId, resetContribution]);
 
   useEffect(() => {
     const updateConnection = () => setOnline(navigator.onLine);
@@ -490,18 +508,7 @@ export function MemoryExperience({
   }, [eventId, guestUid, wantsPersonalPhotos, myPhotoAttempt]);
   useEffect(
     () => () => {
-      window.clearTimeout(timerRef.current);
       window.clearTimeout(photoSuccessTimer.current);
-      window.clearInterval(recordingTickRef.current);
-      const recorder = recorderRef.current;
-      if (recorder && recorder.state !== "inactive") {
-        try {
-          recorder.stop();
-        } catch {
-          /* tracks are still stopped below */
-        }
-        recorder.stream.getTracks().forEach((t) => t.stop());
-      }
     },
     []
   );
@@ -607,7 +614,7 @@ export function MemoryExperience({
     rememberSurfaceTrigger();
     setError("");
     setCameraUploadError("");
-    setMessage(undefined);
+    setVoiceUploadNotice(undefined);
     clearPhotoSuccess();
     setCameraStartDraftId(draftId);
     if (!requireIdentity(reviewOnly ? "review" : "camera")) return;
@@ -636,7 +643,7 @@ export function MemoryExperience({
   function openPanel(panel: Exclude<GuestPanel, "identity">) {
     rememberSurfaceTrigger();
     setError("");
-    setMessage(undefined);
+    setVoiceUploadNotice(undefined);
     if (panel === "upload") {
       if (quotaState !== "ready" || !remainingPhotos || photoBatchRef.current)
         return;
@@ -648,20 +655,68 @@ export function MemoryExperience({
   }
   function closeGuestPanel() {
     setError("");
-    setMessage(undefined);
-    if (guestPanelRef.current === "identity" && identityIntent === "wish") {
+    setVoiceUploadNotice(undefined);
+    if (guestPanel === "identity" && identityIntent === "wish") {
       setGuestPanel("wish");
       return;
     }
-    if (microphonePending || microphoneRequestRef.current) {
-      microphoneGenerationRef.current += 1;
-      microphoneRequestRef.current = false;
-      setMicrophonePending(false);
+    if (guestPanel === "wish" || guestPanel === "voice") {
+      if (contributionBusyRef.current) return;
+      const hasContent =
+        guestPanel === "wish"
+          ? wish.length > 0
+          : recorder.phase === "recording" ||
+            recorder.phase === "finalizing" ||
+            recorder.phase === "review";
+      if (!sentContribution && hasContent) {
+        setConfirmation("discard");
+        return;
+      }
+      resetContribution();
     }
-    if (recording) stopRecording();
     guestPanelRef.current = null;
     setGuestPanel(null);
   }
+
+  const protectingContribution =
+    contributionBusy ||
+    (!sentContribution &&
+      (((guestPanel === "wish" ||
+        (guestPanel === "identity" && identityIntent === "wish")) &&
+        wish.length > 0) ||
+        (guestPanel === "voice" &&
+          (recorder.phase === "recording" ||
+            recorder.phase === "finalizing" ||
+            recorder.phase === "review"))));
+  requestContributionBack.current = () => {
+    if (contributionBusyRef.current) return;
+    if (confirmation) setConfirmation(undefined);
+    else closeGuestPanel();
+  };
+
+  useEffect(() => {
+    if (!protectingContribution) return;
+    const { href } = window.location;
+    const entry = window.history.state;
+    router.beforePopState(() => {
+      // Next runs this after a pop moves the URL. Stay on the source page
+      // while the guest resolves the same confirmation as the Close action.
+      if (window.location.href !== href)
+        window.history.pushState(entry, "", href);
+      requestContributionBack.current?.();
+      return false;
+    });
+    function guardDocumentExit(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", guardDocumentExit);
+    return () => {
+      router.beforePopState(() => true);
+      window.removeEventListener("beforeunload", guardDocumentExit);
+    };
+  }, [protectingContribution, router]);
+
   function saveIdentity(nextName: string) {
     const savedName = nextName.trim();
     if (!savedName || savedName.length > 100) {
@@ -878,25 +933,20 @@ export function MemoryExperience({
               () => setConfirmedPhotoCount(0),
               12_000
             );
-          } else {
-            setMessage({
-              kind: "voice",
-              text: job.isPrivate
+          } else if (voiceJob.current?.id !== job.id) {
+            setVoiceUploadNotice(
+              job.isPrivate
                 ? "Private voice note sent to the couple."
-                : "Your voice note is shared in the gallery.",
-            });
+                : "Your voice note is shared in the gallery."
+            );
           }
         }
       } catch (e) {
         result = "failed";
         const failure = getUploadFailure(e);
         if (isCurrentEvent()) {
-          if (!failureRecorded)
-            setError(
-              job.kind === "photo"
-                ? "Couldn’t upload this photo. Open My album to try again."
-                : failure.message
-            );
+          if (!failureRecorded && job.kind === "photo")
+            setError("Couldn’t upload this photo. Open My album to try again.");
           else if (job.kind === "photo" && guestPanelRef.current === "upload")
             setError(
               "Some photos could not upload. Open My album to retry them."
@@ -946,6 +996,7 @@ export function MemoryExperience({
               job.side === side &&
               belongsToGuest(job, guestUid, name) &&
               !completedUploads.current.has(job.id) &&
+              job.id !== voiceJob.current?.id &&
               (job.kind === "audio" || canResumePhotoUpload(job))
           );
           let next = 0;
@@ -957,7 +1008,7 @@ export function MemoryExperience({
                 next < resumable.length
               ) {
                 const job = resumable[next++];
-                await uploadJob(job);
+                if (job.id !== voiceJob.current?.id) await uploadJob(job);
               }
             })
           );
@@ -980,27 +1031,129 @@ export function MemoryExperience({
       window.removeEventListener("online", reconnect);
     };
   }, [side, eventId, guestUid, name, quotaState, uploadJob]);
+  function setContributionPending(pending: boolean) {
+    contributionBusyRef.current = pending;
+    setContributionBusy(pending);
+  }
+
+  function isCurrentContribution(session: number) {
+    return (
+      activeRef.current &&
+      eventScopeRef.current === eventId &&
+      contributionSession.current === session
+    );
+  }
+
   async function sendWish(savedName?: string) {
-    if (sendWishRef.current) return;
-    setError("");
-    if (!wish.trim()) {
-      setError("Write a wish before sharing it.");
+    if (contributionBusyRef.current || !isMemoryWishValid(wish)) return;
+    setContributionError("");
+    if (!savedName && !requireIdentity("wish")) return;
+    if (!navigator.onLine) {
+      setContributionError("You're offline. Reconnect to share your wish.");
       return;
     }
-    if (!savedName && !requireIdentity("wish")) return;
-    sendWishRef.current = true;
-    setSendingWish(true);
+    const value = wish.trim();
+    if (wishAttempt.current?.value !== value)
+      wishAttempt.current = { value, timestamp: Date.now() };
+    const session = contributionSession.current;
+    setContributionPending(true);
     try {
-      await saveWish(eventId, savedName ?? name.trim(), wish);
-      setWish("");
-      setMessage({ kind: "wish", text: "Your wish is shared in the gallery." });
-    } catch (e) {
-      setError((e as Error).message);
+      await saveWish(
+        eventId,
+        savedName ?? name.trim(),
+        value,
+        wishAttempt.current.timestamp
+      );
+      if (isCurrentContribution(session)) {
+        setWish("");
+        setSentContribution("wish");
+      }
+    } catch (reason) {
+      console.warn("Could not share a Wedding Memories wish", reason);
+      if (isCurrentContribution(session))
+        setContributionError("Your wish couldn't be shared. Please try again.");
     } finally {
-      sendWishRef.current = false;
-      setSendingWish(false);
+      if (isCurrentContribution(session)) setContributionPending(false);
     }
   }
+
+  async function shareVoice() {
+    if (contributionBusyRef.current || !recorder.recording || !name.trim())
+      return;
+    setContributionError("");
+    if (!navigator.onLine) {
+      setContributionError("You're offline. Reconnect to share your message.");
+      return;
+    }
+    const session = contributionSession.current;
+    setContributionPending(true);
+    try {
+      let job = voiceJob.current;
+      if (!job) {
+        const uid = guestUid || (await getWeddingGuest());
+        if (!isCurrentContribution(session)) return;
+        const approved = await saveAudioDraft(
+          side,
+          eventId,
+          name.trim(),
+          recorder.recording.blob,
+          privateVoice,
+          uid
+        );
+        if (isCurrentContribution(session)) voiceJob.current = approved;
+        if (activeRef.current && eventScopeRef.current === approved.event)
+          setQueue((rows) => [...rows, approved]);
+        job = approved;
+      }
+      const result = await uploadJob(job);
+      if (!isCurrentContribution(session)) return;
+      if (result !== "uploaded") {
+        setContributionError(
+          "Your message couldn't be shared. You can try again without recording a new one."
+        );
+        return;
+      }
+      voiceJob.current = undefined;
+      resetRecorder();
+      setSentContribution(job.isPrivate ? "voice-private" : "voice-shared");
+    } catch (reason) {
+      console.warn("Could not share a Wedding Memories voice message", reason);
+      if (isCurrentContribution(session))
+        setContributionError(
+          "Your message couldn't be shared. You can try again without recording a new one."
+        );
+    } finally {
+      if (isCurrentContribution(session)) setContributionPending(false);
+    }
+  }
+
+  async function discardContribution() {
+    if (contributionBusyRef.current) return;
+    const approved = voiceJob.current;
+    if (approved) {
+      const session = contributionSession.current;
+      setContributionPending(true);
+      try {
+        await removeUploadJob(approved.id);
+        if (!isCurrentContribution(session)) return;
+        setQueue((rows) => rows.filter((row) => row.id !== approved.id));
+      } catch (reason) {
+        console.warn("Could not remove the queued voice message", reason);
+        if (isCurrentContribution(session)) {
+          setConfirmation(undefined);
+          setContributionError(
+            "We couldn't remove the queued message. Please try again."
+          );
+          setContributionPending(false);
+        }
+        return;
+      }
+    }
+    resetContribution();
+    guestPanelRef.current = null;
+    setGuestPanel(null);
+  }
+
   async function toggleFavorite(id: string) {
     const writes = favoriteWrites.current;
     if (writes.has(id) || !guestUid) return false;
@@ -1075,116 +1228,56 @@ export function MemoryExperience({
     }
   }
 
-  async function startRecording() {
-    if (microphoneRequestRef.current || recording || recorderRef.current)
-      return;
-    microphoneRequestRef.current = true;
-    const requestId = ++microphoneGenerationRef.current;
-    setMicrophonePending(true);
-    let stream: MediaStream | undefined;
-    try {
-      if (!name.trim()) return;
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (!activeRef.current) {
-        stream.getTracks().forEach((track) => track.stop());
-        return;
-      }
-      if (
-        requestId !== microphoneGenerationRef.current ||
-        guestPanelRef.current !== "voice"
-      ) {
-        stream.getTracks().forEach((track) => track.stop());
-        return;
-      }
-      const mime = [
-        "audio/webm;codecs=opus",
-        "audio/mp4",
-        "audio/ogg;codecs=opus",
-        "audio/webm",
-      ].find((x) => MediaRecorder.isTypeSupported(x));
-      if (!mime)
-        throw new Error("This browser does not support voice recording.");
-      const rec = new MediaRecorder(stream, { mimeType: mime });
-      recorderRef.current = rec;
-      const chunks: Blob[] = [];
-      rec.ondataavailable = (e) => {
-        if (e.data.size) chunks.push(e.data);
-      };
-      rec.onstop = async () => {
-        stream?.getTracks().forEach((t) => t.stop());
-        window.clearTimeout(timerRef.current);
-        window.clearInterval(recordingTickRef.current);
-        if (activeRef.current) {
-          setRecording(false);
-          setSavingVoice(true);
-        }
-        try {
-          const job = await saveAudioDraft(
-            side,
-            eventId,
-            name.trim(),
-            new Blob(chunks, { type: mime }),
-            privateVoice
-          );
-          if (activeRef.current) setQueue((rows) => [...rows, job]);
-          if (navigator.onLine) void uploadJob(job);
-        } catch (e) {
-          if (activeRef.current) setError((e as Error).message);
-        } finally {
-          recorderRef.current = undefined;
-          if (activeRef.current) setSavingVoice(false);
-        }
-      };
-      rec.onerror = () => {
-        stream?.getTracks().forEach((track) => track.stop());
-        try {
-          if (rec.state !== "inactive") rec.stop();
-        } catch {
-          /* already stopped */
-        }
-        if (activeRef.current)
-          setError(
-            "Microphone recording failed. Check browser permissions and try again."
-          );
-      };
-      rec.start();
-      setRecording(true);
-      setRecordingSeconds(0);
-      recordingTickRef.current = window.setInterval(
-        () => setRecordingSeconds((seconds) => Math.min(30, seconds + 1)),
-        1000
-      );
-      timerRef.current = window.setTimeout(() => stopRecording(), 30_000);
-    } catch (e) {
-      stream?.getTracks().forEach((t) => t.stop());
-      if (
-        requestId === microphoneGenerationRef.current &&
-        guestPanelRef.current === "voice"
-      )
-        setError((e as Error).message);
-    } finally {
-      if (requestId === microphoneGenerationRef.current) {
-        microphoneRequestRef.current = false;
-        if (activeRef.current) setMicrophonePending(false);
-      }
-    }
-  }
-  function stopRecording() {
-    window.clearTimeout(timerRef.current);
-    window.clearInterval(recordingTickRef.current);
-    const recorder = recorderRef.current;
-    if (!recorder || recorder.state === "inactive") return;
-    try {
-      recorder.stop();
-    } catch {
-      return;
-    }
-    setRecording(false);
-    setSavingVoice(true);
-  }
   const homeHref = memoryPath(side);
   const galleryHref = memoryPath(side, "gallery");
   const { coupleNames, dateLabel } = MEMORY_PUBLIC_ALBUMS[side];
+  function viewLoveInGallery(tab: "wishes" | "voice-notes") {
+    closeGuestPanel();
+    if (isGallery) changeGalleryTab(tab);
+    else void router.push(`${galleryHref}#${tab}`);
+  }
+
+  function confirmRecordAgain() {
+    setConfirmation(undefined);
+    setContributionError("");
+    resetRecorder();
+  }
+
+  const composingWish = guestPanel === "wish";
+  const composingVoice = guestPanel === "voice";
+  const wishSuccess = sentContribution === "wish";
+  const privateSuccess = sentContribution === "voice-private";
+  const existingVoiceJobs = composingVoice
+    ? guestJobs.filter(
+        (job) => job.kind === "audio" && job.id !== voiceJob.current?.id
+      )
+    : [];
+  const contributionConfirmation =
+    confirmation === "rerecord"
+      ? {
+          title: "Record a new message?",
+          description: "Your current recording will be replaced.",
+          keepLabel: "Keep message",
+          confirmLabel: "Record again",
+          onKeep: () => setConfirmation(undefined),
+          onConfirm: confirmRecordAgain,
+        }
+      : confirmation === "discard"
+      ? {
+          title: composingWish
+            ? "Discard your wish?"
+            : "Discard your recording?",
+          description: voiceJob.current
+            ? "Discarding removes this message from this device’s upload queue."
+            : "Your message hasn't been shared yet.",
+          keepLabel: composingWish ? "Keep editing" : "Keep message",
+          confirmLabel: "Discard",
+          onKeep: () => {
+            if (!contributionBusyRef.current) setConfirmation(undefined);
+          },
+          onConfirm: () => void discardContribution(),
+        }
+      : undefined;
   function isFavoritePending(id: string) {
     return (
       !guestUid ||
@@ -1424,7 +1517,7 @@ export function MemoryExperience({
             activeUploadIds={activeUploadIds}
             online={online}
             confirmedPhotoCount={confirmedPhotoCount}
-            message={message?.kind === "voice" ? message.text : undefined}
+            message={voiceUploadNotice}
             onAlbum={openAlbumUploads}
             onVoice={() => openPanel("voice")}
           />
@@ -1441,23 +1534,18 @@ export function MemoryExperience({
         }
       />
       {photoViewer.viewer}
-      {guestPanel && (
+      {(guestPanel === "identity" || guestPanel === "upload") && (
         <MemoryGuestPanel
           theme={event.theme}
-          title={panelTitles[guestPanel]}
+          title={guestPanel === "identity" ? "Add your name" : "Upload photos"}
           backgroundRef={mainRef}
+          returnFocusRef={surfaceTriggerRef}
           className={
             guestPanel === "identity"
               ? `${homeStyles.identityPanel} ${weddingFonts.memory}`
               : undefined
           }
-          message={
-            guestPanel === "upload"
-              ? photoSuccess
-              : guestPanel === message?.kind
-              ? message.text
-              : undefined
-          }
+          message={guestPanel === "upload" ? photoSuccess : undefined}
           error={isGallery ? guestFacingGalleryError(error) : error}
           onClose={closeGuestPanel}
         >
@@ -1538,86 +1626,120 @@ export function MemoryExperience({
               </button>
             </section>
           )}
-          {guestPanel === "voice" && (
-            <section className={styles.section}>
-              <p>
-                Record up to 30 seconds. Anyone with the album link can listen
-                to a shared voice note. Only the couple can listen to a private
-                voice note.
-              </p>
-              <label className={styles.check}>
-                <input
-                  type="checkbox"
-                  checked={privateVoice}
-                  disabled={recording || microphonePending || savingVoice}
-                  onChange={(event) => setPrivateVoice(event.target.checked)}
-                />
-                Keep this voice note private
-              </label>
-              <button
-                type="button"
-                className={styles.button}
-                disabled={microphonePending || savingVoice}
-                onClick={() =>
-                  void (recording ? stopRecording() : startRecording())
-                }
-              >
-                <Mic size={17} aria-hidden="true" />
-                {microphonePending
-                  ? "Requesting microphone…"
-                  : recording
-                  ? `Stop and send (${30 - recordingSeconds}s left)`
-                  : savingVoice
-                  ? "Saving voice note…"
-                  : "Start recording (30 seconds max)"}
-              </button>
-              {guestJobs
-                .filter((job) => job.kind === "audio")
-                .map((job) => (
+        </MemoryGuestPanel>
+      )}
+      {(composingWish || composingVoice) && (
+        <MemoryContributionSheet
+          theme={event.theme}
+          backgroundRef={mainRef}
+          returnFocusRef={surfaceTriggerRef}
+          title={
+            sentContribution
+              ? wishSuccess
+                ? "With love, received."
+                : "A voice to remember."
+              : composingWish
+              ? "Write a wish"
+              : "Record a message"
+          }
+          eyebrow={
+            sentContribution
+              ? undefined
+              : composingWish
+              ? "A few heartfelt words"
+              : "A voice to remember"
+          }
+          description={
+            sentContribution
+              ? wishSuccess
+                ? "Thank you for leaving a little piece of your heart with us."
+                : "Thank you for leaving us a memory we can listen to again and again."
+              : composingWish
+              ? "A little advice, a favourite memory, or simply a wish for our forever."
+              : "Some memories are even sweeter when heard in your voice."
+          }
+          icon={
+            sentContribution ? (
+              <Heart size={22} />
+            ) : composingWish ? (
+              <PenLine size={22} />
+            ) : undefined
+          }
+          error={
+            contributionError || (composingVoice ? recorder.error : undefined)
+          }
+          confirmation={contributionConfirmation}
+          onClose={closeGuestPanel}
+        >
+          {sentContribution ? (
+            <ContributionActions>
+              {privateSuccess && (
+                <p className={homeStyles.identityHint} role="status">
+                  Your message has been shared privately with {coupleNames}.
+                </p>
+              )}
+              <ContributionPrimary onClick={closeGuestPanel}>
+                Done
+              </ContributionPrimary>
+              {!privateSuccess && (
+                <ContributionSecondary
+                  onClick={() =>
+                    viewLoveInGallery(wishSuccess ? "wishes" : "voice-notes")
+                  }
+                >
+                  {wishSuccess ? "View wishes" : "View voice notes"}
+                </ContributionSecondary>
+              )}
+            </ContributionActions>
+          ) : composingWish ? (
+            <MemoryWishContribution
+              coupleNames={coupleNames}
+              guestName={name}
+              wish={wish}
+              busy={contributionBusy}
+              onChange={(value) => {
+                setWish(value);
+                setContributionError("");
+              }}
+              onShare={() => void sendWish()}
+            />
+          ) : (
+            <>
+              <MemoryVoiceContribution
+                coupleNames={coupleNames}
+                recorder={recorder}
+                isPrivate={privateVoice}
+                busy={contributionBusy}
+                destinationLocked={Boolean(voiceJob.current)}
+                active={!confirmation}
+                onVisibilityChange={setPrivateVoice}
+                onRecordAgain={() => setConfirmation("rerecord")}
+                onShare={() => void shareVoice()}
+              />
+              {existingVoiceJobs.map((job) => {
+                const sending = activeUploadIds.includes(job.id);
+                return (
                   <div className={styles.queue} key={job.id}>
-                    <span>Voice note · {job.status}</span>
-                    {job.error && <p className={styles.error}>{job.error}</p>}
-                    <button
-                      type="button"
-                      className={styles.secondary}
-                      disabled={!online || activeUploadIds.includes(job.id)}
+                    <p>
+                      {job.isPrivate ? "Private message" : "Shared message"}{" "}
+                      waiting to send
+                    </p>
+                    <ContributionSecondary
+                      disabled={!online || sending}
                       onClick={() => void uploadJob(job)}
                     >
                       {!online
                         ? "Waiting for connection"
-                        : activeUploadIds.includes(job.id)
-                        ? "Sending…"
-                        : "Retry voice note"}
-                    </button>
+                        : sending
+                        ? "Sharing…"
+                        : "Retry message"}
+                    </ContributionSecondary>
                   </div>
-                ))}
-            </section>
+                );
+              })}
+            </>
           )}
-          {guestPanel === "wish" && (
-            <section className={styles.section}>
-              <p>Anyone with the album link can read the wish you share.</p>
-              <label className={styles.label}>
-                Your wish
-                <textarea
-                  maxLength={2000}
-                  value={wish}
-                  disabled={sendingWish}
-                  onChange={(event) => setWish(event.target.value)}
-                  placeholder="A message for Faiz and Harissa"
-                />
-              </label>
-              <p className={styles.small}>{wish.length}/2,000 characters</p>
-              <button
-                type="button"
-                className={styles.button}
-                disabled={sendingWish}
-                onClick={() => void sendWish()}
-              >
-                {sendingWish ? "Sharing…" : "Share wish"}
-              </button>
-            </section>
-          )}
-        </MemoryGuestPanel>
+        </MemoryContributionSheet>
       )}
       {cameraOpen && (
         <MemoryCamera
@@ -1660,9 +1782,9 @@ export function MemoryExperience({
           {storageNotice}
         </p>
       )}
-      {message && isGallery && !guestPanel && !cameraOpen && (
+      {voiceUploadNotice && isGallery && !guestPanel && !cameraOpen && (
         <p role="status" className={styles.status}>
-          {message.text}
+          {voiceUploadNotice}
         </p>
       )}
       {error && !guestPanel && !cameraOpen && (

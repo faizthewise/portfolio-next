@@ -24,6 +24,7 @@ const ownerUid = `${baseUid}-owner`;
 const eventId = "faiz-harissa";
 const root = `weddings/${eventId}/memoryAlbums/main`;
 let loseReservationResponse = false;
+let loseWishResponse = false;
 let failPhotoMetadata = false;
 let failVoicePublish = false;
 function client(name, claims = {}) {
@@ -56,6 +57,10 @@ const adapterFirestore = {
     if (loseReservationResponse) {
       loseReservationResponse = false;
       throw new Error("simulated lost reservation response");
+    }
+    if (loseWishResponse) {
+      loseWishResponse = false;
+      throw new Error("simulated lost wish response");
     }
     return result;
   },
@@ -621,8 +626,10 @@ test("public and private voice helpers persist, recover publish failures, and pr
     eventId,
     "Helper guest",
     audio,
-    true
+    true,
+    baseUid
   );
+  assert.equal(privateJob.uid, baseUid);
   failVoicePublish = true;
   await assert.rejects(
     uploads.processUploadJob(privateJob),
@@ -666,6 +673,22 @@ test("public and private voice helpers persist, recover publish failures, and pr
       .byteLength,
     4
   );
+});
+
+test("retrying the same wish after a lost acknowledgement keeps one contribution", async () => {
+  const submissionTime = Date.now();
+  const path = `${root}/wishes/${baseUid}_${submissionTime}`;
+  loseWishResponse = true;
+  await assert.rejects(
+    data.saveWish(eventId, "Helper guest", "  A note from the heart.  ", submissionTime),
+    /lost wish response/
+  );
+  const first = await firestore.getDoc(firestore.doc(bob.db, path));
+  assert.equal(first.data().message, "A note from the heart.");
+  assert.equal(first.data().guestName, "Helper guest");
+  await data.saveWish(eventId, "Helper guest", "A note from the heart.", submissionTime);
+  const retried = await firestore.getDoc(firestore.doc(bob.db, path));
+  assert.deepEqual(retried.data(), first.data());
 });
 
 test("favourites persist/removal works and complete owner ZIP contains every media variant", async () => {
