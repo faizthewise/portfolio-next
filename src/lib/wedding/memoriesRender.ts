@@ -527,6 +527,91 @@ export function formatPhotoStampCaption(coupleNames: string, capturedAt: number)
   return `* ${coupleNames.toLocaleUpperCase("en-US")} | ${formatPhotoStampDate(capturedAt)}`;
 }
 
+export function formatWeddingPhotoStamp(
+  coupleNames: string,
+  time?: number
+): string {
+  const names = coupleNames
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleUpperCase("en-US");
+  if (time === undefined || !Number.isFinite(new Date(time).getTime()))
+    return names;
+  return [names, formatPhotoStampDate(time)].filter(Boolean).join(" | ");
+}
+
+type WeddingPhotoRenderOptions = {
+  film: PhotoFilm;
+  coupleNames: string;
+  time?: number;
+  thumbnail?: boolean;
+  maxDimension?: number;
+};
+
+export function renderWeddingPhoto(
+  source: CanvasImageSource,
+  {
+    film,
+    coupleNames,
+    time,
+    thumbnail,
+    maxDimension = thumbnail ? 400 : 4096,
+  }: WeddingPhotoRenderOptions
+): HTMLCanvasElement {
+  const canvas = renderPhotoCanvas(source, {
+    film,
+    coupleNames,
+    capturedAt: 0,
+    stamp: "",
+    includeStamp: false,
+    aspectRatio: thumbnail ? 1 : undefined,
+    maxDimension,
+  });
+  const caption = formatWeddingPhotoStamp(coupleNames, time);
+  if (!caption) return canvas;
+
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas is unavailable.");
+  const { width, height } = canvas;
+  const font = (size: number) => `700 ${size}px 'Courier New', monospace`;
+  const size = Math.min(
+    Math.max(width * 0.035, height * 0.022),
+    width * 0.045,
+    height * 0.042
+  );
+  const maxLength = height * 0.6;
+
+  context.save();
+  try {
+    context.direction = "ltr";
+    context.textAlign = "left";
+    context.textBaseline = "alphabetic";
+    context.font = font(size);
+    const measured = context.measureText(caption).width;
+    const fittedSize =
+      measured > maxLength ? (size * maxLength) / measured : size;
+    context.font = font(fittedSize);
+    const bounds = context.measureText(caption);
+    const ascent = Number.isFinite(bounds.actualBoundingBoxAscent)
+      ? bounds.actualBoundingBoxAscent
+      : fittedSize * 0.75;
+    const left = Number.isFinite(bounds.actualBoundingBoxLeft)
+      ? Math.max(0, bounds.actualBoundingBoxLeft)
+      : 0;
+
+    // With the text rotated counterclockwise, its ascent extends towards the left edge.
+    context.translate(width * 0.035 + ascent, height * 0.96 - left);
+    context.rotate(-Math.PI / 2);
+    context.fillStyle = "#E98A43";
+    context.shadowColor = "rgba(44, 23, 14, 0.45)";
+    context.shadowBlur = fittedSize * 0.12;
+    context.fillText(caption, 0, 0);
+  } finally {
+    context.restore();
+  }
+  return canvas;
+}
+
 export function renderPhotoCanvas(
   source: CanvasImageSource,
   options: PhotoRenderOptions

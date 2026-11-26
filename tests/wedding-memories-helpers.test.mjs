@@ -98,6 +98,8 @@ function transpile(path) {
       return transpile("src/lib/wedding/memoriesQueue.ts");
     if (name === "@/lib/wedding/memoriesRender")
       return transpile("src/lib/wedding/memoriesRender.ts");
+    if (name === "@/lib/wedding/memoriesPhotoTime")
+      return transpile("src/lib/wedding/memoriesPhotoTime.ts");
     if (name === "@/lib/wedding/memoriesUploadStatus")
       return transpile("src/lib/wedding/memoriesUploadStatus.ts");
     if (name === "@/lib/wedding/memoryRoutes")
@@ -712,7 +714,7 @@ test("favourites persist/removal works and complete owner ZIP contains every med
   const stampLines = [];
   globalThis.document = {
     createElement: () => ({
-      getContext: () => ({ save() {}, restore() {}, clearRect() {}, getImageData(_x, _y, width, height) { return { data: new Uint8ClampedArray(width * height * 4) }; }, putImageData() {}, drawImage() {}, fillText(value) { stampLines.push(value); }, fillRect() {}, measureText(value) { return { width: value.length * 8 }; }, createLinearGradient() { return { addColorStop() {} }; } }),
+      getContext: () => ({ save() {}, restore() {}, clearRect() {}, getImageData(_x, _y, width, height) { return { data: new Uint8ClampedArray(width * height * 4) }; }, putImageData() {}, drawImage() {}, fillText(value) { stampLines.push(value); }, translate() {}, rotate() {}, measureText(value) { return { width: value.length * 8 }; } }),
       toBlob: (callback) =>
         callback(new Blob(["styled"], { type: "image/jpeg" })),
     }),
@@ -722,16 +724,14 @@ test("favourites persist/removal works and complete owner ZIP contains every med
   const zip = await JSZip.loadAsync(await archive.arrayBuffer());
   assert.ok(zip.file("originals/" + photo.id + ".webp"));
   assert.ok(zip.file("styled-photos/" + photo.id + ".jpg"));
+  const original = await storage.getBytes(storage.ref(owner.storage, photo.data().originalPath));
+  assert.deepEqual(await zip.file("originals/" + photo.id + ".webp").async("nodebuffer"), Buffer.from(original));
   const manifest = JSON.parse(await zip.file("metadata.json").async("string"));
   assert.ok(manifest.wishes.some((wish) => wish.uid === baseUid));
   assert.ok(manifest.privateVoices.some((voice) => voice.uid === baseUid));
   assert.ok(manifest.publicVoices.some((voice) => voice.uid === baseUid));
   const stamps = stampLines.join(" ");
-  assert.match(stamps.replace(/\s+/g, ""), /FaIzTheOneForHarissa/);
-  const compactStamp = stamps.replace(/\s+/g, "");
-  assert.match(compactStamp, /\*HARISSA&FAIZ\|15NOV2026/);
-  assert.ok(
-    stampLines.every((line) => line.length * 8 <= 90),
-    "each rendered stamp line must fit within 90% of the 100px canvas width"
-  );
+  assert.doesNotMatch(stamps, /#|\*/);
+  assert.match(stamps, /HARISSA & FAIZ \| 15 NOV 2026/);
+  assert.equal(stampLines.length, zip.file(/^styled-photos\/.+\.jpg$/).length);
 });

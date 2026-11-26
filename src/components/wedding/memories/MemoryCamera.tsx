@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MEMORY_HASHTAG, type MemorySettings } from "@/lib/wedding/memories";
+import { resolveWeddingPhotoTime } from "@/lib/wedding/memoriesPhotoTime";
 import {
   createCameraWebGLPreview,
   getCameraFrameGeometry,
   getPhotoDimensions,
   renderCameraFrame,
   renderCameraFrameInto,
-  renderPhotoCanvas,
+  renderWeddingPhoto,
   resolvePhotoFilm,
   type CameraWebGLPreview,
   type PhotoFilm,
@@ -938,8 +939,14 @@ async function prepareOptionalPreview(
         reject(new Error("Could not prepare the photo preview."));
       image.src = objectUrl;
     });
+    const { time } = await resolveWeddingPhotoTime(blob, style.capturedAt);
     return await canvasToBlob(
-      renderPhotoCanvas(image, { ...style, coupleNames, maxDimension: 320 })
+      renderWeddingPhoto(image, {
+        film: style.film,
+        coupleNames,
+        time,
+        maxDimension: 320,
+      })
     );
   } catch (reason) {
     console.warn(

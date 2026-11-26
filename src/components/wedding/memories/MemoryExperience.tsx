@@ -75,6 +75,10 @@ import {
 } from "./MemoryGallery";
 import { MemoryGalleryPhoto } from "./MemoryGalleryPhoto";
 import {
+  useMemoryPhotoViewer,
+  type ViewerItem,
+} from "./MemorySharedPhotoViewer";
+import {
   MemoryGalleryVoices,
   MemoryGalleryWishes,
 } from "./MemoryGalleryMessages";
@@ -1181,6 +1185,44 @@ export function MemoryExperience({
   const homeHref = memoryPath(side);
   const galleryHref = memoryPath(side, "gallery");
   const { coupleNames, dateLabel } = MEMORY_PUBLIC_ALBUMS[side];
+  function isFavoritePending(id: string) {
+    return (
+      !guestUid ||
+      (!favoriteLoadError && !favoriteReads.current.has(id)) ||
+      favoritePendingIds.includes(id)
+    );
+  }
+  const photoViewer = useMemoryPhotoViewer({
+    scope: `${eventId}:${page}:${isGallery ? galleryTab : albumTab}`,
+    backgroundRef: mainRef,
+    favoriteIds,
+    isFavoritePending,
+    onFavorite: toggleFavorite,
+  });
+  function renderSharedPhotos(collection: MemoryPhoto[], hasMore: boolean) {
+    const items: ViewerItem[] = collection.map((photo) => ({
+      photo,
+      request: {
+        originalPath: photo.originalPath,
+        uploadKey: photo.uploadKey,
+        coupleNames,
+        film: photo.photoStyle?.film ?? settings?.film ?? "none",
+        recordedAt: photo.photoStyle?.capturedAt,
+        sharedAt: photo.createdAt?.toDate().getTime(),
+      },
+    }));
+    return items.map(({ photo, request }, index) => (
+      <MemoryGalleryPhoto
+        key={photo.id}
+        photo={photo}
+        request={request}
+        onFavorite={toggleFavorite}
+        favorite={favoriteIds.includes(photo.id)}
+        favoritePending={isFavoritePending(photo.id)}
+        onOpen={(opener) => photoViewer.open(items, index, hasMore, opener)}
+      />
+    ));
+  }
   const photoSuccess = confirmedPhotoCount
     ? `${confirmedPhotoCount} ${
         confirmedPhotoCount === 1 ? "photo" : "photos"
@@ -1298,23 +1340,7 @@ export function MemoryExperience({
           success={photoSuccess}
           qrHref={memoryPath(side, "qr")}
         >
-          {myPhotos.map((photo) => (
-            <MemoryGalleryPhoto
-              key={photo.id}
-              photo={photo}
-              side={side}
-              settings={settings}
-              onFavorite={toggleFavorite}
-              favorite={favoriteIds.includes(photo.id)}
-              variant="album"
-              favoritePending={
-                !guestUid ||
-                (!favoriteLoadError && !favoriteReads.current.has(photo.id)) ||
-                favoritePendingIds.includes(photo.id)
-              }
-              backgroundRef={mainRef}
-            />
-          ))}
+          {renderSharedPhotos(myPhotos, myHasMore)}
         </MemoryAlbum>
       ) : isGallery ? (
         <MemoryGallery
@@ -1350,24 +1376,10 @@ export function MemoryExperience({
               onLoadMore={() => void loadMorePhotos(showPersonalPhotos)}
               onContribute={contributeFromGallery}
             >
-              {galleryPhotos.map((photo) => (
-                <MemoryGalleryPhoto
-                  key={photo.id}
-                  photo={photo}
-                  side={side}
-                  settings={settings}
-                  onFavorite={toggleFavorite}
-                  favorite={favoriteIds.includes(photo.id)}
-                  allowViewerFavorite={!showFavorites}
-                  favoritePending={
-                    !guestUid ||
-                    (!favoriteLoadError &&
-                      !favoriteReads.current.has(photo.id)) ||
-                    favoritePendingIds.includes(photo.id)
-                  }
-                  backgroundRef={mainRef}
-                />
-              ))}
+              {renderSharedPhotos(
+                galleryPhotos,
+                showPersonalPhotos ? myHasMore : hasMore
+              )}
             </MemoryGalleryPhotos>
           )}
           {galleryTab === "wishes" && (
@@ -1424,8 +1436,11 @@ export function MemoryExperience({
         isGallery={isGallery}
         albumHref={albumHref}
         isAlbum={isAlbum}
-        hidden={cameraOpen || Boolean(guestPanel)}
+        hidden={
+          cameraOpen || Boolean(guestPanel) || Boolean(photoViewer.viewer)
+        }
       />
+      {photoViewer.viewer}
       {guestPanel && (
         <MemoryGuestPanel
           theme={event.theme}

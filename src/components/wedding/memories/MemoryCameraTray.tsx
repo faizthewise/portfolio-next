@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Image as GalleryIcon, Trash2, Upload, X } from "lucide-react";
-import { MEMORY_HASHTAG } from "@/lib/wedding/memories";
 import type { LocalPhotoDraft, UploadJob } from "@/lib/wedding/memoriesQueue";
-import { renderPhotoCanvas } from "@/lib/wedding/memoriesRender";
+import { renderWeddingPhoto } from "@/lib/wedding/memoriesRender";
+import { resolveWeddingPhotoTime } from "@/lib/wedding/memoriesPhotoTime";
 import {
   getPhotoUploadState,
   hasLocalPhotoMedia,
@@ -358,16 +358,19 @@ function DraftPhotoPreview({
     setError("");
     let active = true;
     const image = new Image();
-    image.onload = () => {
+    image.onload = async () => {
       if (!active || !canvas.current) return;
       try {
-        const rendered = renderPhotoCanvas(image, {
-          ...(draft.photoStyle ?? {
-            film: "none",
-            stamp: MEMORY_HASHTAG,
-            capturedAt: draft.createdAt,
-          }),
+        const { time } = await resolveWeddingPhotoTime(
+          draft.blob,
+          draft.photoStyle?.capturedAt,
+          draft.createdAt
+        );
+        if (!active || !canvas.current) return;
+        const rendered = renderWeddingPhoto(image, {
+          film: draft.photoStyle?.film ?? "none",
           coupleNames,
+          time,
           maxDimension: 1600,
         });
         canvas.current.width = rendered.width;

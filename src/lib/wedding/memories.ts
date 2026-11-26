@@ -33,12 +33,16 @@ import {
   getWeddingOwnerStorage,
 } from "@/lib/wedding/firebase";
 import type { WeddingEventId } from "@/lib/wedding/invitations";
-import { memoryCanonicalUrl } from "@/lib/wedding/memoryRoutes";
 import {
-  renderPhotoCanvas,
+  MEMORY_PUBLIC_ALBUMS,
+  memoryCanonicalUrl,
+} from "@/lib/wedding/memoryRoutes";
+import {
+  renderWeddingPhoto,
   type PhotoFilm,
   type PhotoStyle,
 } from "@/lib/wedding/memoriesRender";
+import { resolveWeddingPhotoTime } from "@/lib/wedding/memoriesPhotoTime";
 import { validatePhotoBytes } from "@/lib/wedding/memoriesQueue";
 
 export const MEMORY_EVENTS = {
@@ -106,10 +110,7 @@ const defaultSettings: MemorySettings = {
   qrUrl: "",
 };
 const root = (event: WeddingEventId) => `weddings/${event}/memoryAlbums/main`;
-function samePhotoStyle(
-  existing: unknown,
-  requested?: PhotoStyle
-): boolean {
+function samePhotoStyle(existing: unknown, requested?: PhotoStyle): boolean {
   if (!requested) return existing === undefined;
   if (!existing || typeof existing !== "object") return false;
   const style = existing as PhotoStyle;
@@ -119,8 +120,7 @@ function samePhotoStyle(
     style.capturedAt === requested.capturedAt
   );
 }
-export const memoryUrl = (side: "bride" | "groom") =>
-  memoryCanonicalUrl(side);
+export const memoryUrl = (side: "bride" | "groom") => memoryCanonicalUrl(side);
 export const MEMORY_PAGE_SIZE = 24;
 export type PhotoCursor = QueryDocumentSnapshot<DocumentData>;
 
@@ -647,10 +647,15 @@ export async function exportMemoryFiles(
       const image = new Image();
       image.src = source;
       await image.decode();
-      const styled = drawStyledPhoto(image, settings.film, settings.stamp, {
-        photoDate: dateValue(p.createdAt),
+      const { time } = await resolveWeddingPhotoTime(
+        blob,
+        p.photoStyle?.capturedAt,
+        dateValue(p.createdAt)?.getTime()
+      );
+      const styled = renderWeddingPhoto(image, {
+        film: p.photoStyle?.film ?? settings.film,
         coupleNames: coupleNamesForEvent(event),
-        photoStyle: p.photoStyle,
+        time,
       });
       const styledBlob = await new Promise<Blob>((resolve, reject) =>
         styled.toBlob(
@@ -689,29 +694,6 @@ export async function exportMemoryFiles(
 function extension(type: string) {
   return type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm";
 }
-export function drawStyledPhoto(
-  image: HTMLImageElement,
-  film: MemorySettings["film"],
-  stamp: string,
-  options: {
-    maxDimension?: number;
-    photoDate?: Date;
-    coupleNames?: string;
-    photoStyle?: PhotoStyle;
-  } = {}
-) {
-  const selected = options.photoStyle;
-  return renderPhotoCanvas(image, {
-    film: selected?.film ?? film,
-    stamp: selected?.stamp ?? stamp,
-    capturedAt:
-      selected?.capturedAt ??
-      options.photoDate?.getTime() ??
-      Date.now(),
-    coupleNames: options.coupleNames ?? "Harissa & Faiz",
-    maxDimension: options.maxDimension,
-  });
-}
 function dateValue(value: unknown): Date | undefined {
   if (
     value &&
@@ -724,5 +706,7 @@ function dateValue(value: unknown): Date | undefined {
   return undefined;
 }
 function coupleNamesForEvent(event: WeddingEventId) {
-  return event === "faiz-harissa" ? "Harissa & Faiz" : "Faiz & Harissa";
+  return MEMORY_PUBLIC_ALBUMS[
+    event === MEMORY_EVENTS.bride.id ? "bride" : "groom"
+  ].coupleNames;
 }

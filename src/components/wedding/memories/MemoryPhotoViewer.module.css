@@ -1,0 +1,242 @@
+.viewer {
+  --viewer-ivory: #f7f3e8;
+  --viewer-sage: #b4bfb0;
+  --viewer-background: #171b17;
+
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  inline-size: 100%;
+  max-inline-size: none;
+  block-size: 100%;
+  block-size: 100dvh;
+  max-block-size: none;
+  margin: 0;
+  padding: max(4px, env(safe-area-inset-top))
+    max(8px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
+    max(8px, env(safe-area-inset-left));
+  border: 0;
+  overflow: hidden;
+  background: var(--viewer-background);
+  color: var(--viewer-ivory);
+  font-family: var(--memory-sans, system-ui, sans-serif);
+  overscroll-behavior: contain;
+}
+
+.viewer[open] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+}
+
+.viewer::backdrop {
+  background: var(--viewer-background);
+}
+
+.viewer p,
+.viewer h2 {
+  margin: 0;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  column-gap: 8px;
+  inline-size: min(100%, 720px);
+  margin-inline: auto;
+}
+
+.icon-button {
+  display: grid;
+  inline-size: 44px;
+  block-size: 44px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.icon-button[aria-disabled="true"] {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.icon-button[aria-pressed="true"] {
+  color: #edaaab;
+}
+
+.attribution {
+  min-inline-size: 0;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.attribution p,
+.attribution span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attribution p {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.attribution span {
+  color: var(--viewer-sage);
+  font-size: 0.75rem;
+}
+
+.navigation {
+  display: flex;
+  min-block-size: 24px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--viewer-sage);
+}
+
+.counter {
+  min-inline-size: 64px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.screen-reader-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.stage {
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  min-block-size: 0;
+  place-items: center;
+  margin-block: 3px 6px;
+}
+
+.stage img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+}
+
+.stage p,
+.footer p {
+  color: var(--viewer-sage);
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.load-error {
+  text-align: center;
+}
+
+.load-error button {
+  min-block-size: 44px;
+  padding-inline: 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--viewer-ivory);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.filmstrip {
+  display: flex;
+  grid-row: 4;
+  inline-size: max-content;
+  min-inline-size: 0;
+  max-inline-size: min(100%, 440px);
+  gap: 5px;
+  justify-self: center;
+  box-sizing: border-box;
+  padding: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filmstrip::-webkit-scrollbar {
+  display: none;
+}
+
+.filmstrip button {
+  flex: 0 0 44px;
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: #2b332b;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.filmstrip button[aria-current="true"] {
+  border-color: var(--viewer-ivory);
+  opacity: 1;
+}
+
+.filmstrip img {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
+.footer {
+  display: grid;
+  grid-row: 5;
+  inline-size: min(100%, 420px);
+  gap: 6px;
+  justify-self: center;
+  padding-block-start: 6px;
+  text-align: center;
+}
+
+.download {
+  display: flex;
+  min-block-size: 50px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--viewer-ivory);
+  color: #263c2a;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.download[aria-disabled="true"] {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.viewer button:focus-visible {
+  outline: 2px solid var(--viewer-ivory);
+  outline-offset: 2px;
+}
+
+@media (max-height: 440px) {
+  .filmstrip {
+    display: none;
+  }
+}
