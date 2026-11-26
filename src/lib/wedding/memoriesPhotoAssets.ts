@@ -30,7 +30,7 @@ type AssetState = {
   attempt?: number;
   asset?: StyledPhotoAsset;
   src?: string;
-  status: "loading" | "ready" | "error";
+  status: "loading" | "ready" | "error" | "missing";
 };
 
 const thumbnailSize = 400;
@@ -118,8 +118,17 @@ function makePhotoQueue(workerLimit: number, fullLimit: number) {
 const scheduleRead = makePhotoQueue(3, 3);
 const scheduleRender = makePhotoQueue(2, 1);
 
-function originalKey({ originalPath, uploadKey }: SharedPhotoAssetRequest) {
+export function getPhotoOriginalKey({
+  originalPath,
+  uploadKey,
+}: Pick<SharedPhotoAssetRequest, "originalPath" | "uploadKey">) {
   return JSON.stringify([originalPath, uploadKey]);
+}
+
+export function isMissingPhotoObject(error: unknown) {
+  return (
+    (error as { code?: string } | null)?.code === "storage/object-not-found"
+  );
 }
 
 export function getStyledPhotoKey(
@@ -127,7 +136,7 @@ export function getStyledPhotoKey(
   variant: PhotoVariant
 ) {
   return JSON.stringify([
-    originalKey(request),
+    getPhotoOriginalKey(request),
     request.coupleNames,
     request.film,
     request.recordedAt,
@@ -140,7 +149,7 @@ function getOriginal(
   request: SharedPhotoAssetRequest,
   variant: PhotoVariant
 ): Promise<Original> {
-  const key = originalKey(request);
+  const key = getPhotoOriginalKey(request);
   const cached = originals.get(key);
   if (cached) return Promise.resolve(cached);
   const pending = pendingOriginals.get(key);
@@ -184,7 +193,7 @@ async function renderAsset(
     try {
       await withTimeout(image.decode(), 6000);
     } catch (error) {
-      originals.delete(originalKey(request));
+      originals.delete(getPhotoOriginalKey(request));
       throw error;
     }
     const resolvedTime =
@@ -257,7 +266,8 @@ export function getStyledPhotoAsset(
 
 export function useStyledPhotoAsset(
   request: SharedPhotoAssetRequest | undefined,
-  variant: PhotoVariant
+  variant: PhotoVariant,
+  onMissing: (originalKey: string) => void
 ): Pick<AssetState, "asset" | "src" | "status"> & { retry: () => void } {
   const [state, setState] = useState<AssetState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -286,6 +296,11 @@ export function useStyledPhotoAsset(
       })
       .catch((reason) => {
         if (!active) return;
+        if (isMissingPhotoObject(reason)) {
+          onMissing(getPhotoOriginalKey({ originalPath, uploadKey }));
+          setState({ key, attempt, status: "missing" });
+          return;
+        }
         console.warn("Could not prepare Wedding Memories photo", reason);
         setState({ key, attempt, status: "error" });
       });
@@ -299,6 +314,7 @@ export function useStyledPhotoAsset(
     film,
     key,
     originalPath,
+    onMissing,
     recordedAt,
     sharedAt,
     uploadKey,

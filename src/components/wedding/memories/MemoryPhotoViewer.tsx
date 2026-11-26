@@ -11,7 +11,7 @@ type MemoryPhotoViewerProps = {
   position: number;
   count: number;
   hasMore: boolean;
-  photoStatus: "loading" | "ready" | "error";
+  photoStatus: "loading" | "ready" | "error" | "missing";
   imageUrl?: string;
   onImageError: () => void;
   onRetry: () => void;
@@ -201,16 +201,18 @@ export function MemoryPhotoViewer({
             <ChevronLeft size={20} aria-hidden="true" />
           </button>
         )}
-        <p className={styles.counter} role="status">
-          <span aria-hidden="true">
-            {position} / {count}
-            {loadedCount}
-          </span>
-          <span className={styles["screen-reader-only"]}>
-            Photo {position} of {count}
-            {loadedCount}
-          </span>
-        </p>
+        {count > 0 && (
+          <p className={styles.counter} role="status">
+            <span aria-hidden="true">
+              {position} / {count}
+              {loadedCount}
+            </span>
+            <span className={styles["screen-reader-only"]}>
+              Photo {position} of {count}
+              {loadedCount}
+            </span>
+          </p>
+        )}
         {count > 1 && (
           <button
             className={styles["icon-button"]}
@@ -280,6 +282,13 @@ export function MemoryPhotoViewer({
             draggable={false}
             onError={onImageError}
           />
+        ) : photoStatus === "missing" ? (
+          <div className={styles["load-error"]}>
+            <p role="status">This photo is no longer available.</p>
+            <button type="button" onClick={onClose}>
+              Back to photos
+            </button>
+          </div>
         ) : photoStatus === "error" ? (
           <div className={styles["load-error"]}>
             <p role="alert">This photo could not load.</p>
@@ -329,15 +338,17 @@ export function MemoryPhotoViewer({
         <span className={styles["screen-reader-only"]} role="status">
           {downloadPending ? "Preparing photo…" : ""}
         </span>
-        <button
-          className={styles.download}
-          type="button"
-          aria-disabled={!ready || downloadPending}
-          onClick={ready && !downloadPending ? onDownload : undefined}
-        >
-          <Download size={19} aria-hidden="true" />
-          {downloadPending ? "Preparing photo…" : "Download photo"}
-        </button>
+        {photoStatus !== "missing" && (
+          <button
+            className={styles.download}
+            type="button"
+            aria-disabled={!ready || downloadPending}
+            onClick={ready && !downloadPending ? onDownload : undefined}
+          >
+            <Download size={19} aria-hidden="true" />
+            {downloadPending ? "Preparing photo…" : "Download photo"}
+          </button>
+        )}
       </footer>
     </dialog>,
     document.body

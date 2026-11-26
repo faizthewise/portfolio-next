@@ -60,6 +60,7 @@ import {
   mergeMemoryRows,
   resetMemoryPage,
 } from "@/lib/wedding/memoriesPagination";
+import { getPhotoOriginalKey } from "@/lib/wedding/memoriesPhotoAssets";
 import { MemoryCamera } from "./MemoryCamera";
 import { MemoryAlbum, type AlbumTab } from "./MemoryAlbum";
 import {
@@ -136,6 +137,14 @@ export function MemoryExperience({
   const [name, setName] = useState("");
   const [photos, setPhotos] = useState<MemoryPhoto[]>([]);
   const [myPhotos, setMyPhotos] = useState<MemoryPhoto[]>([]);
+  const [missingPhotoKeys, setMissingPhotoKeys] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
+  const hideMissingPhoto = useCallback((key: string) => {
+    setMissingPhotoKeys((current) =>
+      current.has(key) ? current : new Set(current).add(key)
+    );
+  }, []);
   const [settings, setSettings] = useState<MemorySettings>();
   const [queue, setQueue] = useState<UploadJob[]>([]);
   const [localPhotoDrafts, setLocalPhotoDrafts] = useState<LocalPhotoDraft[]>(
@@ -279,7 +288,12 @@ export function MemoryExperience({
   );
   const showPersonalPhotos = galleryFilters.scope === "my";
   const showFavorites = galleryFilters.scope === "favorites";
-  const gallerySourcePhotos = showPersonalPhotos ? myPhotos : photos;
+  const isAvailable = (photo: MemoryPhoto) =>
+    !missingPhotoKeys.has(getPhotoOriginalKey(photo));
+  const availableMyPhotos = myPhotos.filter(isAvailable);
+  const gallerySourcePhotos = showPersonalPhotos
+    ? availableMyPhotos
+    : photos.filter(isAvailable);
   const galleryGuests = Array.from(
     new Set([
       ...gallerySourcePhotos.map((photo) => photo.guestName),
@@ -294,7 +308,7 @@ export function MemoryExperience({
   );
   const hasUnreadFavorites =
     showFavorites &&
-    photos.some((photo) => !favoriteReads.current.has(photo.id));
+    gallerySourcePhotos.some((photo) => !favoriteReads.current.has(photo.id));
   const personalPhotoStatus =
     (!guestUid && quotaState === "error") ||
     (!online && myPhotoStatus === "ready" && myPhotos.length === 0)
@@ -1291,6 +1305,8 @@ export function MemoryExperience({
     favoriteIds,
     isFavoritePending,
     onFavorite: toggleFavorite,
+    missingPhotoKeys,
+    onMissing: hideMissingPhoto,
   });
   function renderSharedPhotos(collection: MemoryPhoto[], hasMore: boolean) {
     const items: ViewerItem[] = collection.map((photo) => ({
@@ -1312,6 +1328,7 @@ export function MemoryExperience({
         onFavorite={toggleFavorite}
         favorite={favoriteIds.includes(photo.id)}
         favoritePending={isFavoritePending(photo.id)}
+        onMissing={hideMissingPhoto}
         onOpen={(opener) => photoViewer.open(items, index, hasMore, opener)}
       />
     ));
@@ -1401,7 +1418,7 @@ export function MemoryExperience({
           tab={albumTab}
           uploadCount={albumUploads.length}
           photoStatus={personalPhotoStatus}
-          photoCount={myPhotos.length}
+          photoCount={availableMyPhotos.length}
           hasMore={myHasMore}
           loadingMore={loadingMore}
           loadMoreFailed={photoPageError === "personal"}
@@ -1433,7 +1450,7 @@ export function MemoryExperience({
           success={photoSuccess}
           qrHref={memoryPath(side, "qr")}
         >
-          {renderSharedPhotos(myPhotos, myHasMore)}
+          {renderSharedPhotos(availableMyPhotos, myHasMore)}
         </MemoryAlbum>
       ) : isGallery ? (
         <MemoryGallery

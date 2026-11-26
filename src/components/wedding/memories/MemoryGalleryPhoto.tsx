@@ -14,6 +14,7 @@ type PhotoProps = {
   favorite: boolean;
   favoritePending?: boolean;
   onOpen: (button: HTMLButtonElement) => void;
+  onMissing: (originalKey: string) => void;
 };
 
 export function MemoryGalleryPhoto({
@@ -23,13 +24,15 @@ export function MemoryGalleryPhoto({
   favorite,
   favoritePending = false,
   onOpen,
+  onMissing,
 }: PhotoProps) {
   const card = useRef<HTMLElement>(null);
   const [nearViewport, setNearViewport] = useState(false);
   const [failedSource, setFailedSource] = useState<string>();
   const { src, status, retry } = useStyledPhotoAsset(
     nearViewport ? request : undefined,
-    "thumbnail"
+    "thumbnail",
+    onMissing
   );
 
   useEffect(() => {
@@ -51,6 +54,8 @@ export function MemoryGalleryPhoto({
     observer.observe(node);
     return () => observer.disconnect();
   }, [nearViewport]);
+
+  if (status === "missing") return null;
 
   const imageFailed = !!src && src === failedSource;
   return (

@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import type { MemoryPhoto } from "@/lib/wedding/memories";
 import {
   getStyledPhotoAsset,
+  getPhotoOriginalKey,
+  isMissingPhotoObject,
   useStyledPhotoAsset,
   type SharedPhotoAssetRequest,
 } from "@/lib/wedding/memoriesPhotoAssets";
@@ -39,12 +41,16 @@ export function useMemoryPhotoViewer({
   favoriteIds,
   isFavoritePending,
   onFavorite,
+  missingPhotoKeys,
+  onMissing,
 }: {
   scope: string;
   backgroundRef: RefObject<HTMLElement>;
   favoriteIds: string[];
   isFavoritePending: (id: string) => boolean;
   onFavorite: (id: string) => Promise<boolean | void>;
+  missingPhotoKeys: ReadonlySet<string>;
+  onMissing: (originalKey: string) => void;
 }) {
   const [current, setCurrent] = useState<ViewerSession>();
   const lastSession = useRef<ViewerSession>();
@@ -52,7 +58,20 @@ export function useMemoryPhotoViewer({
   const backPending = useRef(false);
   const scrollRestoration = useRef<ScrollRestoration>();
   const nextToken = useRef(0);
-  const visible = current?.scope === scope ? current : undefined;
+  const visible = useMemo(() => {
+    if (!current || current.scope !== scope) return undefined;
+    let position = 0;
+    const items = current.items.filter((item, index) => {
+      if (missingPhotoKeys.has(getPhotoOriginalKey(item.request))) return false;
+      if (index < current.index) position++;
+      return true;
+    });
+    if (items.length === current.items.length) return current;
+    if (!items.length) {
+      return { ...current, items: [current.items[current.index]], index: 0 };
+    }
+    return { ...current, items, index: Math.min(position, items.length - 1) };
+  }, [current, missingPhotoKeys, scope]);
 
   function retainScroll() {
     if (scrollRestoration.current !== undefined) return;
@@ -160,11 +179,11 @@ export function useMemoryPhotoViewer({
       !sessionOpen.current ||
       !visible ||
       session?.token !== visible.token ||
-      !session.items[index] ||
-      index === session.index
+      !visible.items[index] ||
+      index === visible.index
     )
       return;
-    const next = { ...session, index };
+    const next = { ...visible, index };
     lastSession.current = next;
     setCurrent(next);
   }
@@ -179,6 +198,10 @@ export function useMemoryPhotoViewer({
         favoriteIds={favoriteIds}
         isFavoritePending={isFavoritePending}
         onFavorite={onFavorite}
+        knownMissing={missingPhotoKeys.has(
+          getPhotoOriginalKey(visible.items[visible.index].request)
+        )}
+        onMissing={onMissing}
         onChange={change}
         onClose={close}
       />
@@ -192,6 +215,8 @@ function SharedPhotoViewer({
   favoriteIds,
   isFavoritePending,
   onFavorite,
+  knownMissing,
+  onMissing,
   onChange,
   onClose,
 }: {
@@ -200,12 +225,18 @@ function SharedPhotoViewer({
   favoriteIds: string[];
   isFavoritePending: (id: string) => boolean;
   onFavorite: (id: string) => Promise<boolean | void>;
+  knownMissing: boolean;
+  onMissing: (originalKey: string) => void;
   onChange: (index: number) => void;
   onClose: () => void;
 }) {
   const { items, index, hasMore, opener } = session;
   const { photo, request } = items[index];
-  const { asset, src, status, retry } = useStyledPhotoAsset(request, "full");
+  const { asset, src, status, retry } = useStyledPhotoAsset(
+    knownMissing ? undefined : request,
+    "full",
+    onMissing
+  );
   const [failedSource, setFailedSource] = useState<string>();
   const [favoriteFailure, setFavoriteFailure] = useState<string>();
   const [downloadFailure, setDownloadFailure] = useState<string>();
@@ -214,7 +245,8 @@ function SharedPhotoViewer({
   const releaseDownload = useRef<number>();
   const fullFailed =
     status === "error" || (Boolean(src) && failedSource === src);
-  const photosWithNeighbors = useNeighborThumbnails(items, index);
+  const missing = knownMissing || status === "missing";
+  const photosWithNeighbors = useNeighborThumbnails(items, index, onMissing);
   const time = asset?.time ?? request.sharedAt;
   const timeSource = asset?.timeSource ?? "shared";
   const dateLabel =
@@ -234,7 +266,7 @@ function SharedPhotoViewer({
   }
 
   function download() {
-    if (!asset || !src || fullFailed || downloadGate.current) return;
+    if (!asset || !src || fullFailed || missing || downloadGate.current) return;
     downloadGate.current = true;
     setDownloading(true);
     setDownloadFailure(undefined);
@@ -257,9 +289,9 @@ function SharedPhotoViewer({
       guestName={photo.guestName}
       dateLabel={dateLabel}
       position={index + 1}
-      count={items.length}
+      count={missing ? 0 : items.length}
       hasMore={hasMore}
-      photoStatus={fullFailed ? "error" : status}
+      photoStatus={missing ? "missing" : fullFailed ? "error" : status}
       imageUrl={fullFailed ? undefined : src}
       onImageError={() => setFailedSource(src)}
       onRetry={() => {
@@ -271,7 +303,7 @@ function SharedPhotoViewer({
       backgroundRef={backgroundRef}
       favorite={favoriteIds.includes(photo.id)}
       favoritePending={isFavoritePending(photo.id)}
-      onFavorite={() => void toggleFavorite()}
+      onFavorite={missing ? undefined : () => void toggleFavorite()}
       favoriteError={
         favoriteFailure === photo.id
           ? "Could not update this favourite. Try again."
@@ -298,7 +330,11 @@ function SharedPhotoViewer({
   );
 }
 
-function useNeighborThumbnails(items: ViewerItem[], index: number) {
+function useNeighborThumbnails(
+  items: ViewerItem[],
+  index: number,
+  onMissing: (originalKey: string) => void
+) {
   const min = Math.max(
     0,
     Math.min(index - filmstripRadius, items.length - 2 * filmstripRadius - 1)
@@ -319,13 +355,16 @@ function useNeighborThumbnails(items: ViewerItem[], index: number) {
             urls.push(url);
             setSources((current) => ({ ...current, [photo.id]: url }));
           })
-          .catch(() => undefined);
+          .catch((error) => {
+            if (active && isMissingPhotoObject(error))
+              onMissing(getPhotoOriginalKey(request));
+          });
       });
     return () => {
       active = false;
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [items, min]);
+  }, [items, min, onMissing]);
   return items.length > 1
     ? items.slice(min, min + 2 * filmstripRadius + 1).map((item, offset) => ({
         item,
