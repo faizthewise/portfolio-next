@@ -1,7 +1,7 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
+import weddingFonts from "@/styles/WeddingFonts.module.css";
 import { Mic, Upload } from "lucide-react";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
 import type { WeddingEventId } from "@/lib/wedding/invitations";
@@ -87,18 +87,6 @@ import styles from "./Memories.module.css";
 import homeStyles from "./MemoryGuestHome.module.css";
 import galleryStyles from "./MemoryGallery.module.css";
 
-const memoryTitle = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--memory-editorial",
-  display: "swap",
-});
-const memoryNames = Great_Vibes({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--memory-signature",
-  display: "swap",
-});
 type GuestPanel = "voice" | "wish" | "upload" | "identity";
 type IdentityIntent = "camera" | "review" | "upload" | "voice" | "wish";
 type QuotaState = "loading" | "ready" | "error";
@@ -1250,7 +1238,7 @@ export function MemoryExperience({
         isGallery
           ? `${homeStyles.galleryPage} ${galleryStyles.page}`
           : homeStyles.homePage
-      } ${memoryTitle.variable} ${memoryNames.variable}`}
+      } ${weddingFonts.memory}`}
     >
       <Head>
         <title>{pageTitle}</title>
@@ -1357,7 +1345,7 @@ export function MemoryExperience({
               favoriteError={favoriteError}
               theme={event.theme}
               backgroundRef={mainRef}
-              fontClassName={memoryTitle.variable}
+              fontClassName={weddingFonts.memory}
               onRetry={retryGalleryPhotos}
               onLoadMore={() => void loadMorePhotos(showPersonalPhotos)}
               onContribute={contributeFromGallery}
@@ -1445,7 +1433,7 @@ export function MemoryExperience({
           backgroundRef={mainRef}
           className={
             guestPanel === "identity"
-              ? `${homeStyles.identityPanel} ${memoryTitle.variable} ${memoryNames.variable}`
+              ? `${homeStyles.identityPanel} ${weddingFonts.memory}`
               : undefined
           }
           message={

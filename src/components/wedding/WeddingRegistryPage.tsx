@@ -2,7 +2,7 @@ import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Cormorant_Garamond } from "next/font/google";
+import weddingFonts from "@/styles/WeddingFonts.module.css";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -33,11 +33,6 @@ import useRegistry from "@/lib/wedding/useRegistry";
 import garden from "@/styles/WeddingGarden.module.css";
 import styles from "@/styles/WeddingRegistry.module.css";
 
-const titleFont = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
 type Filter = "all" | "available" | "mine";
 
 export default function WeddingRegistryPage({
@@ -293,7 +288,7 @@ export function RegistryContent({
           )}
         </div>
         <div className={styles["card-copy"]}>
-          <h2 className={titleFont.className}>
+          <h2 className={weddingFonts["editorial-regular"]}>
             {product.contribution
               ? product.fullName || product.name
               : product.name}
@@ -340,12 +335,12 @@ export function RegistryContent({
             <ArrowLeft aria-hidden="true" />
             {copy.back}
           </Link>
-          <span className={titleFont.className}>H &amp; F</span>
+          <span className={weddingFonts["editorial-regular"]}>H &amp; F</span>
         </header>
         <div className={styles.content}>
           <div className={styles.introduction}>
             <p className={styles.eyebrow}>{copy.eyebrow}</p>
-            <h1 className={titleFont.className}>{copy.heading}</h1>
+            <h1 className={weddingFonts["editorial-regular"]}>{copy.heading}</h1>
             <p className={styles["intro-copy"]}>{copy.intro}</p>
           </div>
 
@@ -373,7 +368,7 @@ export function RegistryContent({
               className={styles["custom-form"]}
               onSubmit={submitCustomGift}
             >
-              <h2 className={titleFont.className}>{copy.customTitle}</h2>
+              <h2 className={weddingFonts["editorial-regular"]}>{copy.customTitle}</h2>
               <p>{copy.customIntro}</p>
               <label htmlFor="custom-gift-name">{copy.giftName}</label>
               <input
@@ -476,7 +471,7 @@ export function RegistryContent({
               className={styles["big-gifts"]}
               aria-labelledby="big-gifts-title"
             >
-              <h2 id="big-gifts-title" className={titleFont.className}>
+              <h2 id="big-gifts-title" className={weddingFonts["editorial-regular"]}>
                 {fundCopy.heading}
               </h2>
               <p>{fundCopy.intro}</p>
@@ -488,7 +483,7 @@ export function RegistryContent({
           {regularGifts.length > 0 && (
             <>
               <h2
-                className={`${titleFont.className} ${styles["regular-heading"]}`}
+                className={`${weddingFonts["editorial-regular"]} ${styles["regular-heading"]}`}
               >
                 {fundCopy.regularHeading}
               </h2>
@@ -540,7 +535,7 @@ export function RegistryContent({
             </section>
           )}
           <footer className={styles.footer}>
-            <p className={titleFont.className}>{copy.footer}</p>
+            <p className={weddingFonts["editorial-regular"]}>{copy.footer}</p>
             <Link href={returnPath}>
               <ArrowLeft aria-hidden="true" />
               {copy.back}
@@ -585,7 +580,7 @@ export function RegistryContent({
                 />
               </div>
               <div className={styles["detail-copy"]}>
-                <h2 id="gift-detail-title" className={titleFont.className}>
+                <h2 id="gift-detail-title" className={weddingFonts["editorial-regular"]}>
                   {selected.fullName || selected.name}
                 </h2>
                 <p className={styles["detail-description"]}>

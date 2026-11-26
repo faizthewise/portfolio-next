@@ -2,7 +2,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Download } from "lucide-react";
-import { Cormorant_Garamond, Great_Vibes, Lora } from "next/font/google";
+import weddingFonts from "@/styles/WeddingFonts.module.css";
 import { brideInvitation, groomInvitation } from "@/lib/wedding/invitations";
 import {
   MEMORY_PUBLIC_ALBUMS,
@@ -11,21 +11,6 @@ import {
   memoryPublicSlug,
 } from "@/lib/wedding/memoryRoutes";
 import styles from "./Memories.module.css";
-const title = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
-const couple = Great_Vibes({
-  subsets: ["latin"],
-  weight: "400",
-  display: "swap",
-});
-const body = Lora({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  display: "swap",
-});
 
 export function MemoryQr({ side }: { side: "bride" | "groom" }) {
   const event = {
@@ -69,7 +54,7 @@ export function MemoryQr({ side }: { side: "bride" | "groom" }) {
     timeZone: "Asia/Kuala_Lumpur",
   });
   return (
-    <main className={`${styles.page} ${styles[event.theme]} ${body.className}`}>
+    <main className={`${styles.page} ${styles[event.theme]} ${weddingFonts.body}`}>
       <Head>
         <title>{`${event.coupleNames} · ${event.dateLabel} · Printable QR`}</title>
         <meta name="robots" content="noindex,nofollow" />
@@ -82,10 +67,10 @@ export function MemoryQr({ side }: { side: "bride" | "groom" }) {
       </header>
       <section className={`${styles.qrCard} ${styles.qrArtwork}`}>
         <p className={styles.eyebrow}>WEDDING MEMORIES · {event.dateLabel}</p>
-        <p className={`${styles.couple} ${couple.className}`}>
+        <p className={`${styles.couple} ${weddingFonts.signature}`}>
           {event.coupleNames}
         </p>
-        <h1 className={title.className}>Scan to share your memories</h1>
+        <h1 className={weddingFonts["editorial-regular"]}>Scan to share your memories</h1>
         <p className={styles.eventDetails}>
           {displayDate}
           <br />

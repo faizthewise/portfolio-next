@@ -1,7 +1,7 @@
 import Head from "next/head";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
 import { GiftItem, WeddingWish, WISH_CHARACTER_LIMIT, initialGifts, subscribeWedding, saveRsvp, reserveGift, createGift, recordContribution } from "@/lib/wedding/data";
-import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
+import weddingFonts from "@/styles/WeddingFonts.module.css";
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   Banknote,
@@ -18,18 +18,6 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-
-const titleFont = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  display: "swap",
-});
-
-const namesFont = Great_Vibes({
-  subsets: ["latin"],
-  weight: "400",
-  display: "swap",
-});
 
 const wedding = {
   bride: "Harissa",
@@ -110,7 +98,7 @@ function SectionTitle({ eyebrow, children, light = false }: { eyebrow: string; c
   return (
     <div className="mx-auto mb-10 max-w-xl text-center">
       <p className={`text-[10px] font-semibold uppercase tracking-[0.34em] ${light ? "text-[#66704b]" : "text-[#7c8467]"}`}>{eyebrow}</p>
-      <h2 className={`${titleFont.className} mt-3 text-4xl font-medium tracking-wide text-[#4f5843] sm:text-5xl`}>{children}</h2>
+      <h2 className={`${weddingFonts["editorial-regular"]} mt-3 text-4xl font-medium tracking-wide text-[#4f5843] sm:text-5xl`}>{children}</h2>
       <Ornament />
     </div>
   );
@@ -322,13 +310,13 @@ export default function JemputanPerkahwinan() {
             <p className="mx-auto mt-6 max-w-lg text-sm leading-7 text-[#68776d]">
               Dengan penuh kesyukuran ke hadrat Allah SWT, kami
             </p>
-            <p className={`${titleFont.className} mt-2 text-3xl font-medium tracking-wide text-[#66704b] sm:text-4xl`}>{wedding.hosts}</p>
+            <p className={`${weddingFonts["editorial-regular"]} mt-2 text-3xl font-medium tracking-wide text-[#66704b] sm:text-4xl`}>{wedding.hosts}</p>
             <p className="mx-auto mt-5 max-w-lg text-sm leading-7 text-[#68776d]">
               dengan segala hormatnya menjemput Dato&apos;, Datin, Tuan, Puan, Encik dan Cik seisi keluarga ke majlis perkahwinan puteri kami
             </p>
-            <h1 className={`${namesFont.className} mt-7 text-4xl font-normal leading-[0.95] text-[#66704b] sm:text-6xl`}>
+            <h1 className={`${weddingFonts.signature} mt-7 text-4xl font-normal leading-[0.95] text-[#66704b] sm:text-6xl`}>
               {wedding.brideFullName}
-              <span className={`${titleFont.className} mx-auto my-3 block text-xl font-normal italic text-[#9b8b65]`}>&</span>
+              <span className={`${weddingFonts["editorial-regular"]} mx-auto my-3 block text-xl font-normal italic text-[#9b8b65]`}>&</span>
               {wedding.groomFullName}
             </h1>
             <Ornament />
@@ -365,7 +353,7 @@ export default function JemputanPerkahwinan() {
             <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
               {[["Hari", countdown.hari], ["Jam", countdown.jam], ["Minit", countdown.minit]].map(([label, value]) => (
                 <div key={label} className="stationery-panel p-7 text-center">
-                  <strong className={`${titleFont.className} block text-6xl font-medium text-[#66704b]`}>{value}</strong>
+                  <strong className={`${weddingFonts["editorial-regular"]} block text-6xl font-medium text-[#66704b]`}>{value}</strong>
                   <span className="mt-2 block text-xs uppercase tracking-[0.25em] text-[#777d72]">{label}</span>
                 </div>
               ))}
@@ -402,7 +390,7 @@ export default function JemputanPerkahwinan() {
               <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
                 <div>
                   <MapPin className="h-9 w-9 text-[#747d59]" />
-                  <h3 className={`${titleFont.className} mt-4 text-4xl font-medium text-[#4f5843]`}>{wedding.venue}</h3>
+                  <h3 className={`${weddingFonts["editorial-regular"]} mt-4 text-4xl font-medium text-[#4f5843]`}>{wedding.venue}</h3>
                   <p className="mt-3 max-w-lg leading-7 text-[#6f786f]">Kami sekeluarga berbesar hati menyambut kehadiran tuan/puan. Pilih aplikasi navigasi untuk mendapatkan arah ke lokasi majlis.</p>
                 </div>
                 <div className="grid gap-3">
@@ -464,7 +452,7 @@ export default function JemputanPerkahwinan() {
                 {wishes.slice().reverse().map((wish, index) => (
                   <blockquote key={`${wish.name}-${index}`} className="stationery-panel relative p-6 sm:p-8">
                     <Quote className="h-8 w-8 fill-[#dfe3da] text-[#747d59]" aria-hidden="true" />
-                    <p className={`${titleFont.className} mt-4 text-2xl leading-9 text-[#4f5843]`}>&ldquo;{wish.message}&rdquo;</p>
+                    <p className={`${weddingFonts["editorial-regular"]} mt-4 text-2xl leading-9 text-[#4f5843]`}>&ldquo;{wish.message}&rdquo;</p>
                     <footer className="mt-5 text-sm font-semibold uppercase tracking-[0.16em] text-[#747d59]">— {wish.name}</footer>
                   </blockquote>
                 ))}
@@ -472,7 +460,7 @@ export default function JemputanPerkahwinan() {
             ) : (
               <div className="stationery-panel mx-auto max-w-xl px-6 py-10 text-center">
                 <Quote className="mx-auto h-8 w-8 text-[#747d59]" aria-hidden="true" />
-                <p className={`${titleFont.className} mt-4 text-2xl text-[#4f5843]`}>Belum ada ucapan dititipkan.</p>
+                <p className={`${weddingFonts["editorial-regular"]} mt-4 text-2xl text-[#4f5843]`}>Belum ada ucapan dititipkan.</p>
                 <p className="mt-2 text-sm leading-6 text-[#6f786f]">Ucapan daripada borang RSVP akan dipaparkan di sini.</p>
               </div>
             )}
@@ -579,7 +567,7 @@ export default function JemputanPerkahwinan() {
                 <X className="h-5 w-5" />
               </button>
               <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#747d59]">Sumbangan hadiah</p>
-              <h2 id="contribution-title" className={`${titleFont.className} mt-2 pr-12 text-4xl font-medium text-[#4f5843]`}>{selectedGift.name}</h2>
+              <h2 id="contribution-title" className={`${weddingFonts["editorial-regular"]} mt-2 pr-12 text-4xl font-medium text-[#4f5843]`}>{selectedGift.name}</h2>
               <p className="mt-3 text-sm leading-6 text-[#6f786f]">Sekiranya tuan/puan ingin menyumbang buat hadiah pengantin, imbas kod DuitNow, buat pembayaran, kemudian catat jumlah sumbangan. Catatan ini bukan pengesahan pembayaran oleh bank.</p>
 
               <div className="mx-auto mt-6 w-full max-w-[240px] overflow-hidden rounded-lg border border-[#4f5843]/10 bg-white p-3 shadow-sm">
@@ -626,7 +614,7 @@ export default function JemputanPerkahwinan() {
               <SectionTitle eyebrow="Tanda ingatan buat pengantin" light>Salam Kaut</SectionTitle>
               <div className="stationery-panel mx-auto max-w-xl p-7 text-center sm:p-10">
                 <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-[#fffdf8] text-[#4f5843]"><QrCode className="h-10 w-10" /></span>
-                <h3 className={`${titleFont.className} mt-6 text-4xl font-medium text-[#66704b]`}>Sedikit tanda ingatan</h3>
+                <h3 className={`${weddingFonts["editorial-regular"]} mt-6 text-4xl font-medium text-[#66704b]`}>Sedikit tanda ingatan</h3>
                 <p className="mt-4 leading-7 text-[#6f786f]">Sekiranya tuan/puan berhasrat berkongsi rezeki buat pasangan pengantin, silakan imbas kod DuitNow ini. Kehadiran dan doa restu tuan/puan tetap menjadi hadiah yang paling bermakna.</p>
                 <div className="mx-auto mt-7 w-full max-w-[260px] overflow-hidden rounded-sm border border-[#7c8467]/15 bg-white p-3 shadow-lg shadow-[#4f5843]/10">
                   <img src="/images/harissa-qr.jpeg" alt="Kod QR DuitNow untuk Salam Kaut" className="h-auto w-full" />
@@ -639,9 +627,9 @@ export default function JemputanPerkahwinan() {
         <footer className="stationery-section border-t border-[#a79a78]/20 bg-[#efefeb] px-6 py-20 text-center">
           <Ornament />
           <Heart className="mx-auto mt-2 h-5 w-5 fill-[#747d59] text-[#747d59]" />
-          <p className={`${titleFont.className} mt-5 text-4xl font-medium text-[#4f5843]`}>Kehadiran tuan dan puan amat kami hargai.</p>
+          <p className={`${weddingFonts["editorial-regular"]} mt-5 text-4xl font-medium text-[#4f5843]`}>Kehadiran tuan dan puan amat kami hargai.</p>
           <p className="mx-auto mt-4 max-w-xl leading-7 text-[#6f786f]">Dengan ingatan tulus daripada {wedding.hosts}.</p>
-          <p className={`${namesFont.className} mt-7 text-5xl text-[#66704b]`}>{wedding.bride} & {wedding.groom}</p>
+          <p className={`${weddingFonts.signature} mt-7 text-5xl text-[#66704b]`}>{wedding.bride} & {wedding.groom}</p>
         </footer>
         </main>
       )}

@@ -31,12 +31,7 @@ import {
   subscribeWedding,
   saveRsvp,
 } from "@/lib/wedding/data";
-import {
-  Cormorant_Garamond,
-  Great_Vibes,
-  Lora,
-  Parisienne,
-} from "next/font/google";
+import weddingFonts from "@/styles/WeddingFonts.module.css";
 import {
   CSSProperties,
   FormEvent,
@@ -64,32 +59,6 @@ import {
   VolumeX,
 } from "lucide-react";
 
-const titleFont = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
-  display: "swap",
-});
-
-const namesFont = Great_Vibes({
-  subsets: ["latin"],
-  weight: "400",
-  display: "swap",
-});
-
-const coupleNamesFont = Parisienne({
-  subsets: ["latin"],
-  weight: "400",
-  display: "swap",
-});
-
-const hashtagFont = Lora({
-  subsets: ["latin"],
-  weight: "400",
-  style: "italic",
-  display: "swap",
-});
-
 function CoupleName({ fullName }: { fullName: string }) {
   const parts = fullName.match(/^(.+?)\s+((?:bin|binti)\s+.+)$/);
   return (
@@ -98,7 +67,7 @@ function CoupleName({ fullName }: { fullName: string }) {
       {parts && (
         <span
           data-part="couple-lineage"
-          className={`${styles["couple-lineage"]} ${titleFont.className}`}
+          className={`${styles["couple-lineage"]} ${weddingFonts.editorial}`}
         >
           {" "}
           {parts[2]}
@@ -394,7 +363,7 @@ function InvitationCoverArtwork({
       <p
         data-part="cover-hint"
         className={`${styles["cover-hint"]} ${
-          songket ? "" : namesFont.className
+          songket ? "" : weddingFonts.signature
         } mt-6 text-[rgb(var(--wedding-rgb-536858))]`}
       >
         Tekan mohor untuk membuka
@@ -432,7 +401,7 @@ function SectionTitle({
         {eyebrow}
       </p>
       <h2
-        className={`${titleFont.className} mt-3 text-4xl font-medium tracking-wide text-[rgb(var(--wedding-rgb-3e5949))] sm:text-5xl`}
+        className={`${weddingFonts.editorial} mt-3 text-4xl font-medium tracking-wide text-[rgb(var(--wedding-rgb-3e5949))] sm:text-5xl`}
       >
         {children}
       </h2>
@@ -722,7 +691,7 @@ export default function WeddingInvitation({
             className="p-5 text-center"
           >
             <strong
-              className={`${titleFont.className} block text-6xl font-medium text-[rgb(var(--wedding-rgb-496851))]`}
+              className={`${weddingFonts.editorial} block text-6xl font-medium text-[rgb(var(--wedding-rgb-496851))]`}
             >
               {value}
             </strong>
@@ -778,7 +747,7 @@ export default function WeddingInvitation({
             <p
               data-part="cover-label"
               className={`${styles["cover-label"]} ${
-                songket ? titleFont.className : namesFont.className
+                songket ? weddingFonts.editorial : weddingFonts.signature
               } mb-7 text-[rgb(var(--wedding-rgb-536858))]`}
             >
               Jemputan ke Walimatulurus
@@ -791,7 +760,7 @@ export default function WeddingInvitation({
             />
             <p
               data-part="cover-date"
-              className={`${titleFont.className} mt-7 text-sm tracking-[0.3em] text-[rgb(var(--wedding-rgb-8e7956))]`}
+              className={`${weddingFonts.editorial} mt-7 text-sm tracking-[0.3em] text-[rgb(var(--wedding-rgb-8e7956))]`}
             >
               {wedding.coverDate}
             </p>
@@ -870,7 +839,7 @@ export default function WeddingInvitation({
                   </p>
                   <p
                     data-part="invitation-prose"
-                    className={`${songket ? titleFont.className : ""} ${
+                    className={`${songket ? weddingFonts.editorial : ""} ${
                       styles["hero-invitation"]
                     } mx-auto mt-6 max-w-lg text-[rgb(var(--wedding-rgb-68776d))]`}
                   >
@@ -878,7 +847,7 @@ export default function WeddingInvitation({
                   </p>
                   <p
                     data-part="hosts"
-                    className={`${styles["hero-hosts"]} ${titleFont.className} mt-2 font-medium text-[rgb(var(--wedding-rgb-496851))]`}
+                    className={`${styles["hero-hosts"]} ${weddingFonts.editorial} mt-2 font-medium text-[rgb(var(--wedding-rgb-496851))]`}
                   >
                     {wedding.hosts.split(" & ").map((host, index) => (
                       <span key={host} className={styles["host-name"]}>
@@ -893,7 +862,7 @@ export default function WeddingInvitation({
                   </p>
                   <p
                     data-part="invitation-prose"
-                    className={`${songket ? titleFont.className : ""} ${
+                    className={`${songket ? weddingFonts.editorial : ""} ${
                       styles["hero-invitation"]
                     } mx-auto mt-5 max-w-lg text-[rgb(var(--wedding-rgb-68776d))]`}
                   >
@@ -910,11 +879,11 @@ export default function WeddingInvitation({
                   {songket ? (
                     <h1
                       data-part="couple-names"
-                      className={coupleNamesFont.className}
+                      className={weddingFonts.parisienne}
                     >
                       <CoupleName fullName={firstName} />
                       <span
-                        className={`${songketStyles.connector} ${titleFont.className}`}
+                        className={`${songketStyles.connector} ${weddingFonts.editorial}`}
                       >
                         {" dan pilihan hatinya "}
                       </span>
@@ -922,11 +891,11 @@ export default function WeddingInvitation({
                     </h1>
                   ) : (
                     <h1
-                      className={`${coupleNamesFont.className} font-normal focus:outline-none`}
+                      className={`${weddingFonts.parisienne} font-normal focus:outline-none`}
                     >
                       <CoupleName fullName={firstName} />
                       <span
-                        className={`${styles["couple-connector"]} ${namesFont.className} mx-auto block font-normal italic text-[rgb(var(--wedding-rgb-9b8b65))]`}
+                        className={`${styles["couple-connector"]} ${weddingFonts.signature} mx-auto block font-normal italic text-[rgb(var(--wedding-rgb-9b8b65))]`}
                       >
                         dan pilihan hatinya
                       </span>
@@ -936,20 +905,20 @@ export default function WeddingInvitation({
                   {songket ? <SongketOrnament /> : <Ornament />}
                   <p
                     data-part="hero-date"
-                    className={`${styles["hero-date"]} ${titleFont.className}`}
+                    className={`${styles["hero-date"]} ${weddingFonts.editorial}`}
                   >
                     {wedding.heroDate}
                   </p>
                   <p
                     data-part="hero-venue"
                     className={`${styles["hero-venue"]} ${
-                      songket ? titleFont.className : ""
+                      songket ? weddingFonts.editorial : ""
                     }`}
                   >
                     {wedding.venue}
                   </p>
                   {songket && (
-                    <p data-part="hero-time" className={titleFont.className}>
+                    <p data-part="hero-time" className={weddingFonts.editorial}>
                       {wedding.timeLabel}
                     </p>
                   )}
@@ -996,7 +965,7 @@ export default function WeddingInvitation({
                   {!songket && (
                     <div
                       data-part="hero-schedule"
-                      className={`${styles["hero-schedule"]} ${titleFont.className} mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[rgb(var(--wedding-rgb-3e5949))]`}
+                      className={`${styles["hero-schedule"]} ${weddingFonts.editorial} mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[rgb(var(--wedding-rgb-3e5949))]`}
                     >
                       {!songket && <span>{wedding.dateLabel}</span>}
                       {!songket && (
@@ -1026,12 +995,12 @@ export default function WeddingInvitation({
           {songket ? (
             <section ref={quotationRef} data-part="quotation">
               <GardenReveal className={songketStyles["quotation-inner"]}>
-                <blockquote className={titleFont.className}>
+                <blockquote className={weddingFonts.editorial}>
                   &ldquo;Dan Kami menciptakan kamu berpasang-pasangan.&rdquo;
                   <cite>Surah An-Naba · 78:8</cite>
                 </blockquote>
                 {wedding.side === "groom" && (
-                  <div className={`${songketStyles.doa} ${titleFont.className}`}>
+                  <div className={`${songketStyles.doa} ${weddingFonts.editorial}`}>
                     <div className={songketStyles["doa-divider"]} aria-hidden="true">
                       <SongketOrnament />
                     </div>
@@ -1047,14 +1016,14 @@ export default function WeddingInvitation({
                       dan beramal soleh. Semoga kehidupan mereka dipenuhi Sakinah,
                       Mawaddah dan Al-Rahmah di dunia dan di akhirat.
                     </p>
-                    <p className={`${songketStyles["doa-amen"]} ${namesFont.className}`}>Aamiin</p>
+                    <p className={`${songketStyles["doa-amen"]} ${weddingFonts.signature}`}>Aamiin</p>
                   </div>
                 )}
               </GardenReveal>
             </section>
           ) : (
             <GardenReveal className={styles.interlude} dataPart="quotation">
-              <blockquote className={titleFont.className}>
+              <blockquote className={weddingFonts.editorial}>
                 &ldquo;Dan Kami menciptakan kamu berpasang-pasangan.&rdquo;
                 <cite>Surah An-Naba · 78:8</cite>
               </blockquote>
@@ -1141,7 +1110,7 @@ export default function WeddingInvitation({
                     ].map(({ label, time }) => (
                       <li key={label}>
                         <span>{time}</span>
-                        <p className={titleFont.className}>{label}</p>
+                        <p className={weddingFonts.editorial}>{label}</p>
                       </li>
                     ))}
                   </ol>
@@ -1170,7 +1139,7 @@ export default function WeddingInvitation({
                     <div>
                       <MapPin className="h-9 w-9 text-[rgb(var(--wedding-rgb-607a60))]" />
                       <h3
-                        className={`${titleFont.className} mt-4 text-4xl font-medium text-[rgb(var(--wedding-rgb-3e5949))]`}
+                        className={`${weddingFonts.editorial} mt-4 text-4xl font-medium text-[rgb(var(--wedding-rgb-3e5949))]`}
                       >
                         {wedding.venue}
                       </h3>
@@ -1199,7 +1168,6 @@ export default function WeddingInvitation({
               </GardenReveal>
             </div>
           </section>
-
 
           {showGifts && (
             <section
@@ -1237,7 +1205,7 @@ export default function WeddingInvitation({
                         <div className={registryStyles["image-wrap"]}>
                           <RegistryProductImage product={product} />
                         </div>
-                        <span className={titleFont.className}>
+                        <span className={weddingFonts.editorial}>
                           {product.name}
                         </span>
                       </Link>
@@ -1278,7 +1246,7 @@ export default function WeddingInvitation({
                     <QrCode className="h-10 w-10" />
                   </span>
                   <h3
-                    className={`${titleFont.className} mt-6 text-4xl font-medium text-[rgb(var(--wedding-rgb-496851))]`}
+                    className={`${weddingFonts.editorial} mt-6 text-4xl font-medium text-[rgb(var(--wedding-rgb-496851))]`}
                   >
                     Sedikit tanda ingatan
                   </h3>
@@ -1330,7 +1298,7 @@ export default function WeddingInvitation({
                 <GardenReveal className={styles["wishes-list"]}>
                   <WeddingWishes
                     wishes={wishes}
-                    fontClassName={titleFont.className}
+                    fontClassName={weddingFonts.editorial}
                   />
                 </GardenReveal>
               ) : (
@@ -1340,7 +1308,7 @@ export default function WeddingInvitation({
                     aria-hidden="true"
                   />
                   <p
-                    className={`${titleFont.className} mt-4 text-2xl text-[rgb(var(--wedding-rgb-3e5949))]`}
+                    className={`${weddingFonts.editorial} mt-4 text-2xl text-[rgb(var(--wedding-rgb-3e5949))]`}
                   >
                     {wishesStatus === "loading"
                       ? "Sedang memuatkan ucapan…"
@@ -1555,7 +1523,7 @@ export default function WeddingInvitation({
                 <Heart className="mx-auto mt-2 h-5 w-5 fill-[rgb(var(--wedding-rgb-607a60))] text-[rgb(var(--wedding-rgb-607a60))]" />
               )}
               <p
-                className={`${titleFont.className} mx-auto mt-5 max-w-3xl text-4xl font-medium text-[rgb(var(--wedding-rgb-3e5949))]`}
+                className={`${weddingFonts.editorial} mx-auto mt-5 max-w-3xl text-4xl font-medium text-[rgb(var(--wedding-rgb-3e5949))]`}
               >
                 Kehadiran tuan dan puan amat kami hargai dan didahului dengan
                 ucapan ribuan terima kasih
@@ -1563,7 +1531,7 @@ export default function WeddingInvitation({
               {showHashtag ? (
                 <p
                   className={`${styles["closing-hashtag"]} ${
-                    songket ? titleFont.className : hashtagFont.className
+                    songket ? weddingFonts.editorial : weddingFonts.hashtag
                   } mt-7 font-normal italic text-[rgb(var(--wedding-rgb-496851))]`}
                 >
                   #FaIzTheOneForHarissa

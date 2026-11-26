@@ -10,7 +10,7 @@ import {
 } from "firebase/auth";
 import { getBlob, ref } from "firebase/storage";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { Cormorant_Garamond, Great_Vibes, Lora } from "next/font/google";
+import weddingFonts from "@/styles/WeddingFonts.module.css";
 import {
   getWeddingOwnerAuth,
   getWeddingOwnerFirestore,
@@ -45,9 +45,6 @@ const emptySettings: MemorySettings = {
   bankDetails: "",
   qrUrl: "",
 };
-const dashboardTitle = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600"], display: "swap" });
-const dashboardNames = Great_Vibes({ subsets: ["latin"], weight: "400", display: "swap" });
-const dashboardBody = Lora({ subsets: ["latin"], weight: ["400", "500"], display: "swap" });
 export function MemoryAdmin({ side }: { side: "bride" | "groom" }) {
   const event = MEMORY_EVENTS[side];
   const wedding = side === "bride" ? brideInvitation : groomInvitation;
@@ -157,7 +154,7 @@ export function MemoryAdmin({ side }: { side: "bride" | "groom" }) {
     }
   };
   return (
-    <main className={`${styles.page} ${styles[event.theme]} ${dashboardBody.className}`}>
+    <main className={`${styles.page} ${styles[event.theme]} ${weddingFonts.body}`}>
       <Head>
         <title>{`${event.name} · ${event.dateLabel} · Couple dashboard`}</title>
         <meta name="robots" content="noindex,nofollow" />
@@ -172,10 +169,10 @@ export function MemoryAdmin({ side }: { side: "bride" | "groom" }) {
       </header>
       <section className={styles.hero}>
         <p className={styles.eyebrow}>PRIVATE COUPLE DASHBOARD</p>
-        <p className={`${styles.couple} ${dashboardNames.className}`}>
+        <p className={`${styles.couple} ${weddingFonts.signature}`}>
           {MEMORY_PUBLIC_ALBUMS[side].coupleNames}
         </p>
-        <h1 className={dashboardTitle.className}>Memories settings</h1>
+        <h1 className={weddingFonts["editorial-regular"]}>Memories settings</h1>
         <p>
           {event.name} · {displayDate} · {wedding.venue}
         </p>
