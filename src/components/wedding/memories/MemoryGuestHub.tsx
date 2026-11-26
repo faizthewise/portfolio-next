@@ -1,19 +1,12 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Camera,
-  ChevronRight,
-  Gift,
-  ImagePlus,
-  Mic,
-  PenLine,
-} from "lucide-react";
+import { ArrowRight, Camera, ImagePlus, Mic, PenLine } from "lucide-react";
 import styles from "./MemoryGuestHome.module.css";
 
 type MemoryGuestHubProps = {
   coupleNames: string;
   date: string;
+  hashtag: string;
   remaining: number;
   photoLimit: number;
   quotaState: "loading" | "ready" | "error";
@@ -24,7 +17,6 @@ type MemoryGuestHubProps = {
   onUpload: () => void;
   onVoice: () => void;
   onWish: () => void;
-  onSalamKaut: () => void;
   galleryHref: string;
   children?: ReactNode;
 };
@@ -32,6 +24,7 @@ type MemoryGuestHubProps = {
 export function MemoryGuestHub({
   coupleNames,
   date,
+  hashtag,
   remaining,
   photoLimit,
   quotaState,
@@ -42,7 +35,6 @@ export function MemoryGuestHub({
   onUpload,
   onVoice,
   onWish,
-  onSalamKaut,
   galleryHref,
   children,
 }: MemoryGuestHubProps) {
@@ -176,26 +168,7 @@ export function MemoryGuestHub({
         </Link>
       </section>
 
-      <div className={styles.giftSection}>
-        <button
-          type="button"
-          className={styles.giftAction}
-          onClick={onSalamKaut}
-        >
-          <span className={styles.giftIcon} aria-hidden="true">
-            <Gift size={22} />
-          </span>
-          <span>
-            <span className={styles.cardTitle}>Salam Kaut</span>
-            <span className={styles.cardDescription}>
-              A little blessing for our new beginning.
-            </span>
-          </span>
-          <ChevronRight size={18} aria-hidden="true" />
-        </button>
-      </div>
-
-      <footer className={styles.closing}>With love, {coupleNames}</footer>
+      <footer className={styles.closing}>{hashtag}</footer>
     </div>
   );
 }

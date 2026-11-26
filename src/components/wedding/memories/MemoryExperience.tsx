@@ -1,5 +1,4 @@
 import Head from "next/head";
-import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Cormorant_Garamond, Great_Vibes } from "next/font/google";
@@ -100,14 +99,13 @@ const memoryNames = Great_Vibes({
   variable: "--memory-signature",
   display: "swap",
 });
-type GuestPanel = "voice" | "wish" | "salam" | "upload" | "identity";
+type GuestPanel = "voice" | "wish" | "upload" | "identity";
 type IdentityIntent = "camera" | "review" | "upload" | "voice" | "wish";
 type QuotaState = "loading" | "ready" | "error";
 
 const panelTitles: Record<GuestPanel, string> = {
   voice: "Voice note",
   wish: "Write a wish",
-  salam: "Salam Kaut",
   upload: "Upload photos",
   identity: "Add your name",
 };
@@ -1406,6 +1404,7 @@ export function MemoryExperience({
         <MemoryGuestHub
           coupleNames={coupleNames}
           date={dateLabel}
+          hashtag={MEMORY_HASHTAG}
           remaining={remainingPhotos}
           photoLimit={PHOTO_LIMIT}
           quotaState={quotaState}
@@ -1418,7 +1417,6 @@ export function MemoryExperience({
           onUpload={() => openPanel("upload")}
           onVoice={() => openPanel("voice")}
           onWish={() => openPanel("wish")}
-          onSalamKaut={() => openPanel("salam")}
           galleryHref={galleryHref}
         >
           <MemoryHomeUploadStatus
@@ -1614,35 +1612,6 @@ export function MemoryExperience({
               >
                 {sendingWish ? "Sharing…" : "Share wish"}
               </button>
-            </section>
-          )}
-          {guestPanel === "salam" && (
-            <section className={styles.section}>
-              <p>Send your doa or contribute through the existing gift page.</p>
-              {settings?.bankRecipient && (
-                <p>
-                  <strong>Recipient:</strong> {settings.bankRecipient}
-                  <br />
-                  <strong>Details:</strong> {settings.bankDetails}
-                </p>
-              )}
-              {settings?.qrUrl && (
-                <img
-                  className={styles.bankQr}
-                  src={settings.qrUrl}
-                  alt="Couple’s Salam Kaut contribution QR code"
-                />
-              )}
-              <Link
-                className={styles.button}
-                href={
-                  side === "bride"
-                    ? "/jemputan-walimatulurus-harissa-faiz?salam=1"
-                    : "/jemputan-walimatulurus-faiz-harissa?salam=1"
-                }
-              >
-                Open Salam Kaut
-              </Link>
             </section>
           )}
         </MemoryGuestPanel>

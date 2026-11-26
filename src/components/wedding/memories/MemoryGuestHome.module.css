@@ -209,7 +209,6 @@
 .secondaryAction,
 .textAction,
 .contributionCard,
-.giftAction,
 .navAction,
 .albumUtility a,
 a.albumUtility {
@@ -326,32 +325,6 @@ a.albumUtility {
   color: var(--memory-muted);
   font-size: 0.875rem;
   line-height: 1.5;
-}
-
-.giftSection {
-  margin-top: 8px;
-  border-block: 1px solid var(--memory-border);
-}
-
-.giftAction {
-  display: grid;
-  width: 100%;
-  min-height: 64px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  border-radius: 8px;
-  background: transparent;
-  text-align: left;
-}
-
-.giftIcon {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--memory-linen);
 }
 
 .closing {
@@ -515,7 +488,6 @@ a.albumUtility:focus-visible {
   }
 
   .secondaryAction:enabled:hover,
-  .giftAction:hover,
   .guestNav .navAction:hover {
     background: var(--memory-soft-sage);
   }
@@ -543,7 +515,6 @@ a.albumUtility:focus-visible {
 .secondaryAction:enabled:active,
 .textAction:active,
 .contributionCard:active,
-.giftAction:active,
 .guestNav .navAction:active {
   background: color-mix(
     in srgb,
@@ -563,7 +534,6 @@ a.albumUtility:focus-visible {
   .secondaryAction,
   .textAction,
   .contributionCard,
-  .giftAction,
   .navAction,
   .albumUtility a,
   a.albumUtility {
