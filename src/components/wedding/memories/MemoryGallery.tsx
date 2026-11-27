@@ -100,6 +100,8 @@ export function MemoryGalleryPhotos({
   guests,
   count,
   status,
+  photoPreviewFailed,
+  onRetryPhotoPreviews,
   hasMore,
   loadingMore,
   loadMoreFailed,
@@ -117,6 +119,8 @@ export function MemoryGalleryPhotos({
   guests: string[];
   count: number;
   status: GalleryStatus;
+  photoPreviewFailed: boolean;
+  onRetryPhotoPreviews: () => void;
   hasMore: boolean;
   loadingMore: boolean;
   loadMoreFailed?: boolean;
@@ -215,16 +219,7 @@ export function MemoryGalleryPhotos({
       )}
 
       {status === "loading" && (
-        <>
-          <p className={styles.visuallyHidden} role="status">
-            Loading photos…
-          </p>
-          <div className={styles.grid} aria-hidden="true">
-            {Array.from({ length: 6 }, (_, index) => (
-              <div className={styles.skeleton} key={index} />
-            ))}
-          </div>
-        </>
+        <MemoryPhotoGridLoading>Loading photos…</MemoryPhotoGridLoading>
       )}
       {status === "error" && (
         <div className={styles.state}>
@@ -250,11 +245,11 @@ export function MemoryGalleryPhotos({
           )}
           {count > 0 ? (
             <div className={styles.grid}>{children}</div>
-          ) : hasMore ? (
+          ) : loadingMore ? null : hasMore ? (
             <p className={styles.feedback} role="status">
               No matches so far. Load more photos to keep looking.
             </p>
-          ) : (
+          ) : !photoPreviewFailed ? (
             <div className={styles.state}>
               <h3>{emptyState.title}</h3>
               <p>{emptyState.description}</p>
@@ -267,8 +262,11 @@ export function MemoryGalleryPhotos({
                 {emptyState.label}
               </button>
             </div>
+          ) : null}
+          {photoPreviewFailed && (
+            <MemoryPhotoGridRetry onRetry={onRetryPhotoPreviews} />
           )}
-          {hasMore && (
+          {(hasMore || loadingMore) && (
             <div className={styles.pagination}>
               {loadMoreFailed && (
                 <p className={styles.feedback} role="alert">
@@ -379,5 +377,24 @@ export function MemoryGalleryPhotos({
         </MemoryGuestPanel>
       )}
     </section>
+  );
+}
+
+export function MemoryPhotoGridLoading({ children }: { children: string }) {
+  return (
+    <div className={`${styles.state} ${styles.photoLoading}`}>
+      <p role="status">{children}</p>
+    </div>
+  );
+}
+
+export function MemoryPhotoGridRetry({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className={`${styles.state} ${styles.photoLoading}`}>
+      <p role="alert">Some photos couldn&apos;t load. Please try again.</p>
+      <button type="button" className={homeStyles.textAction} onClick={onRetry}>
+        Retry photos
+      </button>
+    </div>
   );
 }

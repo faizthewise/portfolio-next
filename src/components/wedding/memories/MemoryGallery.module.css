@@ -285,12 +285,6 @@
   gap: 4px;
 }
 
-.skeleton {
-  aspect-ratio: 1;
-  border-radius: 6px;
-  background: var(--memory-linen);
-}
-
 .state {
   display: grid;
   justify-items: center;
@@ -299,6 +293,13 @@
   border-radius: 16px;
   background: var(--memory-linen);
   text-align: center;
+}
+
+.photoLoading {
+  min-height: 98px;
+  align-content: center;
+  margin-block-start: 10px;
+  padding: 16px;
 }
 
 .state h3 {

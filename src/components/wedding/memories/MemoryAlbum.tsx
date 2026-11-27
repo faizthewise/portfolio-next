@@ -2,6 +2,7 @@ import { Camera, ImagePlus, Images, Upload } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode } from "react";
 import { MemoryContentTabs } from "./MemoryContentTabs";
+import { MemoryPhotoGridLoading, MemoryPhotoGridRetry } from "./MemoryGallery";
 import styles from "./MemoryAlbum.module.css";
 import galleryStyles from "./MemoryGallery.module.css";
 import homeStyles from "./MemoryGuestHome.module.css";
@@ -18,6 +19,8 @@ type AlbumProps = {
   uploadCount: number;
   photoStatus: "loading" | "ready" | "error";
   photoCount: number;
+  photoPreviewFailed: boolean;
+  onRetryPhotoPreviews: () => void;
   hasMore: boolean;
   loadingMore: boolean;
   loadMoreFailed: boolean;
@@ -75,6 +78,8 @@ function ContributionActions({
 function AlbumPhotos({
   photoStatus,
   photoCount,
+  photoPreviewFailed,
+  onRetryPhotoPreviews,
   hasMore,
   loadingMore,
   loadMoreFailed,
@@ -87,6 +92,8 @@ function AlbumPhotos({
   AlbumProps,
   | "photoStatus"
   | "photoCount"
+  | "photoPreviewFailed"
+  | "onRetryPhotoPreviews"
   | "hasMore"
   | "loadingMore"
   | "loadMoreFailed"
@@ -108,19 +115,8 @@ function AlbumPhotos({
         </p>
       </div>
 
-      {photoStatus === "loading" && (
-        <>
-          <p className={galleryStyles.visuallyHidden} role="status">
-            Loading your photos…
-          </p>
-          {photoCount === 0 && (
-            <div className={galleryStyles.grid} aria-hidden="true">
-              {Array.from({ length: 6 }, (_, index) => (
-                <div className={galleryStyles.skeleton} key={index} />
-              ))}
-            </div>
-          )}
-        </>
+      {photoStatus === "loading" && photoCount === 0 && (
+        <MemoryPhotoGridLoading>Loading your photos…</MemoryPhotoGridLoading>
       )}
 
       {photoStatus === "error" && (
@@ -147,21 +143,29 @@ function AlbumPhotos({
 
       {photoCount > 0 && <div className={galleryStyles.grid}>{children}</div>}
 
-      {photoStatus === "ready" && photoCount === 0 && !hasMore && (
-        <div className={galleryStyles.state}>
-          <h3>Your story starts here.</h3>
-          <p>
-            {contribution.canContribute
-              ? "Capture your first little moment from today."
-              : "Your photos will appear here once they’re shared."}
-          </p>
-          {contribution.canContribute && (
-            <ContributionActions {...contribution} />
-          )}
-        </div>
+      {photoStatus === "ready" && photoPreviewFailed && (
+        <MemoryPhotoGridRetry onRetry={onRetryPhotoPreviews} />
       )}
 
-      {photoStatus === "ready" && hasMore && (
+      {photoStatus === "ready" &&
+        photoCount === 0 &&
+        !hasMore &&
+        !loadingMore &&
+        !photoPreviewFailed && (
+          <div className={galleryStyles.state}>
+            <h3>Your story starts here.</h3>
+            <p>
+              {contribution.canContribute
+                ? "Capture your first little moment from today."
+                : "Your photos will appear here once they’re shared."}
+            </p>
+            {contribution.canContribute && (
+              <ContributionActions {...contribution} />
+            )}
+          </div>
+        )}
+
+      {photoStatus === "ready" && (hasMore || loadingMore) && (
         <div className={galleryStyles.pagination}>
           {loadMoreFailed && (
             <p className={galleryStyles.feedback} role="alert">

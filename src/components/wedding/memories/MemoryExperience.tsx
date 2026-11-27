@@ -1,6 +1,6 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import weddingFonts from "@/styles/WeddingFonts.module.css";
 import { Heart, PenLine, Upload } from "lucide-react";
 import { getWeddingGuest } from "@/lib/wedding/firebase";
@@ -60,7 +60,11 @@ import {
   mergeMemoryRows,
   resetMemoryPage,
 } from "@/lib/wedding/memoriesPagination";
-import { getPhotoOriginalKey } from "@/lib/wedding/memoriesPhotoAssets";
+import {
+  getPhotoOriginalKey,
+  getStyledPhotoKey,
+} from "@/lib/wedding/memoriesPhotoAssets";
+import { usePhotoThumbnails } from "@/lib/wedding/memoriesPhotoThumbnails";
 import { MemoryCamera } from "./MemoryCamera";
 import { MemoryAlbum, type AlbumTab } from "./MemoryAlbum";
 import {
@@ -108,6 +112,7 @@ import galleryStyles from "./MemoryGallery.module.css";
 type GuestPanel = "voice" | "wish" | "upload" | "identity";
 type IdentityIntent = "camera" | "review" | "upload" | "voice" | "wish";
 type QuotaState = "loading" | "ready" | "error";
+type GridPhoto = ViewerItem & { thumbnail: Blob };
 
 type SentContribution = "wish" | "voice-shared" | "voice-private";
 
@@ -132,6 +137,7 @@ export function MemoryExperience({
   const router = useRouter();
   const event = MEMORY_EVENTS[side];
   const eventId = event.id;
+  const { coupleNames, dateLabel } = MEMORY_PUBLIC_ALBUMS[side];
   const eventScopeRef = useRef(eventId);
   eventScopeRef.current = eventId;
   const [name, setName] = useState("");
@@ -288,31 +294,72 @@ export function MemoryExperience({
   );
   const showPersonalPhotos = galleryFilters.scope === "my";
   const showFavorites = galleryFilters.scope === "favorites";
-  const isAvailable = (photo: MemoryPhoto) =>
-    !missingPhotoKeys.has(getPhotoOriginalKey(photo));
-  const availableMyPhotos = myPhotos.filter(isAvailable);
-  const gallerySourcePhotos = showPersonalPhotos
-    ? availableMyPhotos
-    : photos.filter(isAvailable);
+  const gridSource =
+    isAlbum && albumTab === "photos"
+      ? myPhotos
+      : isGallery && galleryTab === "photos"
+      ? showPersonalPhotos
+        ? myPhotos
+        : photos
+      : undefined;
+  const defaultFilm = settings?.film ?? "none";
+  const gridItems = useMemo(
+    (): ViewerItem[] =>
+      (gridSource ?? [])
+        .filter((photo) => !missingPhotoKeys.has(getPhotoOriginalKey(photo)))
+        .map((photo) => ({
+          photo,
+          request: {
+            originalPath: photo.originalPath,
+            uploadKey: photo.uploadKey,
+            coupleNames,
+            film: photo.photoStyle?.film ?? defaultFilm,
+            recordedAt: photo.photoStyle?.capturedAt,
+            sharedAt: photo.createdAt?.toDate().getTime(),
+          },
+        })),
+    [coupleNames, defaultFilm, gridSource, missingPhotoKeys]
+  );
+  const {
+    results: photoThumbnails,
+    checking: checkingThumbnails,
+    failed: photoPreviewFailed,
+    retry: retryPhotoPreviews,
+  } = usePhotoThumbnails(
+    gridItems.map(({ request }) => request),
+    hideMissingPhoto
+  );
+  const availableItems = gridItems.flatMap((item): GridPhoto[] => {
+    const result = photoThumbnails.get(
+      getStyledPhotoKey(item.request, "thumbnail")
+    );
+    return result?.status === "ready"
+      ? [{ ...item, thumbnail: result.asset.blob }]
+      : [];
+  });
   const galleryGuests = Array.from(
     new Set([
-      ...gallerySourcePhotos.map((photo) => photo.guestName),
+      ...availableItems.map(({ photo }) => photo.guestName),
       ...(galleryFilters.guest ? [galleryFilters.guest] : []),
     ])
   ).sort((a, b) => a.localeCompare(b));
-  const galleryPhotos = gallerySourcePhotos.filter(
-    (photo) =>
+  const galleryPhotos = availableItems.filter(
+    ({ photo }) =>
       (!showFavorites || favoriteIds.includes(photo.id)) &&
       (galleryFilters.guest === null ||
         photo.guestName === galleryFilters.guest)
   );
   const hasUnreadFavorites =
     showFavorites &&
-    gallerySourcePhotos.some((photo) => !favoriteReads.current.has(photo.id));
+    availableItems.some(({ photo }) => !favoriteReads.current.has(photo.id));
   const personalPhotoStatus =
     (!guestUid && quotaState === "error") ||
     (!online && myPhotoStatus === "ready" && myPhotos.length === 0)
       ? "error"
+      : myPhotoStatus === "ready" &&
+        checkingThumbnails &&
+        !availableItems.length
+      ? "loading"
       : myPhotoStatus;
   const galleryPhotoStatus = showPersonalPhotos
     ? personalPhotoStatus
@@ -320,6 +367,8 @@ export function MemoryExperience({
       (favoriteLoadError || (!guestUid && quotaState === "error"))
     ? "error"
     : showFavorites && (!guestUid || favoriteLoadPending || hasUnreadFavorites)
+    ? "loading"
+    : photoStatus === "ready" && checkingThumbnails && !galleryPhotos.length
     ? "loading"
     : photoStatus;
   useEffect(() => {
@@ -1206,6 +1255,7 @@ export function MemoryExperience({
     if (
       !nextCursor ||
       loadingMore ||
+      checkingThumbnails ||
       !(personal ? myHasMore && guestUid : hasMore)
     )
       return;
@@ -1244,7 +1294,6 @@ export function MemoryExperience({
 
   const homeHref = memoryPath(side);
   const galleryHref = memoryPath(side, "gallery");
-  const { coupleNames, dateLabel } = MEMORY_PUBLIC_ALBUMS[side];
   function viewLoveInGallery(tab: "wishes" | "voice-notes") {
     closeGuestPanel();
     if (isGallery) changeGalleryTab(tab);
@@ -1308,27 +1357,15 @@ export function MemoryExperience({
     missingPhotoKeys,
     onMissing: hideMissingPhoto,
   });
-  function renderSharedPhotos(collection: MemoryPhoto[], hasMore: boolean) {
-    const items: ViewerItem[] = collection.map((photo) => ({
-      photo,
-      request: {
-        originalPath: photo.originalPath,
-        uploadKey: photo.uploadKey,
-        coupleNames,
-        film: photo.photoStyle?.film ?? settings?.film ?? "none",
-        recordedAt: photo.photoStyle?.capturedAt,
-        sharedAt: photo.createdAt?.toDate().getTime(),
-      },
-    }));
-    return items.map(({ photo, request }, index) => (
+  function renderSharedPhotos(items: GridPhoto[], hasMore: boolean) {
+    return items.map(({ photo, thumbnail }, index) => (
       <MemoryGalleryPhoto
         key={photo.id}
         photo={photo}
-        request={request}
+        thumbnail={thumbnail}
         onFavorite={toggleFavorite}
         favorite={favoriteIds.includes(photo.id)}
         favoritePending={isFavoritePending(photo.id)}
-        onMissing={hideMissingPhoto}
         onOpen={(opener) => photoViewer.open(items, index, hasMore, opener)}
       />
     ));
@@ -1418,9 +1455,11 @@ export function MemoryExperience({
           tab={albumTab}
           uploadCount={albumUploads.length}
           photoStatus={personalPhotoStatus}
-          photoCount={availableMyPhotos.length}
+          photoCount={availableItems.length}
+          photoPreviewFailed={photoPreviewFailed}
+          onRetryPhotoPreviews={retryPhotoPreviews}
           hasMore={myHasMore}
-          loadingMore={loadingMore}
+          loadingMore={loadingMore || checkingThumbnails}
           loadMoreFailed={photoPageError === "personal"}
           favoriteError={favoriteError}
           onTabChange={changeAlbumTab}
@@ -1450,7 +1489,7 @@ export function MemoryExperience({
           success={photoSuccess}
           qrHref={memoryPath(side, "qr")}
         >
-          {renderSharedPhotos(availableMyPhotos, myHasMore)}
+          {renderSharedPhotos(availableItems, myHasMore)}
         </MemoryAlbum>
       ) : isGallery ? (
         <MemoryGallery
@@ -1472,9 +1511,11 @@ export function MemoryExperience({
               }}
               guests={galleryGuests}
               count={galleryPhotos.length}
+              photoPreviewFailed={photoPreviewFailed}
+              onRetryPhotoPreviews={retryPhotoPreviews}
               status={galleryPhotoStatus}
               hasMore={showPersonalPhotos ? myHasMore : hasMore}
-              loadingMore={loadingMore}
+              loadingMore={loadingMore || checkingThumbnails}
               loadMoreFailed={
                 photoPageError === (showPersonalPhotos ? "personal" : "public")
               }

@@ -1,67 +1,41 @@
-import { Heart, Image as ImageIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Heart } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { MemoryPhoto } from "@/lib/wedding/memories";
-import {
-  useStyledPhotoAsset,
-  type SharedPhotoAssetRequest,
-} from "@/lib/wedding/memoriesPhotoAssets";
 import styles from "./MemoryGalleryPhoto.module.css";
 
 type PhotoProps = {
   photo: MemoryPhoto;
-  request: SharedPhotoAssetRequest;
+  thumbnail: Blob;
   onFavorite: (id: string) => void | Promise<boolean | void>;
   favorite: boolean;
   favoritePending?: boolean;
   onOpen: (button: HTMLButtonElement) => void;
-  onMissing: (originalKey: string) => void;
 };
 
 export function MemoryGalleryPhoto({
   photo,
-  request,
+  thumbnail,
   onFavorite,
   favorite,
   favoritePending = false,
   onOpen,
-  onMissing,
 }: PhotoProps) {
-  const card = useRef<HTMLElement>(null);
-  const [nearViewport, setNearViewport] = useState(false);
+  const [source, setSource] = useState<{ blob: Blob; url: string }>();
+  const [attempt, setAttempt] = useState(0);
   const [failedSource, setFailedSource] = useState<string>();
-  const { src, status, retry } = useStyledPhotoAsset(
-    nearViewport ? request : undefined,
-    "thumbnail",
-    onMissing
-  );
-
   useEffect(() => {
-    const node = card.current;
-    if (!node || nearViewport) return;
-    if (!("IntersectionObserver" in window)) {
-      setNearViewport(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setNearViewport(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "120px 0px" }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [nearViewport]);
+    const url = URL.createObjectURL(thumbnail);
+    setSource({ blob: thumbnail, url });
+    return () => URL.revokeObjectURL(url);
+  }, [thumbnail, attempt]);
 
-  if (status === "missing") return null;
-
-  const imageFailed = !!src && src === failedSource;
+  if (source?.blob !== thumbnail) return null;
+  const src = source.url;
+  const imageFailed = src === failedSource;
   return (
-    <article ref={card} className={styles.card}>
+    <article className={styles.card}>
       <div className={styles.tile}>
-        {src && !imageFailed ? (
+        {!imageFailed ? (
           <>
             <button
               type="button"
@@ -97,21 +71,17 @@ export function MemoryGalleryPhoto({
           </>
         ) : (
           <div className={styles.placeholder}>
-            {status === "error" || imageFailed ? (
-              <div className={styles.previewError}>
-                <p role="status">Photo unavailable</p>
-                <button
-                  type="button"
-                  className={styles.retry}
-                  onClick={retry}
-                  aria-label={`Retry loading photo shared by ${photo.guestName}`}
-                >
-                  Retry photo
-                </button>
-              </div>
-            ) : (
-              <ImageIcon size={22} aria-hidden="true" />
-            )}
+            <div className={styles.previewError}>
+              <p role="status">Photo unavailable</p>
+              <button
+                type="button"
+                className={styles.retry}
+                onClick={() => setAttempt((current) => current + 1)}
+                aria-label={`Retry loading photo shared by ${photo.guestName}`}
+              >
+                Retry photo
+              </button>
+            </div>
           </div>
         )}
       </div>
