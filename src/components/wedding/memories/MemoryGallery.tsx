@@ -382,15 +382,22 @@ export function MemoryGalleryPhotos({
 
 export function MemoryPhotoGridLoading({ children }: { children: string }) {
   return (
-    <div className={`${styles.state} ${styles.photoLoading}`}>
-      <p role="status">{children}</p>
-    </div>
+    <>
+      <p className={styles.visuallyHidden} role="status">
+        {children}
+      </p>
+      <div className={styles.grid} aria-hidden="true">
+        {Array.from({ length: 5 }, (_, index) => (
+          <div className={styles.photoSkeleton} key={index} />
+        ))}
+      </div>
+    </>
   );
 }
 
 export function MemoryPhotoGridRetry({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className={`${styles.state} ${styles.photoLoading}`}>
+    <div className={`${styles.state} ${styles.photoRetry}`}>
       <p role="alert">Some photos couldn&apos;t load. Please try again.</p>
       <button type="button" className={homeStyles.textAction} onClick={onRetry}>
         Retry photos
